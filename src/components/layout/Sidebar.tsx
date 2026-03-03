@@ -13,8 +13,11 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  Upload,
 } from 'lucide-react';
 import { useAppState } from '@/hooks/useAppState';
+import { hasUploadedData } from '@/hooks/useDataLoader';
+import { DataUploader } from '@/components/DataUploader';
 import { t } from '@/i18n';
 import { cn } from '@/lib/utils';
 
@@ -90,6 +93,7 @@ function TogglePill({
 
 export function Sidebar({ mobileOpen, onMobileClose }: { mobileOpen?: boolean; onMobileClose?: () => void }) {
   const [expanded, setExpanded] = useState(true);
+  const [uploaderOpen, setUploaderOpen] = useState(false);
   const { language, setLanguage, currency, setCurrency } = useAppState();
   const location = useLocation();
 
@@ -181,6 +185,36 @@ export function Sidebar({ mobileOpen, onMobileClose }: { mobileOpen?: boolean; o
 
       {/* Bottom Controls */}
       <div className="shrink-0 px-3 py-4 flex flex-col gap-3 border-t border-border/50">
+        {/* Upload Button */}
+        <button
+          onClick={() => setUploaderOpen(true)}
+          className={cn(
+            'flex items-center gap-2.5 w-full rounded-lg text-sm font-medium transition-colors duration-200 border-none cursor-pointer',
+            expanded ? 'px-3 py-2.5 justify-start' : 'px-0 py-2.5 justify-center',
+            hasUploadedData()
+              ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+              : 'bg-transparent text-text-secondary hover:bg-muted',
+          )}
+        >
+          <Upload size={18} strokeWidth={1.8} className="shrink-0" />
+          <AnimatePresence>
+            {expanded && (
+              <motion.span
+                initial={{ opacity: 0, width: 0 }}
+                animate={{ opacity: 1, width: 'auto' }}
+                exit={{ opacity: 0, width: 0 }}
+                transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                className="truncate whitespace-nowrap overflow-hidden"
+              >
+                {t(language, 'upload.button')}
+              </motion.span>
+            )}
+          </AnimatePresence>
+          {hasUploadedData() && (
+            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0 ml-auto" />
+          )}
+        </button>
+
         {/* Language Toggle */}
         <div className={cn('flex items-center', expanded ? 'justify-between' : 'justify-center')}>
           <AnimatePresence>
@@ -239,6 +273,9 @@ export function Sidebar({ mobileOpen, onMobileClose }: { mobileOpen?: boolean; o
         {desktopSidebar}
       </div>
 
+      {/* Upload modal */}
+      <DataUploader open={uploaderOpen} onClose={() => setUploaderOpen(false)} />
+
       {/* Mobile overlay */}
       {mobileOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
@@ -295,6 +332,23 @@ export function Sidebar({ mobileOpen, onMobileClose }: { mobileOpen?: boolean; o
 
               {/* Bottom controls - always show expanded */}
               <div className="shrink-0 px-3 py-4 flex flex-col gap-3 border-t border-border/50">
+                {/* Upload Button */}
+                <button
+                  onClick={() => { setUploaderOpen(true); onMobileClose?.(); }}
+                  className={cn(
+                    'flex items-center gap-2.5 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200 border-none cursor-pointer',
+                    hasUploadedData()
+                      ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                      : 'bg-transparent text-text-secondary hover:bg-muted',
+                  )}
+                >
+                  <Upload size={18} strokeWidth={1.8} />
+                  <span>{t(language, 'upload.button')}</span>
+                  {hasUploadedData() && (
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 ml-auto" />
+                  )}
+                </button>
+
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium uppercase tracking-wider text-text-muted">Lang</span>
                   <TogglePill

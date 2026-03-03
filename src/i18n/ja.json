@@ -98,5 +98,43 @@
   "ai": {
     "briefingTitle": "主要イシューブリーフィング",
     "generatedAt": "時点"
+  },
+  "rawUpload": {
+    "button": "速報値アップロード",
+    "title": "速報値データ集計",
+    "dragDrop": "プラットフォーム元ファイルをドラッグまたはクリックして選択（複数ファイル可）",
+    "classifying": "ファイル分類中...",
+    "classified": "ファイル分類完了",
+    "parsing": "データ解析中...",
+    "totalRows": "総データ行",
+    "totalSales": "総売上",
+    "apply": "適用",
+    "downloadReport": "Weekly Reportダウンロード",
+    "merging": "データ統合中...",
+    "success": "集計完了！ダッシュボードが更新されました。",
+    "unknownFiles": "認識できないファイル",
+    "mechacomic": "メチャコミック",
+    "cmoa": "コミックシーモア",
+    "piccoma": "ピッコマ"
+  },
+  "upload": {
+    "button": "データ更新",
+    "title": "Excelファイルアップロード",
+    "dragDrop": "ファイルをドラッグまたはクリックして選択",
+    "parsing": "ファイル読み込み中...",
+    "converting": "データ変換中...",
+    "rows": "データ行",
+    "dateRange": "期間",
+    "platforms": "プラットフォーム",
+    "titleCount": "作品数",
+    "noTitleSheet": "Titleシートがありません。シリーズ名マッピングなしで変換されます。",
+    "apply": "適用",
+    "cancel": "キャンセル",
+    "retry": "再試行",
+    "success": "データが更新されました",
+    "error": "ファイル処理中にエラーが発生しました",
+    "invalidFormat": ".xlsxまたは.xlsファイルのみ対応",
+    "revert": "デフォルトデータに戻す",
+    "uploaded": "アップロードデータ使用中"
   }
 }

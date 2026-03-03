@@ -6,6 +6,7 @@ import { t } from '@/i18n';
 import { formatSales } from '@/utils/formatters';
 import { filterByDateRange } from '@/utils/calculations';
 import { PlatformBadge } from '@/components/PlatformIcon';
+import { RawDataUploader } from '@/components/RawDataUploader';
 import { staggerContainer, staggerItem } from '@/lib/constants';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -57,6 +58,7 @@ export function RawData() {
   const [page, setPage] = useState(0);
   const [sortKey, setSortKey] = useState<SortKey>('date');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
+  const [rawUploaderOpen, setRawUploaderOpen] = useState(false);
 
   // Extract unique platforms
   const platforms = useMemo(() => {
@@ -288,17 +290,30 @@ export function RawData() {
             </span>
           </span>
         </div>
-        <Button
-          onClick={downloadCSV}
-          className="gap-2.5 px-5 rounded-xl font-semibold shadow-[0_2px_8px_rgba(37,99,235,0.25)] hover:shadow-lg"
-        >
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-            <polyline points="7 10 12 15 17 10" />
-            <line x1="12" y1="15" x2="12" y2="3" />
-          </svg>
-          {t(language, 'table.download')}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => setRawUploaderOpen(true)}
+            className="gap-2.5 px-5 rounded-xl font-semibold bg-emerald-600 hover:bg-emerald-700 shadow-[0_2px_8px_rgba(16,185,129,0.25)] hover:shadow-lg"
+          >
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            {t(language, 'rawUpload.button')}
+          </Button>
+          <Button
+            onClick={downloadCSV}
+            className="gap-2.5 px-5 rounded-xl font-semibold shadow-[0_2px_8px_rgba(37,99,235,0.25)] hover:shadow-lg"
+          >
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            {t(language, 'table.download')}
+          </Button>
+        </div>
       </motion.div>
 
       {/* Data table */}
@@ -405,6 +420,16 @@ export function RawData() {
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* Raw data uploader modal */}
+      <RawDataUploader
+        open={rawUploaderOpen}
+        onClose={() => setRawUploaderOpen(false)}
+        existingData={{
+          dailySales: data.dailySales,
+          titleMaster: data.titleMaster,
+        }}
+      />
     </motion.div>
   );
 }

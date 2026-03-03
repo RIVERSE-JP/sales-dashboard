@@ -98,5 +98,43 @@
   "ai": {
     "briefingTitle": "주요 이슈 브리핑",
     "generatedAt": "기준"
+  },
+  "rawUpload": {
+    "button": "속보치 업로드",
+    "title": "속보치 데이터 취합",
+    "dragDrop": "플랫폼 원본 파일을 드래그하거나 클릭하여 선택 (다중 파일 가능)",
+    "classifying": "파일 분류 중...",
+    "classified": "파일 분류 완료",
+    "parsing": "데이터 파싱 중...",
+    "totalRows": "총 데이터 행",
+    "totalSales": "총 매출",
+    "apply": "적용",
+    "downloadReport": "Weekly Report 다운로드",
+    "merging": "데이터 병합 중...",
+    "success": "취합 완료! 대시보드가 업데이트되었습니다.",
+    "unknownFiles": "인식할 수 없는 파일",
+    "mechacomic": "메챠코믹",
+    "cmoa": "코믹시모아",
+    "piccoma": "픽코마"
+  },
+  "upload": {
+    "button": "데이터 업데이트",
+    "title": "Excel 파일 업로드",
+    "dragDrop": "파일을 드래그하거나 클릭하여 선택",
+    "parsing": "파일 읽는 중...",
+    "converting": "데이터 변환 중...",
+    "rows": "데이터 행",
+    "dateRange": "기간",
+    "platforms": "플랫폼",
+    "titleCount": "작품 수",
+    "noTitleSheet": "Title 시트가 없습니다. 시리즈명 매핑 없이 변환됩니다.",
+    "apply": "적용",
+    "cancel": "취소",
+    "retry": "다시 시도",
+    "success": "데이터가 업데이트되었습니다",
+    "error": "파일 처리 중 오류가 발생했습니다",
+    "invalidFormat": ".xlsx 또는 .xls 파일만 지원합니다",
+    "revert": "기본 데이터로 되돌리기",
+    "uploaded": "업로드 데이터 사용 중"
   }
 }
