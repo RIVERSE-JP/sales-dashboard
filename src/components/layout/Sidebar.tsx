@@ -32,32 +32,11 @@ const navItems = [
 function RiverseLogo({ expanded }: { expanded: boolean }) {
   return (
     <div className="flex items-center gap-3 overflow-hidden">
-      {/* Icon mark - always visible */}
+      {/* Logo icon - always visible */}
       <div className="flex items-center justify-center w-9 h-9 rounded-lg shrink-0 bg-primary">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <path
-            d="M4 4h6v6H4V4Z"
-            fill="rgba(255,255,255,0.9)"
-            rx="1"
-          />
-          <path
-            d="M14 4h6v6h-6V4Z"
-            fill="rgba(255,255,255,0.5)"
-            rx="1"
-          />
-          <path
-            d="M4 14h6v6H4v-6Z"
-            fill="rgba(255,255,255,0.5)"
-            rx="1"
-          />
-          <path
-            d="M14 14h6v6h-6v-6Z"
-            fill="rgba(255,255,255,0.3)"
-            rx="1"
-          />
-        </svg>
+        <span className="text-white font-extrabold text-base leading-none">R</span>
       </div>
-      {/* Text logo - only when expanded */}
+      {/* Full logo + subtitle - only when expanded */}
       <AnimatePresence>
         {expanded && (
           <motion.div
@@ -67,15 +46,14 @@ function RiverseLogo({ expanded }: { expanded: boolean }) {
             transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
             className="overflow-hidden whitespace-nowrap"
           >
-            <div className="flex flex-col">
-              <svg width="110" height="22" viewBox="0 0 110 22" xmlns="http://www.w3.org/2000/svg">
-                <text x="0" y="17" fontFamily="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" fill="#0F1B4C">
-                  <tspan fontWeight="800" fontSize="18" letterSpacing="0.5">RIV</tspan>
-                  <tspan fontWeight="500" fontSize="18" letterSpacing="0.5">ERSE</tspan>
-                </text>
-              </svg>
-              <span className="text-[11px] font-medium tracking-wider uppercase text-text-muted">
-                Sales Dashboard
+            <div className="flex flex-col gap-0.5">
+              <img
+                src="/riverse_logo.png"
+                alt="RIVERSE"
+                className="h-5 w-auto object-contain object-left"
+              />
+              <span className="text-[11px] font-medium tracking-wider text-text-muted">
+                매출 분석 -
               </span>
             </div>
           </motion.div>
