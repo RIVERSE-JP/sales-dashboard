@@ -1,4 +1,6 @@
 <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-  <rect width="32" height="32" rx="6" fill="#0F1B4C"/>
-  <text x="16" y="23" text-anchor="middle" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-weight="800" font-size="22" fill="white">R</text>
+  <rect width="32" height="32" rx="4" fill="white"/>
+  <text x="16" y="22" text-anchor="middle" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" fill="#0F1B4C">
+    <tspan font-weight="800" font-size="15">RIV</tspan><tspan font-weight="400" font-size="11" dy="-0.5">E</tspan>
+  </text>
 </svg>
