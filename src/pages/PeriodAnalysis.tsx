@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useDataLoader, useDailySales } from '@/hooks/useDataLoader';
 import { useAppState } from '@/hooks/useAppState';
@@ -56,12 +56,7 @@ export function PeriodAnalysis() {
   const { dailySales: localDailySales, loading: dailyLoading } = useDailySales(data);
   const { language, currency, exchangeRate } = useAppState();
 
-  // Show skeleton while loading
-  if (dailyLoading) {
-    return <LoadingSkeleton />;
-  }
-
-  // Compute data boundaries
+  // ALL hooks must be above early returns (React Rules of Hooks)
   const dateBounds = useMemo(() => {
     if (localDailySales.length === 0) return { min: '2025-03-01', max: '2026-02-22' };
     const dates = localDailySales.map(d => d.date).sort();
@@ -71,6 +66,16 @@ export function PeriodAnalysis() {
   const [startDate, setStartDate] = useState(dateBounds.min);
   const [endDate, setEndDate] = useState(dateBounds.max);
   const [granularity, setGranularity] = useState<Granularity>('daily');
+
+  // Sync date range when real data arrives (useState only uses initial value)
+  const initializedRef = useRef(false);
+  useEffect(() => {
+    if (localDailySales.length > 0 && !initializedRef.current) {
+      initializedRef.current = true;
+      setStartDate(dateBounds.min);
+      setEndDate(dateBounds.max);
+    }
+  }, [localDailySales.length, dateBounds.min, dateBounds.max]);
 
   // Quick date selectors
   const applyQuickRange = (days: number | 'all') => {
@@ -164,6 +169,11 @@ export function PeriodAnalysis() {
     }
     return result;
   }, [filteredData, prevPeriodData]);
+
+  // Show skeleton while loading (AFTER all hooks — React Rules of Hooks)
+  if (dailyLoading) {
+    return <LoadingSkeleton />;
+  }
 
   const granularityOptions: { key: Granularity; label: string }[] = [
     { key: 'daily', label: t(language, 'period.daily') },
