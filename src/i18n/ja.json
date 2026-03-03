@@ -6,7 +6,9 @@
     "platforms": "プラットフォーム別分析",
     "period": "期間別分析",
     "trends": "トレンド",
-    "rawData": "データ"
+    "rawData": "データ",
+    "dynamics": "PFダイナミクス",
+    "structure": "売上構造分析"
   },
   "kpi": {
     "totalSales": "累計売上",
@@ -60,5 +62,41 @@
     "growth": "成長",
     "decline": "下落",
     "new": "新規"
+  },
+  "dynamics": {
+    "title": "プラットフォームダイナミクス",
+    "hhi": "プラットフォーム集中度 (HHI)",
+    "hhiDesc": "ハーフィンダール・ハーシュマン指数：PF売上集中度を測定します",
+    "low": "低い",
+    "moderate": "中程度",
+    "high": "高い",
+    "concentration": "集中度",
+    "topDependency": "上位PF依存度",
+    "revenueShare": "売上シェア",
+    "momChanges": "PF別前月比変動",
+    "currentMonth": "当月売上",
+    "previousMonth": "前月売上",
+    "changePercent": "増減率",
+    "direction": "方向",
+    "monthlyShareTrend": "月別PFシェア推移",
+    "monthlyShareTrendDesc": "各PFの月別売上比率変化"
+  },
+  "structure": {
+    "title": "売上構造分析",
+    "titleConcentration": "作品集中度",
+    "titleConcentrationDesc": "上位作品の売上占有率分析",
+    "platformDiversification": "PF多角化",
+    "platformDiversificationDesc": "作品別PF展開状況",
+    "revenueStability": "売上安定性",
+    "revenueStabilityDesc": "月別売上変動係数(CV)に基づく安定性分類",
+    "heatmap": "売上ヒートマップ",
+    "heatmapDesc": "作品×月別売上強度",
+    "stable": "安定",
+    "moderate": "普通",
+    "volatile": "変動"
+  },
+  "ai": {
+    "briefingTitle": "AIインサイト",
+    "generatedAt": "生成時刻"
   }
 }

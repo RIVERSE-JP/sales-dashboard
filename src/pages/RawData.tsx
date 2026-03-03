@@ -1,27 +1,50 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { useDataLoader } from '../hooks/useDataLoader';
-import { useAppState } from '../hooks/useAppState';
-import { t } from '../i18n';
-import { formatSales } from '../utils/formatters';
-import { filterByDateRange } from '../utils/calculations';
-import { PlatformBadge } from '../components/PlatformIcon';
+import { useDataLoader } from '@/hooks/useDataLoader';
+import { useAppState } from '@/hooks/useAppState';
+import { t } from '@/i18n';
+import { formatSales } from '@/utils/formatters';
+import { filterByDateRange } from '@/utils/calculations';
+import { PlatformBadge } from '@/components/PlatformIcon';
+import { staggerContainer, staggerItem } from '@/lib/constants';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from '@/components/ui/table';
 
 const PAGE_SIZE = 50;
 
 type SortKey = 'date' | 'title' | 'channel' | 'sales';
 type SortDir = 'asc' | 'desc';
 
-const fadeIn = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0 },
-};
-
-const stagger = {
-  visible: {
-    transition: { staggerChildren: 0.08 },
-  },
-};
+function LoadingSkeleton() {
+  return (
+    <div className="space-y-6">
+      <Skeleton className="h-10 w-64" />
+      <Card variant="glass"><CardContent className="p-6">
+        <div className="flex flex-wrap gap-4">
+          <Skeleton className="h-10 w-40" /><Skeleton className="h-10 flex-1 min-w-[200px]" />
+          <div className="flex gap-2"><Skeleton className="h-10 w-36" /><Skeleton className="h-10 w-36" /></div>
+        </div>
+      </CardContent></Card>
+      <div className="flex justify-between"><Skeleton className="h-5 w-64" /><Skeleton className="h-10 w-36" /></div>
+      <Card variant="glass"><CardContent className="p-0">
+        <Skeleton className="h-10 w-full" />
+        {[...Array(10)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+        <div className="flex justify-between p-4"><Skeleton className="h-5 w-32" /><div className="flex gap-2"><Skeleton className="h-9 w-16" /><Skeleton className="h-9 w-20" /><Skeleton className="h-9 w-16" /></div></div>
+      </CardContent></Card>
+    </div>
+  );
+}
 
 export function RawData() {
   const data = useDataLoader();
@@ -153,167 +176,121 @@ export function RawData() {
   };
 
   if (data.loading) {
-    return (
-      <div className="flex items-center justify-center" style={{ minHeight: '400px' }}>
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2" style={{ borderColor: '#2563EB' }} />
-      </div>
-    );
+    return <LoadingSkeleton />;
   }
 
   return (
     <motion.div
       initial="hidden"
-      animate="visible"
-      variants={stagger}
+      animate="show"
+      variants={staggerContainer}
     >
       {/* Page title */}
       <motion.h1
-        variants={fadeIn}
-        className="font-bold mb-8"
-        style={{ color: '#0F1B4C', fontSize: '28px', letterSpacing: '-0.025em' }}
+        variants={staggerItem}
+        className="font-bold mb-8 text-primary text-[28px] tracking-tight"
       >
         {t(language, 'nav.rawData')}
       </motion.h1>
 
       {/* Filter controls row */}
-      <motion.div
-        variants={fadeIn}
-        className="rounded-2xl p-6 mb-6"
-        style={{
-          backgroundColor: '#ffffff',
-          border: '1px solid #E2E8F0',
-          boxShadow: '0 1px 3px 0 rgba(0,0,0,0.05)',
-        }}
-      >
-        <div className="flex flex-wrap items-end gap-5">
-          {/* Platform dropdown */}
-          <div className="flex flex-col gap-1.5">
-            <label className="font-semibold" style={{ color: '#475569', fontSize: '13px', letterSpacing: '0.02em' }}>
-              {t(language, 'filter.platform')}
-            </label>
-            <select
-              value={platformFilter}
-              onChange={e => handleFilterChange(setPlatformFilter, e.target.value)}
-              className="rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 transition-shadow cursor-pointer"
-              style={{
-                backgroundColor: '#ffffff',
-                border: '1px solid #CBD5E1',
-                color: '#0F172A',
-                fontSize: '14px',
-                fontWeight: 500,
-                minWidth: '160px',
-              }}
-            >
-              <option value="">{t(language, 'filter.allPlatforms')}</option>
-              {platforms.map(p => (
-                <option key={p} value={p}>{p}</option>
-              ))}
-            </select>
-          </div>
+      <motion.div variants={staggerItem} className="mb-6">
+        <Card variant="glass">
+          <CardContent className="p-6">
+            <div className="flex flex-wrap items-end gap-5">
+              {/* Platform dropdown */}
+              <div className="flex flex-col gap-1.5">
+                <label className="font-semibold text-text-secondary text-[13px] tracking-wide">
+                  {t(language, 'filter.platform')}
+                </label>
+                <Select
+                  value={platformFilter}
+                  onChange={e => handleFilterChange(setPlatformFilter, e.target.value)}
+                  className="min-w-[160px] h-10 rounded-xl font-medium"
+                >
+                  <option value="">{t(language, 'filter.allPlatforms')}</option>
+                  {platforms.map(p => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </Select>
+              </div>
 
-          {/* Title search */}
-          <div className="flex flex-col gap-1.5 flex-1 min-w-[220px]">
-            <label className="font-semibold" style={{ color: '#475569', fontSize: '13px', letterSpacing: '0.02em' }}>
-              {t(language, 'filter.title')}
-            </label>
-            <div className="relative">
-              <svg
-                className="absolute left-3.5 top-1/2 -translate-y-1/2"
-                width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-              >
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-              <input
-                type="text"
-                value={titleSearch}
-                onChange={e => handleFilterChange(setTitleSearch, e.target.value)}
-                placeholder={t(language, 'filter.search')}
-                className="w-full rounded-xl pl-10 pr-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
-                style={{
-                  backgroundColor: '#ffffff',
-                  border: '1px solid #CBD5E1',
-                  color: '#0F172A',
-                  fontSize: '14px',
-                  fontWeight: 500,
-                }}
-              />
-            </div>
-          </div>
+              {/* Title search */}
+              <div className="flex flex-col gap-1.5 flex-1 min-w-[220px]">
+                <label className="font-semibold text-text-secondary text-[13px] tracking-wide">
+                  {t(language, 'filter.title')}
+                </label>
+                <div className="relative">
+                  <svg
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted"
+                    width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                  >
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  </svg>
+                  <Input
+                    type="text"
+                    value={titleSearch}
+                    onChange={e => handleFilterChange(setTitleSearch, e.target.value)}
+                    placeholder={t(language, 'filter.search')}
+                    className="w-full rounded-xl pl-10 pr-4 h-10 font-medium"
+                  />
+                </div>
+              </div>
 
-          {/* Date range */}
-          <div className="flex flex-col gap-1.5">
-            <label className="font-semibold" style={{ color: '#475569', fontSize: '13px', letterSpacing: '0.02em' }}>
-              {t(language, 'filter.dateRange')}
-            </label>
-            <div className="flex items-center gap-2">
-              <input
-                type="date"
-                value={startDate}
-                onChange={e => handleFilterChange(setStartDate, e.target.value)}
-                className="rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
-                style={{
-                  backgroundColor: '#ffffff',
-                  border: '1px solid #CBD5E1',
-                  color: '#0F172A',
-                  fontSize: '14px',
-                  fontWeight: 500,
-                }}
-              />
-              <span style={{ color: '#94A3B8', fontSize: '16px', fontWeight: 500 }}>~</span>
-              <input
-                type="date"
-                value={endDate}
-                onChange={e => handleFilterChange(setEndDate, e.target.value)}
-                className="rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
-                style={{
-                  backgroundColor: '#ffffff',
-                  border: '1px solid #CBD5E1',
-                  color: '#0F172A',
-                  fontSize: '14px',
-                  fontWeight: 500,
-                }}
-              />
+              {/* Date range */}
+              <div className="flex flex-col gap-1.5">
+                <label className="font-semibold text-text-secondary text-[13px] tracking-wide">
+                  {t(language, 'filter.dateRange')}
+                </label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="date"
+                    value={startDate}
+                    onChange={e => handleFilterChange(setStartDate, e.target.value)}
+                    className="rounded-xl h-10 font-medium"
+                  />
+                  <span className="text-text-muted text-base font-medium">~</span>
+                  <Input
+                    type="date"
+                    value={endDate}
+                    onChange={e => handleFilterChange(setEndDate, e.target.value)}
+                    className="rounded-xl h-10 font-medium"
+                  />
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </motion.div>
 
       {/* Summary row + CSV download */}
       <motion.div
-        variants={fadeIn}
+        variants={staggerItem}
         className="flex flex-wrap items-center justify-between mb-5 gap-4"
       >
         <div className="flex items-center gap-4">
-          <span style={{ color: '#64748B', fontSize: '14px', fontWeight: 500 }}>
+          <span className="text-muted-foreground text-sm font-medium">
             {t(language, 'table.showing')}{' '}
-            <span style={{ color: '#0F172A', fontWeight: 700, fontSize: '15px' }}>
+            <span className="text-foreground font-bold text-[15px]">
               {filteredData.length.toLocaleString()}
             </span>{' '}
             {t(language, 'table.of')}{' '}
-            <span style={{ color: '#0F172A', fontWeight: 700, fontSize: '15px' }}>
+            <span className="text-foreground font-bold text-[15px]">
               {data.dailySales.length.toLocaleString()}
             </span>
           </span>
-          <span style={{ color: '#E2E8F0', fontSize: '18px' }}>|</span>
-          <span style={{ color: '#64748B', fontSize: '14px', fontWeight: 500 }}>
+          <span className="text-border text-lg">|</span>
+          <span className="text-muted-foreground text-sm font-medium">
             {t(language, 'table.sales')}:{' '}
-            <span style={{ color: '#0F172A', fontWeight: 700, fontSize: '15px' }}>
+            <span className="text-foreground font-bold text-[15px]">
               {formatSales(totalFilteredSales, currency, exchangeRate, language)}
             </span>
           </span>
         </div>
-        <button
+        <Button
           onClick={downloadCSV}
-          className="flex items-center gap-2.5 px-5 py-2.5 rounded-xl font-semibold transition-all duration-200 hover:shadow-lg"
-          style={{
-            backgroundColor: '#2563EB',
-            color: '#ffffff',
-            fontSize: '14px',
-            boxShadow: '0 2px 8px rgba(37,99,235,0.25)',
-          }}
-          onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#1D4ED8'; }}
-          onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#2563EB'; }}
+          className="gap-2.5 px-5 rounded-xl font-semibold shadow-[0_2px_8px_rgba(37,99,235,0.25)] hover:shadow-lg"
         >
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
@@ -321,156 +298,112 @@ export function RawData() {
             <line x1="12" y1="15" x2="12" y2="3" />
           </svg>
           {t(language, 'table.download')}
-        </button>
+        </Button>
       </motion.div>
 
       {/* Data table */}
-      <motion.div
-        variants={fadeIn}
-        className="rounded-2xl overflow-hidden"
-        style={{
-          backgroundColor: '#ffffff',
-          border: '1px solid #E2E8F0',
-          boxShadow: '0 1px 3px 0 rgba(0,0,0,0.05)',
-        }}
-      >
-        <div className="overflow-x-auto">
-          <table className="w-full" style={{ fontSize: '14px' }}>
-            <thead>
-              <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '2px solid #E2E8F0' }}>
-                <th
-                  className="text-left py-3.5 px-5 font-semibold cursor-pointer select-none transition-colors duration-150"
-                  style={{ color: '#475569' }}
-                  onClick={() => handleSort('date')}
-                  onMouseEnter={e => { e.currentTarget.style.color = '#0F172A'; }}
-                  onMouseLeave={e => { e.currentTarget.style.color = '#475569'; }}
-                >
-                  {t(language, 'table.date')}{sortIcon('date')}
-                </th>
-                <th
-                  className="text-left py-3.5 px-5 font-semibold cursor-pointer select-none transition-colors duration-150"
-                  style={{ color: '#475569' }}
-                  onClick={() => handleSort('title')}
-                  onMouseEnter={e => { e.currentTarget.style.color = '#0F172A'; }}
-                  onMouseLeave={e => { e.currentTarget.style.color = '#475569'; }}
-                >
-                  {t(language, 'table.title')}{sortIcon('title')}
-                </th>
-                <th
-                  className="text-left py-3.5 px-5 font-semibold cursor-pointer select-none transition-colors duration-150"
-                  style={{ color: '#475569' }}
-                  onClick={() => handleSort('channel')}
-                  onMouseEnter={e => { e.currentTarget.style.color = '#0F172A'; }}
-                  onMouseLeave={e => { e.currentTarget.style.color = '#475569'; }}
-                >
-                  {t(language, 'table.platform')}{sortIcon('channel')}
-                </th>
-                <th
-                  className="text-right py-3.5 px-5 font-semibold cursor-pointer select-none transition-colors duration-150"
-                  style={{ color: '#475569' }}
-                  onClick={() => handleSort('sales')}
-                  onMouseEnter={e => { e.currentTarget.style.color = '#0F172A'; }}
-                  onMouseLeave={e => { e.currentTarget.style.color = '#475569'; }}
-                >
-                  {t(language, 'table.sales')}{sortIcon('sales')}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {pagedData.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="text-center py-16" style={{ color: '#94A3B8', fontSize: '15px' }}>
-                    {language === 'ko' ? '데이터가 없습니다' : 'データがありません'}
-                  </td>
-                </tr>
-              ) : (
-                pagedData.map((row, idx) => (
-                  <tr
-                    key={`${row.date}-${row.titleKR}-${row.channel}-${idx}`}
-                    className="transition-colors duration-100"
-                    style={{
-                      backgroundColor: idx % 2 === 0 ? '#ffffff' : '#F8FAFC',
-                      borderBottom: '1px solid #F1F5F9',
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#F1F5F9'; }}
-                    onMouseLeave={e => { e.currentTarget.style.backgroundColor = idx % 2 === 0 ? '#ffffff' : '#F8FAFC'; }}
+      <motion.div variants={staggerItem}>
+        <Card variant="glass">
+          <CardContent className="p-0">
+            <Table className="text-sm">
+              <TableHeader>
+                <TableRow className="bg-background border-b-2 border-border hover:bg-background">
+                  <TableHead
+                    className="py-3.5 px-5 font-semibold text-text-secondary cursor-pointer select-none hover:text-foreground transition-colors duration-150"
+                    onClick={() => handleSort('date')}
                   >
-                    <td className="py-3 px-5 font-medium" style={{ color: '#64748B' }}>
-                      {row.date}
-                    </td>
-                    <td className="py-3 px-5 max-w-[300px] truncate font-medium" style={{ color: '#0F172A' }}>
-                      {language === 'ko' ? row.titleKR : row.titleJP}
-                    </td>
-                    <td className="py-3 px-5">
-                      <PlatformBadge name={row.channel} compact />
-                    </td>
-                    <td className="py-3 px-5 text-right font-bold" style={{ color: '#0F172A', fontSize: '15px' }}>
-                      {formatSales(row.sales, currency, exchangeRate, language)}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                    {t(language, 'table.date')}{sortIcon('date')}
+                  </TableHead>
+                  <TableHead
+                    className="py-3.5 px-5 font-semibold text-text-secondary cursor-pointer select-none hover:text-foreground transition-colors duration-150"
+                    onClick={() => handleSort('title')}
+                  >
+                    {t(language, 'table.title')}{sortIcon('title')}
+                  </TableHead>
+                  <TableHead
+                    className="py-3.5 px-5 font-semibold text-text-secondary cursor-pointer select-none hover:text-foreground transition-colors duration-150"
+                    onClick={() => handleSort('channel')}
+                  >
+                    {t(language, 'table.platform')}{sortIcon('channel')}
+                  </TableHead>
+                  <TableHead
+                    className="py-3.5 px-5 text-right font-semibold text-text-secondary cursor-pointer select-none hover:text-foreground transition-colors duration-150"
+                    onClick={() => handleSort('sales')}
+                  >
+                    {t(language, 'table.sales')}{sortIcon('sales')}
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pagedData.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-16 text-text-muted text-[15px]">
+                      {language === 'ko' ? '데이터가 없습니다' : 'データがありません'}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  pagedData.map((row, idx) => (
+                    <TableRow
+                      key={`${row.date}-${row.titleKR}-${row.channel}-${idx}`}
+                      className={idx % 2 === 0 ? 'bg-card' : 'bg-background'}
+                    >
+                      <TableCell className="py-3 px-5 font-medium text-muted-foreground">
+                        {row.date}
+                      </TableCell>
+                      <TableCell className="py-3 px-5 max-w-[300px] truncate font-medium text-foreground">
+                        {language === 'ko' ? row.titleKR : row.titleJP}
+                      </TableCell>
+                      <TableCell className="py-3 px-5">
+                        <PlatformBadge name={row.channel} compact />
+                      </TableCell>
+                      <TableCell className="py-3 px-5 text-right font-bold text-foreground text-[15px]">
+                        {formatSales(row.sales, currency, exchangeRate, language)}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div
-            className="flex items-center justify-between py-4 px-5"
-            style={{ borderTop: '1px solid #E2E8F0', backgroundColor: '#F8FAFC' }}
-          >
-            <span style={{ color: '#64748B', fontSize: '13px', fontWeight: 500 }}>
-              {page * PAGE_SIZE + 1}~{Math.min((page + 1) * PAGE_SIZE, sortedData.length)}{' '}
-              / {sortedData.length.toLocaleString()}
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setPage(p => Math.max(0, p - 1))}
-                disabled={page === 0}
-                className="px-4 py-2 rounded-xl font-semibold transition-all duration-200 disabled:opacity-35"
-                style={{
-                  backgroundColor: '#E2E8F0',
-                  color: '#475569',
-                  fontSize: '13px',
-                }}
-                onMouseEnter={e => {
-                  if (!e.currentTarget.disabled) e.currentTarget.style.backgroundColor = '#CBD5E1';
-                }}
-                onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#E2E8F0'; }}
-              >
-                {language === 'ko' ? '이전' : '前へ'}
-              </button>
-              <div
-                className="flex items-center gap-1 px-3 py-2 rounded-xl"
-                style={{ backgroundColor: '#ffffff', border: '1px solid #E2E8F0' }}
-              >
-                <span style={{ color: '#2563EB', fontWeight: 700, fontSize: '14px' }}>
-                  {page + 1}
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between py-4 px-5 border-t border-border bg-background">
+                <span className="text-muted-foreground text-[13px] font-medium">
+                  {page * PAGE_SIZE + 1}~{Math.min((page + 1) * PAGE_SIZE, sortedData.length)}{' '}
+                  / {sortedData.length.toLocaleString()}
                 </span>
-                <span style={{ color: '#94A3B8', fontSize: '13px', fontWeight: 500 }}>
-                  {' / '}{totalPages}
-                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setPage(p => Math.max(0, p - 1))}
+                    disabled={page === 0}
+                    className="rounded-xl font-semibold text-[13px]"
+                  >
+                    {language === 'ko' ? '이전' : '前へ'}
+                  </Button>
+                  <div className="flex items-center gap-1 px-3 py-2 rounded-xl bg-card border border-border">
+                    <span className="text-primary font-bold text-sm">
+                      {page + 1}
+                    </span>
+                    <span className="text-text-muted text-[13px] font-medium">
+                      {' / '}{totalPages}
+                    </span>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+                    disabled={page >= totalPages - 1}
+                    className="rounded-xl font-semibold text-[13px]"
+                  >
+                    {language === 'ko' ? '다음' : '次へ'}
+                  </Button>
+                </div>
               </div>
-              <button
-                onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-                disabled={page >= totalPages - 1}
-                className="px-4 py-2 rounded-xl font-semibold transition-all duration-200 disabled:opacity-35"
-                style={{
-                  backgroundColor: '#E2E8F0',
-                  color: '#475569',
-                  fontSize: '13px',
-                }}
-                onMouseEnter={e => {
-                  if (!e.currentTarget.disabled) e.currentTarget.style.backgroundColor = '#CBD5E1';
-                }}
-                onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#E2E8F0'; }}
-              >
-                {language === 'ko' ? '다음' : '次へ'}
-              </button>
-            </div>
-          </div>
-        )}
+            )}
+          </CardContent>
+        </Card>
       </motion.div>
     </motion.div>
   );

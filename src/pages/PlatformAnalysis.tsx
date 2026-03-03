@@ -1,35 +1,59 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { useDataLoader } from '../hooks/useDataLoader';
-import { useAppState } from '../hooks/useAppState';
-import { t } from '../i18n';
-import { formatSales, formatSalesShort } from '../utils/formatters';
-import { KPICard } from '../components/charts/KPICard';
+import { useDataLoader } from '@/hooks/useDataLoader';
+import { useAppState } from '@/hooks/useAppState';
+import { t } from '@/i18n';
+import { formatSales, formatSalesShort } from '@/utils/formatters';
+import { KPICard } from '@/components/charts/KPICard';
+import { Card, CardContent } from '@/components/ui/card';
+import { ChartCard } from '@/components/ui/chart-card';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
+} from '@/components/ui/table';
+import { DashboardGrid } from '@/components/layout/DashboardGrid';
+import { PlatformIcon } from '@/components/PlatformIcon';
+import { tooltipStyle, staggerContainer, staggerItem } from '@/lib/constants';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend, AreaChart, Area,
 } from 'recharts';
-import { getPlatformBrand, getPlatformColor } from '../utils/platformConfig';
-import { PlatformIcon } from '../components/PlatformIcon';
+import { getPlatformBrand, getPlatformColor } from '@/utils/platformConfig';
 
-const tooltipStyle = {
-  contentStyle: { backgroundColor: '#fff', border: '1px solid #E2E8F0', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' },
-  labelStyle: { color: '#475569', fontWeight: 600 },
-  itemStyle: { color: '#0F172A' },
-};
+/* ------------------------------------------------------------------ */
+/*  Loading skeleton                                                    */
+/* ------------------------------------------------------------------ */
 
-const staggerContainer = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.1 },
-  },
-};
+function LoadingSkeleton() {
+  return (
+    <div className="space-y-6">
+      <Skeleton className="h-10 w-64" />
+      <div className="flex flex-wrap gap-2">
+        {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-10 w-28 rounded-full" />)}
+      </div>
+      <DashboardGrid cols={3}>
+        {[...Array(3)].map((_, i) => (
+          <Card key={i} variant="glass"><CardContent className="p-6 space-y-3">
+            <Skeleton className="h-4 w-24" /><Skeleton className="h-8 w-36" /><Skeleton className="h-4 w-20" />
+          </CardContent></Card>
+        ))}
+      </DashboardGrid>
+      <Card variant="glass"><CardContent className="p-6">
+        <Skeleton className="h-5 w-40 mb-4" /><Skeleton className="h-80 w-full rounded-xl" />
+      </CardContent></Card>
+      <Card variant="glass"><CardContent className="p-6">
+        <Skeleton className="h-5 w-40 mb-4" /><Skeleton className="h-64 w-full rounded-xl" />
+      </CardContent></Card>
+      <Card variant="glass"><CardContent className="p-6">
+        <Skeleton className="h-5 w-48 mb-4" /><Skeleton className="h-96 w-full rounded-xl" />
+      </CardContent></Card>
+    </div>
+  );
+}
 
-const staggerItem = {
-  hidden: { opacity: 0, y: 16 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' as const } },
-};
+/* ------------------------------------------------------------------ */
+/*  PlatformAnalysis page                                               */
+/* ------------------------------------------------------------------ */
 
 export function PlatformAnalysis() {
   const { language, currency, exchangeRate } = useAppState();
@@ -90,21 +114,10 @@ export function PlatformAnalysis() {
   if (data.loading) {
     return (
       <div>
-        <h1 className="font-bold mb-6" style={{ color: '#0F1B4C', fontSize: '28px' }}>
+        <h1 className="text-2xl md:text-3xl font-bold mb-6 text-primary">
           {t(language, 'nav.platforms')}
         </h1>
-        <div
-          className="rounded-xl p-8 flex items-center justify-center"
-          style={{ backgroundColor: '#ffffff', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', minHeight: '400px' }}
-        >
-          <div className="flex flex-col items-center gap-3">
-            <div
-              className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"
-              style={{ borderColor: '#2563EB', borderTopColor: 'transparent' }}
-            />
-            <p style={{ color: '#64748B', fontSize: '15px' }}>Loading...</p>
-          </div>
-        </div>
+        <LoadingSkeleton />
       </div>
     );
   }
@@ -112,14 +125,13 @@ export function PlatformAnalysis() {
   return (
     <motion.div
       initial="hidden"
-      animate="visible"
+      animate="show"
       variants={staggerContainer}
     >
       {/* Page Title */}
       <motion.h1
         variants={staggerItem}
-        className="font-bold mb-6"
-        style={{ color: '#0F1B4C', fontSize: '28px', letterSpacing: '-0.02em' }}
+        className="text-2xl md:text-3xl font-bold mb-6 text-primary tracking-tight"
       >
         {t(language, 'nav.platforms')}
       </motion.h1>
@@ -134,14 +146,12 @@ export function PlatformAnalysis() {
               onClick={() => setSelectedPlatform(p.platform)}
               whileHover={{ scale: 1.04 }}
               whileTap={{ scale: 0.97 }}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-full font-medium transition-all duration-200"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium transition-all duration-200 cursor-pointer"
               style={{
                 backgroundColor: isActive ? getPlatformBrand(p.platform).color : '#F1F5F9',
                 color: isActive ? '#ffffff' : '#475569',
-                fontSize: '14px',
                 border: isActive ? 'none' : `1px solid ${getPlatformBrand(p.platform).borderColor}`,
                 boxShadow: isActive ? `0 2px 8px ${getPlatformBrand(p.platform).color}40` : 'none',
-                cursor: 'pointer',
               }}
             >
               {!isActive && <PlatformIcon name={p.platform} size={20} />}
@@ -156,197 +166,183 @@ export function PlatformAnalysis() {
         <motion.div
           key={selectedPlatformData.platform}
           initial="hidden"
-          animate="visible"
+          animate="show"
           variants={staggerContainer}
           className="space-y-6"
         >
           {/* KPI Cards */}
-          <motion.div variants={staggerItem} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <KPICard
-              title={t(language, 'kpi.totalSales')}
-              value={formatSales(selectedPlatformData.totalSales, currency, exchangeRate, language)}
-              subtitle={selectedPlatformData.platform}
-            />
-            <KPICard
-              title={language === 'ko' ? '작품 수' : '作品数'}
-              value={String(selectedPlatformData.titleCount)}
-              subtitle={language === 'ko' ? '등록된 작품' : '登録作品'}
-            />
-            <KPICard
-              title={language === 'ko' ? '매출 비중' : '売上シェア'}
-              value={grandTotal > 0
-                ? `${((selectedPlatformData.totalSales / grandTotal) * 100).toFixed(1)}%`
-                : '0%'
-              }
-              subtitle={language === 'ko' ? '전체 대비' : '全体比'}
-            />
+          <motion.div variants={staggerItem}>
+            <DashboardGrid cols={3}>
+              <KPICard
+                title={t(language, 'kpi.totalSales')}
+                value={formatSales(selectedPlatformData.totalSales, currency, exchangeRate, language)}
+                subtitle={selectedPlatformData.platform}
+              />
+              <KPICard
+                title={language === 'ko' ? '작품 수' : '作品数'}
+                value={String(selectedPlatformData.titleCount)}
+                subtitle={language === 'ko' ? '등록된 작품' : '登録作品'}
+              />
+              <KPICard
+                title={language === 'ko' ? '매출 비중' : '売上シェア'}
+                value={grandTotal > 0
+                  ? `${((selectedPlatformData.totalSales / grandTotal) * 100).toFixed(1)}%`
+                  : '0%'
+                }
+                subtitle={language === 'ko' ? '전체 대비' : '全体比'}
+              />
+            </DashboardGrid>
           </motion.div>
 
           {/* Monthly Sales Bar Chart */}
-          <motion.div
-            variants={staggerItem}
-            className="rounded-xl p-6"
-            style={{ backgroundColor: '#ffffff', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}
-          >
-            <h3 className="font-semibold mb-4" style={{ color: '#0F1B4C', fontSize: '16px' }}>
-              {t(language, 'chart.monthlySales')} - {selectedPlatformData.platform}
-            </h3>
-            <ResponsiveContainer width="100%" height={320}>
-              <BarChart data={selectedMonthlyData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-                <XAxis
-                  dataKey="month"
-                  stroke="#CBD5E1"
-                  tick={{ fill: '#64748B', fontSize: 12 }}
-                  tickFormatter={(val: any) => val.substring(2).replace('-', '/')}
-                />
-                <YAxis
-                  stroke="#CBD5E1"
-                  tick={{ fill: '#64748B', fontSize: 12 }}
-                  tickFormatter={(val: any) => formatSalesShort(val)}
-                />
-                <Tooltip
-                  {...tooltipStyle}
-                  formatter={(value: any) => [
-                    formatSales(value, currency, exchangeRate, language),
-                    t(language, 'table.sales'),
-                  ]}
-                />
-                <Bar
-                  dataKey="sales"
-                  fill={getPlatformColor(activePlatform || '')}
-                  radius={[6, 6, 0, 0]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
+          <motion.div variants={staggerItem}>
+            <ChartCard
+              title={`${t(language, 'chart.monthlySales')} - ${selectedPlatformData.platform}`}
+              variant="glass"
+            >
+              <ResponsiveContainer width="100%" height={320}>
+                <BarChart data={selectedMonthlyData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+                  <XAxis
+                    dataKey="month"
+                    stroke="#CBD5E1"
+                    tick={{ fill: '#64748B', fontSize: 12 }}
+                    tickFormatter={(val: any) => val.substring(2).replace('-', '/')}
+                  />
+                  <YAxis
+                    stroke="#CBD5E1"
+                    tick={{ fill: '#64748B', fontSize: 12 }}
+                    tickFormatter={(val: any) => formatSalesShort(val)}
+                  />
+                  <Tooltip
+                    {...tooltipStyle}
+                    formatter={(value: any) => [
+                      formatSales(value, currency, exchangeRate, language),
+                      t(language, 'table.sales'),
+                    ]}
+                  />
+                  <Bar
+                    dataKey="sales"
+                    fill={getPlatformColor(activePlatform || '')}
+                    radius={[6, 6, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartCard>
           </motion.div>
 
           {/* Top 10 Titles Table */}
-          <motion.div
-            variants={staggerItem}
-            className="rounded-xl p-6"
-            style={{ backgroundColor: '#ffffff', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}
-          >
-            <h3 className="font-semibold mb-4" style={{ color: '#0F1B4C', fontSize: '16px' }}>
-              {t(language, 'chart.topTitles')} - {selectedPlatformData.platform}
-            </h3>
-            <div className="overflow-x-auto">
-              <table className="w-full" style={{ fontSize: '14px' }}>
-                <thead>
-                  <tr style={{ backgroundColor: '#F1F5F9' }}>
-                    <th className="text-left p-3.5 font-semibold rounded-tl-lg" style={{ color: '#475569' }}>
-                      {t(language, 'table.rank')}
-                    </th>
-                    <th className="text-left p-3.5 font-semibold" style={{ color: '#475569' }}>
-                      {t(language, 'table.title')}
-                    </th>
-                    <th className="text-right p-3.5 font-semibold" style={{ color: '#475569' }}>
-                      {t(language, 'table.sales')}
-                    </th>
-                    <th className="text-right p-3.5 font-semibold rounded-tr-lg" style={{ color: '#475569' }}>
-                      {language === 'ko' ? '비중' : 'シェア'}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {selectedTopTitles.map((title, idx) => (
-                    <tr
-                      key={`${title.titleKR}-${idx}`}
-                      className="transition-colors duration-150"
-                      style={{
-                        borderBottom: '1px solid #F1F5F9',
-                        backgroundColor: idx % 2 === 1 ? '#F8FAFC' : '#ffffff',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#F1F5F9';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = idx % 2 === 1 ? '#F8FAFC' : '#ffffff';
-                      }}
-                    >
-                      <td className="p-3.5 font-mono" style={{ color: '#94A3B8', fontSize: '14px' }}>
-                        {idx + 1}
-                      </td>
-                      <td className="p-3.5 font-semibold" style={{ color: '#0F172A', fontSize: '15px' }}>
-                        {language === 'ko' ? title.titleKR : title.titleJP}
-                      </td>
-                      <td className="p-3.5 text-right font-mono" style={{ color: '#0F172A', fontSize: '14px', fontWeight: 600 }}>
-                        {formatSales(title.sales, currency, exchangeRate, language)}
-                      </td>
-                      <td className="p-3.5 text-right font-mono" style={{ color: '#475569', fontSize: '14px' }}>
-                        {selectedPlatformData.totalSales > 0
-                          ? `${((title.sales / selectedPlatformData.totalSales) * 100).toFixed(1)}%`
-                          : '0%'
-                        }
-                      </td>
-                    </tr>
-                  ))}
-                  {selectedTopTitles.length === 0 && (
-                    <tr>
-                      <td colSpan={4} className="p-8 text-center" style={{ color: '#94A3B8', fontSize: '15px' }}>
-                        {language === 'ko' ? '데이터가 없습니다.' : 'データがありません。'}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+          <motion.div variants={staggerItem}>
+            <Card variant="glass">
+              <CardContent className="p-6">
+                <h3 className="text-base font-semibold mb-4 text-primary">
+                  {t(language, 'chart.topTitles')} - {selectedPlatformData.platform}
+                </h3>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted hover:bg-muted">
+                      <TableHead className="font-semibold">
+                        {t(language, 'table.rank')}
+                      </TableHead>
+                      <TableHead className="font-semibold">
+                        {t(language, 'table.title')}
+                      </TableHead>
+                      <TableHead className="text-right font-semibold">
+                        {t(language, 'table.sales')}
+                      </TableHead>
+                      <TableHead className="text-right font-semibold">
+                        {language === 'ko' ? '비중' : 'シェア'}
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {selectedTopTitles.map((title, idx) => (
+                      <TableRow
+                        key={`${title.titleKR}-${idx}`}
+                        className={idx % 2 === 1 ? 'bg-background' : 'bg-card'}
+                      >
+                        <TableCell className="font-mono text-sm text-text-muted">
+                          {idx + 1}
+                        </TableCell>
+                        <TableCell className="font-semibold text-[15px] text-foreground">
+                          {language === 'ko' ? title.titleKR : title.titleJP}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-sm font-semibold text-foreground">
+                          {formatSales(title.sales, currency, exchangeRate, language)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-sm text-text-secondary">
+                          {selectedPlatformData.totalSales > 0
+                            ? `${((title.sales / selectedPlatformData.totalSales) * 100).toFixed(1)}%`
+                            : '0%'
+                          }
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {selectedTopTitles.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={4} className="p-8 text-center text-[15px] text-text-muted">
+                          {language === 'ko' ? '데이터가 없습니다.' : 'データがありません。'}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
           </motion.div>
         </motion.div>
       )}
 
       {/* Platform Comparison Section */}
-      <motion.div
-        variants={staggerItem}
-        className="rounded-xl p-6 mt-6"
-        style={{ backgroundColor: '#ffffff', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}
-      >
-        <h3 className="font-semibold mb-4" style={{ color: '#0F1B4C', fontSize: '16px' }}>
-          {t(language, 'chart.platformShareTrend')}
-        </h3>
-        <ResponsiveContainer width="100%" height={400}>
-          <AreaChart data={comparisonData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-            <XAxis
-              dataKey="month"
-              stroke="#CBD5E1"
-              tick={{ fill: '#64748B', fontSize: 12 }}
-              tickFormatter={(val: any) => val.substring(2).replace('-', '/')}
-            />
-            <YAxis
-              stroke="#CBD5E1"
-              tick={{ fill: '#64748B', fontSize: 12 }}
-              tickFormatter={(val: any) => formatSalesShort(val)}
-            />
-            <Tooltip
-              {...tooltipStyle}
-              formatter={(value: any, name: any) => [
-                formatSales(value, currency, exchangeRate, language),
-                name,
-              ]}
-            />
-            <Legend content={() => null} />
-            {platforms.map((p) => (
-              <Area
-                key={p.platform}
-                type="monotone"
-                dataKey={p.platform}
-                stackId="1"
-                stroke={getPlatformColor(p.platform)}
-                fill={getPlatformColor(p.platform)}
-                fillOpacity={0.5}
+      <motion.div variants={staggerItem} className="mt-6">
+        <ChartCard
+          title={t(language, 'chart.platformShareTrend')}
+          variant="glass"
+        >
+          <ResponsiveContainer width="100%" height={400}>
+            <AreaChart data={comparisonData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+              <XAxis
+                dataKey="month"
+                stroke="#CBD5E1"
+                tick={{ fill: '#64748B', fontSize: 12 }}
+                tickFormatter={(val: any) => val.substring(2).replace('-', '/')}
               />
+              <YAxis
+                stroke="#CBD5E1"
+                tick={{ fill: '#64748B', fontSize: 12 }}
+                tickFormatter={(val: any) => formatSalesShort(val)}
+              />
+              <Tooltip
+                {...tooltipStyle}
+                formatter={(value: any, name: any) => [
+                  formatSales(value, currency, exchangeRate, language),
+                  name,
+                ]}
+              />
+              <Legend content={() => null} />
+              {platforms.map((p) => (
+                <Area
+                  key={p.platform}
+                  type="monotone"
+                  dataKey={p.platform}
+                  stackId="1"
+                  stroke={getPlatformColor(p.platform)}
+                  fill={getPlatformColor(p.platform)}
+                  fillOpacity={0.5}
+                />
+              ))}
+            </AreaChart>
+          </ResponsiveContainer>
+          <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mt-2 px-2">
+            {platforms.map((p) => (
+              <div key={p.platform} className="flex items-center gap-1.5">
+                <PlatformIcon name={p.platform} size={16} />
+                <span className="text-xs font-medium text-text-secondary">{p.platform}</span>
+              </div>
             ))}
-          </AreaChart>
-        </ResponsiveContainer>
-        <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mt-2 px-2">
-          {platforms.map((p) => (
-            <div key={p.platform} className="flex items-center gap-1.5">
-              <PlatformIcon name={p.platform} size={16} />
-              <span style={{ color: '#475569', fontSize: '12px', fontWeight: 500 }}>{p.platform}</span>
-            </div>
-          ))}
-        </div>
+          </div>
+        </ChartCard>
       </motion.div>
     </motion.div>
   );

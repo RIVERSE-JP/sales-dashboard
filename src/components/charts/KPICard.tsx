@@ -6,6 +6,8 @@ import {
   useInView,
   useTransform,
 } from 'framer-motion';
+import { cardVariants } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 interface KPICardProps {
   title: string;
@@ -133,23 +135,14 @@ export function KPICard({
         ease: [0.22, 1, 0.36, 1],
       }}
       whileHover={{
-        y: -2,
+        y: -4,
+        scale: 1.015,
         transition: { duration: 0.2 },
       }}
-      className="relative rounded-xl overflow-hidden cursor-default"
-      style={{
-        backgroundColor: '#FFFFFF',
-        border: '1px solid #E2E8F0',
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03)',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.boxShadow =
-          '0 4px 12px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.04)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.boxShadow =
-          '0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03)';
-      }}
+      className={cn(
+        cardVariants({ variant: 'glass' }),
+        'relative overflow-hidden cursor-default hover:shadow-lg transition-shadow',
+      )}
     >
       {/* Left accent bar */}
       <div
@@ -160,10 +153,7 @@ export function KPICard({
       <div className="p-6 pl-5">
         {/* Header row: title + icon */}
         <div className="flex items-start justify-between mb-3">
-          <span
-            className="text-xs font-semibold uppercase tracking-wider"
-            style={{ color: '#94A3B8' }}
-          >
+          <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">
             {title}
           </span>
           {icon && (
@@ -179,11 +169,8 @@ export function KPICard({
           )}
         </div>
 
-        {/* Value - large for readability (presbyopia/nosian friendly) */}
-        <div
-          className="text-3xl font-bold mb-1.5 tracking-tight"
-          style={{ color: '#0F172A', lineHeight: 1.2 }}
-        >
+        {/* Value - large for readability */}
+        <div className="text-3xl font-bold mb-1.5 tracking-tight text-foreground leading-[1.2]">
           <AnimatedValue value={value} delay={delay} />
         </div>
 
@@ -211,10 +198,7 @@ export function KPICard({
             </span>
           )}
           {subtitle && (
-            <span
-              className="text-sm"
-              style={{ color: '#64748B' }}
-            >
+            <span className="text-sm text-muted-foreground">
               {subtitle}
             </span>
           )}

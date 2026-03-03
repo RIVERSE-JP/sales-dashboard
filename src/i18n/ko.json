@@ -6,7 +6,9 @@
     "platforms": "플랫폼별 분석",
     "period": "기간별 분석",
     "trends": "트렌드",
-    "rawData": "데이터"
+    "rawData": "데이터",
+    "dynamics": "플랫폼 다이나믹스",
+    "structure": "매출 구조 분석"
   },
   "kpi": {
     "totalSales": "총 누적매출",
@@ -60,5 +62,41 @@
     "growth": "성장",
     "decline": "하락",
     "new": "신규"
+  },
+  "dynamics": {
+    "title": "플랫폼 다이나믹스",
+    "hhi": "플랫폼 집중도 (HHI)",
+    "hhiDesc": "허핀달-허쉬만 지수: 플랫폼 매출 집중도를 측정합니다",
+    "low": "낮음",
+    "moderate": "보통",
+    "high": "높음",
+    "concentration": "집중도",
+    "topDependency": "상위 플랫폼 의존도",
+    "revenueShare": "매출 비중",
+    "momChanges": "플랫폼별 전월 대비 변동",
+    "currentMonth": "당월 매출",
+    "previousMonth": "전월 매출",
+    "changePercent": "증감률",
+    "direction": "방향",
+    "monthlyShareTrend": "월별 플랫폼 점유율 추이",
+    "monthlyShareTrendDesc": "각 플랫폼의 월별 매출 비중 변화"
+  },
+  "structure": {
+    "title": "매출 구조 분석",
+    "titleConcentration": "작품 집중도",
+    "titleConcentrationDesc": "상위 작품들의 매출 점유율 분석",
+    "platformDiversification": "플랫폼 다각화",
+    "platformDiversificationDesc": "작품별 플랫폼 진출 현황",
+    "revenueStability": "매출 안정성",
+    "revenueStabilityDesc": "월별 매출 변동 계수(CV) 기반 안정성 분류",
+    "heatmap": "매출 히트맵",
+    "heatmapDesc": "작품 × 월별 매출 강도",
+    "stable": "안정",
+    "moderate": "보통",
+    "volatile": "변동"
+  },
+  "ai": {
+    "briefingTitle": "AI 인사이트",
+    "generatedAt": "생성 시각"
   }
 }
