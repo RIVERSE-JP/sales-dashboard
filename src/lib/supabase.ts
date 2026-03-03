@@ -70,6 +70,39 @@ interface DbTitleMaster {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Helper: paginated fetch (Supabase caps at 1 000 rows per request)  */
+/* ------------------------------------------------------------------ */
+
+async function fetchAllRows<T>(
+  table: string,
+  select: string,
+  dsId: string,
+  orderCol: string,
+  ascending: boolean,
+): Promise<T[]> {
+  if (!supabase) return [];
+  const PAGE_SIZE = 1000;
+  const allRows: T[] = [];
+  let from = 0;
+
+  while (true) {
+    const { data, error } = await supabase
+      .from(table)
+      .select(select)
+      .eq('dataset_id', dsId)
+      .order(orderCol, { ascending })
+      .range(from, from + PAGE_SIZE - 1);
+
+    if (error || !data || data.length === 0) break;
+    allRows.push(...(data as T[]));
+    if (data.length < PAGE_SIZE) break; // last page
+    from += PAGE_SIZE;
+  }
+
+  return allRows;
+}
+
+/* ------------------------------------------------------------------ */
 /*  Read: fetch active dataset                                         */
 /* ------------------------------------------------------------------ */
 
@@ -89,14 +122,16 @@ export async function fetchActiveDataset(): Promise<ConvertedData | null> {
   const dsId = dataset.id as string;
 
   // 2. Fetch all 5 tables in parallel
-  const [dailyRes, monthlyRes, titleRes, platformRes, masterRes] =
+  //    daily_sales uses paginated fetch (can exceed 1 000-row Supabase limit)
+  const [dailyRows, monthlyRes, titleRes, platformRes, masterRes] =
     await Promise.all([
-      supabase
-        .from('daily_sales')
-        .select('title_kr, title_jp, channel, date, sales')
-        .eq('dataset_id', dsId)
-        .range(0, 99999)
-        .order('date', { ascending: true }),
+      fetchAllRows<DbDailySale>(
+        'daily_sales',
+        'title_kr, title_jp, channel, date, sales',
+        dsId,
+        'date',
+        true,
+      ),
       supabase
         .from('monthly_summary')
         .select('month, total_sales, platforms')
@@ -119,7 +154,7 @@ export async function fetchActiveDataset(): Promise<ConvertedData | null> {
     ]);
 
   // 3. Map snake_case → camelCase
-  const dailySales: DailySale[] = ((dailyRes.data ?? []) as DbDailySale[]).map((r) => ({
+  const dailySales: DailySale[] = dailyRows.map((r) => ({
     titleKR: r.title_kr,
     titleJP: r.title_jp,
     channel: r.channel,
