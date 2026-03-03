@@ -18,6 +18,7 @@ import type { DailySale } from '@/types';
 /* ------------------------------------------------------------------ */
 
 export interface ClassifiedFiles {
+  reportExcel: File[];
   mechacomic: File[];
   cmoa: File[];
   piccoma: File[];
@@ -52,6 +53,7 @@ export interface ParseSummary {
 
 export async function classifyFiles(files: File[]): Promise<ClassifiedFiles> {
   const result: ClassifiedFiles = {
+    reportExcel: [],
     mechacomic: [],
     cmoa: [],
     piccoma: [],
@@ -66,19 +68,95 @@ export async function classifyFiles(files: File[]): Promise<ClassifiedFiles> {
     } else if (name.includes('total_product_kpi') && name.endsWith('.csv')) {
       result.piccoma.push(file);
     } else if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
-      // Check if it has a Q003 sheet
-      const isSimoa = await checkSimoaFile(file);
-      if (isSimoa) {
-        result.cmoa.push(file);
+      // Check for report Excel (has Daily_raw sheet) first
+      const isReport = await checkReportExcel(file);
+      if (isReport) {
+        result.reportExcel.push(file);
       } else {
-        result.unknown.push(file);
+        const isSimoa = await checkSimoaFile(file);
+        if (isSimoa) {
+          result.cmoa.push(file);
+        } else {
+          result.unknown.push(file);
+        }
       }
-    } else {
+    } else if (name.endsWith('.csv')) {
       result.unknown.push(file);
     }
+    // Skip non-data files (images, docs, etc.)
   }
 
   return result;
+}
+
+/** Check if an Excel file has a Daily_raw sheet (report format) */
+async function checkReportExcel(file: File): Promise<boolean> {
+  try {
+    const buffer = await file.arrayBuffer();
+    const wb = XLSX.read(buffer, { type: 'array', sheetRows: 1 });
+    return wb.SheetNames.some(
+      (n) => n.toLowerCase().replace(/[_\s]/g, '') === 'dailyraw',
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Extract files from a drag-and-drop event, handling both
+ * individual files and folder drops recursively.
+ */
+export async function extractFilesFromDrop(
+  dataTransfer: DataTransfer,
+): Promise<File[]> {
+  const files: File[] = [];
+
+  // Try webkitGetAsEntry for folder support
+  if (dataTransfer.items && dataTransfer.items.length > 0) {
+    const entries: FileSystemEntry[] = [];
+    for (let i = 0; i < dataTransfer.items.length; i++) {
+      const entry = dataTransfer.items[i].webkitGetAsEntry?.();
+      if (entry) entries.push(entry);
+    }
+
+    if (entries.length > 0) {
+      for (const entry of entries) {
+        await readEntryRecursive(entry, files);
+      }
+      // Filter to only data files
+      return files.filter((f) => /\.(csv|xlsx?|xls)$/i.test(f.name));
+    }
+  }
+
+  // Fallback: direct files (no folder support)
+  const direct = Array.from(dataTransfer.files);
+  return direct.filter((f) => /\.(csv|xlsx?|xls)$/i.test(f.name));
+}
+
+async function readEntryRecursive(
+  entry: FileSystemEntry,
+  files: File[],
+): Promise<void> {
+  if (entry.isFile) {
+    const fileEntry = entry as FileSystemFileEntry;
+    const file = await new Promise<File>((resolve, reject) => {
+      fileEntry.file(resolve, reject);
+    });
+    files.push(file);
+  } else if (entry.isDirectory) {
+    const dirEntry = entry as FileSystemDirectoryEntry;
+    const reader = dirEntry.createReader();
+    // readEntries may not return all entries at once — loop until empty
+    let batch: FileSystemEntry[] = [];
+    do {
+      batch = await new Promise<FileSystemEntry[]>((resolve, reject) => {
+        reader.readEntries(resolve, reject);
+      });
+      for (const child of batch) {
+        await readEntryRecursive(child, files);
+      }
+    } while (batch.length > 0);
+  }
 }
 
 async function checkSimoaFile(file: File): Promise<boolean> {

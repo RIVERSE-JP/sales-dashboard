@@ -5,7 +5,6 @@ import { useAppState } from '@/hooks/useAppState';
 import { t } from '@/i18n';
 import { formatSales } from '@/utils/formatters';
 import { PlatformBadge } from '@/components/PlatformIcon';
-import { RawDataUploader } from '@/components/RawDataUploader';
 import { isSupabaseConfigured, fetchDailySalesPage, fetchAllDailySales } from '@/lib/supabase';
 import type { DailySale } from '@/types';
 import { staggerContainer, staggerItem } from '@/lib/constants';
@@ -100,8 +99,6 @@ export function RawData() {
   const [page, setPage] = useState(0);
   const [sortKey, setSortKey] = useState<SortKey>('date');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
-  const [rawUploaderOpen, setRawUploaderOpen] = useState(false);
-
   // Server-side state (Supabase mode)
   const [serverRows, setServerRows] = useState<DailySale[]>([]);
   const [serverCount, setServerCount] = useState(0);
@@ -330,17 +327,6 @@ export function RawData() {
         </div>
         <div className="flex items-center gap-2">
           <Button
-            onClick={() => setRawUploaderOpen(true)}
-            className="gap-2.5 px-5 rounded-xl font-semibold bg-emerald-600 hover:bg-emerald-700 shadow-[0_2px_8px_rgba(16,185,129,0.25)] hover:shadow-lg"
-          >
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-              <polyline points="17 8 12 3 7 8" />
-              <line x1="12" y1="3" x2="12" y2="15" />
-            </svg>
-            {t(language, 'rawUpload.button')}
-          </Button>
-          <Button
             onClick={downloadCSV}
             disabled={csvDownloading}
             className="gap-2.5 px-5 rounded-xl font-semibold shadow-[0_2px_8px_rgba(37,99,235,0.25)] hover:shadow-lg"
@@ -478,15 +464,6 @@ export function RawData() {
         </Card>
       </motion.div>
 
-      {/* Raw data uploader modal */}
-      <RawDataUploader
-        open={rawUploaderOpen}
-        onClose={() => setRawUploaderOpen(false)}
-        existingData={{
-          dailySales: data.dailySales,
-          titleMaster: data.titleMaster,
-        }}
-      />
     </motion.div>
   );
 }
