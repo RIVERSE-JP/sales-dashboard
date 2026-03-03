@@ -137,6 +137,7 @@ export function ExecutiveSummary() {
   const {
     totalSales, currentMonthSales, currentMonthLabel, momChange,
     activeTitleCount, sparklineData, monthlyChartData, platformChartData, topTitlesData,
+    totalDateRange,
   } = useMemo(() => {
     const monthly = [...data.monthlySummary].sort((a, b) => a.month.localeCompare(b.month));
     const totalSales = monthly.reduce((sum, m) => sum + m.totalSales, 0);
@@ -146,6 +147,18 @@ export function ExecutiveSummary() {
     if (monthly.length > 0) {
       const monthNum = parseInt(monthly[monthly.length - 1].month.split('-')[1]);
       currentMonthLabel = language === 'ko' ? `${monthNum}월 매출` : `${monthNum}月売上`;
+    }
+
+    // Date range for total sales
+    let totalDateRange = '';
+    if (monthly.length > 0) {
+      const first = monthly[0].month;
+      const last = monthly[monthly.length - 1].month;
+      const [fy, fm] = first.split('-');
+      const [ly, lm] = last.split('-');
+      totalDateRange = language === 'ko'
+        ? `${fy}.${fm} ~ ${ly}.${lm}`
+        : `${fy}.${fm} ~ ${ly}.${lm}`;
     }
 
     const momChange = calcMoMChange(monthly);
@@ -181,6 +194,7 @@ export function ExecutiveSummary() {
     return {
       totalSales, currentMonthSales, currentMonthLabel, momChange,
       activeTitleCount, sparklineData, monthlyChartData, platformChartData, topTitlesData,
+      totalDateRange,
     };
   }, [data.monthlySummary, data.platformSummary, data.titleSummary, language]);
 
@@ -241,6 +255,7 @@ export function ExecutiveSummary() {
               value={fmt(totalSales)}
               sparkline={sparklineData}
               icon={<DollarSign size={20} />}
+              dateRange={totalDateRange}
             />
           </motion.div>
           <motion.div variants={staggerItem}>

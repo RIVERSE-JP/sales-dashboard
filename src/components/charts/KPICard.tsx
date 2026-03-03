@@ -18,6 +18,7 @@ interface KPICardProps {
   sparkline?: number[];
   accentColor?: string;
   delay?: number;
+  dateRange?: string;
 }
 
 /**
@@ -118,6 +119,7 @@ export function KPICard({
   sparkline,
   accentColor = '#2563EB',
   delay = 0,
+  dateRange,
 }: KPICardProps) {
   const isPositive = change !== undefined && change >= 0;
   const changeColor = isPositive ? '#16A34A' : '#DC2626';
@@ -153,9 +155,16 @@ export function KPICard({
       <div className="p-6 pl-5">
         {/* Header row: title + icon */}
         <div className="flex items-start justify-between mb-3">
-          <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">
-            {title}
-          </span>
+          <div className="flex flex-col gap-0.5">
+            <span className="text-sm font-bold tracking-wide text-text-muted">
+              {title}
+            </span>
+            {dateRange && (
+              <span className="text-[11px] text-muted-foreground font-medium">
+                {dateRange}
+              </span>
+            )}
+          </div>
           {icon && (
             <span
               className="flex items-center justify-center w-10 h-10 rounded-xl"
