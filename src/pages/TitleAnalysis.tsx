@@ -5,14 +5,35 @@ import {
   ResponsiveContainer, BarChart, Bar, Cell,
 } from 'recharts';
 import { BookOpen, Search, ArrowLeft, TrendingUp } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
-import type { DailySale, TimeGranularity } from '@/types';
+import { fetchTitleSummaries, fetchTitleDetail } from '@/lib/supabase';
 import { getPlatformColor } from '@/utils/platformConfig';
 import { PlatformBadge } from '@/components/PlatformBadge';
-import { startOfWeek, format, parseISO } from 'date-fns';
+import { useApp } from '@/context/AppContext';
 
 // ============================================================
-// Shared styles & animation variants (mirrors Dashboard.tsx)
+// Types for RPC responses
+// ============================================================
+
+interface TitleSummary {
+  title_jp: string;
+  title_kr: string | null;
+  channels: string[];
+  first_date: string;
+  total_sales: number;
+  day_count: number;
+}
+
+interface TitleDetailData {
+  total_sales: number;
+  title_kr: string | null;
+  channels: string[];
+  monthly_trend: Array<{ month: string; sales: number }>;
+  platform_breakdown: Array<{ channel: string; sales: number }>;
+  daily_recent: Array<{ sale_date: string; sales: number }>;
+}
+
+// ============================================================
+// Shared styles & animation variants
 // ============================================================
 
 const GLASS_CARD = {
@@ -47,42 +68,6 @@ const darkTooltipStyle = {
   labelStyle: { color: 'var(--color-tooltip-label)', fontWeight: 600, fontSize: '12px', marginBottom: '4px' },
   itemStyle: { color: 'var(--color-tooltip-value)', fontWeight: 700, fontSize: '13px' },
 };
-
-// ============================================================
-// Helpers
-// ============================================================
-
-function formatYen(value: number): string {
-  if (value >= 100_000_000) return `¥${(value / 100_000_000).toFixed(2)}億`;
-  if (value >= 10_000) return `¥${(value / 10_000).toFixed(1)}万`;
-  return `¥${value.toLocaleString()}`;
-}
-
-function formatYenShort(value: number): string {
-  if (value >= 100_000_000) return `${(value / 100_000_000).toFixed(1)}億`;
-  if (value >= 10_000) return `${(value / 10_000).toFixed(0)}万`;
-  return value.toLocaleString();
-}
-
-interface TitleSummary {
-  titleJP: string;
-  titleKR: string | null;
-  totalSales: number;
-  platforms: string[];
-  salesCount: number;
-}
-
-interface TimeSeriesPoint {
-  period: string;
-  label: string;
-  sales: number;
-}
-
-interface PlatformBreakdown {
-  platform: string;
-  sales: number;
-  color: string;
-}
 
 // ============================================================
 // Loading Skeletons
@@ -121,101 +106,59 @@ function ChartSkeleton({ height = 360 }: { height?: number }) {
 }
 
 // ============================================================
-// Data aggregation
-// ============================================================
-
-function aggregateTimeSeries(rows: DailySale[], granularity: TimeGranularity): TimeSeriesPoint[] {
-  const map = new Map<string, number>();
-  for (const row of rows) {
-    let key: string;
-    const d = parseISO(row.sale_date);
-    switch (granularity) {
-      case 'daily': key = row.sale_date; break;
-      case 'weekly': key = format(startOfWeek(d, { weekStartsOn: 1 }), 'yyyy-MM-dd'); break;
-      case 'monthly': key = format(d, 'yyyy-MM'); break;
-    }
-    map.set(key, (map.get(key) ?? 0) + row.sales_amount);
-  }
-  return Array.from(map.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([period, sales]) => {
-      let label: string;
-      switch (granularity) {
-        case 'daily': label = format(parseISO(period), 'M/d'); break;
-        case 'weekly': label = format(parseISO(period), 'M/d') + '~'; break;
-        case 'monthly': label = period.slice(0, 7); break;
-      }
-      return { period, label, sales };
-    });
-}
-
-function computePlatformBreakdown(rows: DailySale[]): PlatformBreakdown[] {
-  const map = new Map<string, number>();
-  for (const row of rows) {
-    map.set(row.channel, (map.get(row.channel) ?? 0) + row.sales_amount);
-  }
-  return Array.from(map.entries())
-    .sort(([, a], [, b]) => b - a)
-    .map(([platform, sales]) => ({ platform, sales, color: getPlatformColor(platform) }));
-}
-
-// ============================================================
 // Main Component
 // ============================================================
 
 export function TitleAnalysis() {
+  const { formatCurrency, t } = useApp();
+
   const [loading, setLoading] = useState(true);
   const [titles, setTitles] = useState<TitleSummary[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTitle, setSelectedTitle] = useState<string | null>(null);
-  const [titleSales, setTitleSales] = useState<DailySale[]>([]);
+  const [detailData, setDetailData] = useState<TitleDetailData | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [granularity, setGranularity] = useState<TimeGranularity>('daily');
 
-  // Fetch all sales to build title summaries
+  const formatShort = (value: number): string => {
+    if (value >= 100_000_000) return `${(value / 100_000_000).toFixed(1)}`;
+    if (value >= 10_000) return `${(value / 10_000).toFixed(0)}`;
+    return value.toLocaleString();
+  };
+
+  // Fetch title list via RPC
   useEffect(() => {
     async function load() {
       setLoading(true);
-      const { data } = await supabase
-        .from('daily_sales_v2')
-        .select('title_jp, title_kr, channel, sales_amount');
-
-      if (data) {
-        const map = new Map<string, TitleSummary>();
-        for (const row of data as Array<{ title_jp: string; title_kr: string | null; channel: string; sales_amount: number }>) {
-          const existing = map.get(row.title_jp);
-          if (existing) {
-            existing.totalSales += row.sales_amount;
-            existing.salesCount += 1;
-            if (!existing.platforms.includes(row.channel)) existing.platforms.push(row.channel);
-            if (row.title_kr && !existing.titleKR) existing.titleKR = row.title_kr;
-          } else {
-            map.set(row.title_jp, {
-              titleJP: row.title_jp,
-              titleKR: row.title_kr,
-              totalSales: row.sales_amount,
-              platforms: [row.channel],
-              salesCount: 1,
-            });
-          }
-        }
-        setTitles(Array.from(map.values()).sort((a, b) => b.totalSales - a.totalSales));
+      try {
+        const data = await fetchTitleSummaries();
+        const result: TitleSummary[] = (data ?? []).map((row: TitleSummary) => ({
+          title_jp: row.title_jp,
+          title_kr: row.title_kr,
+          channels: row.channels ?? [],
+          first_date: row.first_date,
+          total_sales: row.total_sales,
+          day_count: row.day_count,
+        }));
+        setTitles(result.sort((a, b) => b.total_sales - a.total_sales));
+      } catch (err) {
+        console.error('Failed to load title summaries:', err);
       }
       setLoading(false);
     }
     load();
   }, []);
 
-  // Fetch detail data when a title is selected
+  // Fetch detail when a title is selected
   const loadTitleDetail = useCallback(async (titleJP: string) => {
     setDetailLoading(true);
     setSelectedTitle(titleJP);
-    const { data } = await supabase
-      .from('daily_sales_v2')
-      .select('*')
-      .eq('title_jp', titleJP)
-      .order('sale_date', { ascending: true });
-    setTitleSales((data as DailySale[] | null) ?? []);
+    try {
+      const data = await fetchTitleDetail(titleJP);
+      setDetailData(data as TitleDetailData);
+    } catch (err) {
+      console.error('Failed to load title detail:', err);
+      setDetailData(null);
+    }
     setDetailLoading(false);
   }, []);
 
@@ -224,35 +167,37 @@ export function TitleAnalysis() {
     if (!searchQuery.trim()) return titles;
     const q = searchQuery.toLowerCase();
     return titles.filter(
-      (t) => t.titleJP.toLowerCase().includes(q) || (t.titleKR?.toLowerCase().includes(q) ?? false)
+      (t) => t.title_jp.toLowerCase().includes(q) || (t.title_kr?.toLowerCase().includes(q) ?? false)
     );
   }, [titles, searchQuery]);
 
-  // Detail computations
-  const timeSeries = useMemo(() => aggregateTimeSeries(titleSales, granularity), [titleSales, granularity]);
-  const platformBreakdown = useMemo(() => computePlatformBreakdown(titleSales), [titleSales]);
-
+  // Selected title info from the list
   const selectedTitleInfo = useMemo(
-    () => titles.find((t) => t.titleJP === selectedTitle),
+    () => titles.find((t) => t.title_jp === selectedTitle),
     [titles, selectedTitle]
   );
-
-  // Period comparison
-  const periodComparison = useMemo(() => {
-    if (titleSales.length === 0) return null;
-    const dates = titleSales.map((r) => r.sale_date).sort();
-    const mid = dates[Math.floor(dates.length / 2)];
-    const firstHalf = titleSales.filter((r) => r.sale_date <= mid).reduce((s, r) => s + r.sales_amount, 0);
-    const secondHalf = titleSales.filter((r) => r.sale_date > mid).reduce((s, r) => s + r.sales_amount, 0);
-    const change = firstHalf > 0 ? ((secondHalf - firstHalf) / firstHalf) * 100 : 0;
-    return { firstHalf, secondHalf, change };
-  }, [titleSales]);
 
   // ============================================================
   // Detail view
   // ============================================================
 
   if (selectedTitle) {
+    const monthlyTrend = detailData?.monthly_trend ?? [];
+    const platformBreakdown = (detailData?.platform_breakdown ?? []).map((p) => ({
+      ...p,
+      color: getPlatformColor(p.channel),
+    }));
+    const dailyRecent = (detailData?.daily_recent ?? []).map((d) => ({
+      label: d.sale_date.slice(5), // MM-DD
+      sales: d.sales,
+    }));
+
+    // Compute period comparison from monthly trend
+    const trendLen = monthlyTrend.length;
+    const recentMonth = trendLen > 0 ? monthlyTrend[trendLen - 1].sales : 0;
+    const prevMonth = trendLen > 1 ? monthlyTrend[trendLen - 2].sales : 0;
+    const periodChange = prevMonth > 0 ? ((recentMonth - prevMonth) / prevMonth) * 100 : 0;
+
     return (
       <motion.div
         initial={{ opacity: 0 }}
@@ -265,7 +210,7 @@ export function TitleAnalysis() {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => { setSelectedTitle(null); setTitleSales([]); }}
+            onClick={() => { setSelectedTitle(null); setDetailData(null); }}
             className="w-10 h-10 rounded-xl flex items-center justify-center cursor-pointer"
             style={{ ...GLASS_CARD }}
           >
@@ -275,9 +220,9 @@ export function TitleAnalysis() {
             <h1 className="text-xl font-bold truncate" style={{ color: 'var(--color-text-primary)' }}>
               {selectedTitle}
             </h1>
-            {selectedTitleInfo?.titleKR && (
+            {(detailData?.title_kr || selectedTitleInfo?.title_kr) && (
               <p className="text-sm truncate" style={{ color: 'var(--color-text-muted)' }}>
-                {selectedTitleInfo.titleKR}
+                {detailData?.title_kr || selectedTitleInfo?.title_kr}
               </p>
             )}
           </div>
@@ -300,76 +245,57 @@ export function TitleAnalysis() {
             {/* KPI cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[
-                { label: '累計売上', value: formatYen(selectedTitleInfo?.totalSales ?? 0) },
-                { label: 'プラットフォーム数', value: String(platformBreakdown.length) },
+                { label: t('누적 매출', '累計売上'), value: formatCurrency(detailData?.total_sales ?? selectedTitleInfo?.total_sales ?? 0) },
+                { label: t('플랫폼 수', 'プラットフォーム数'), value: String(platformBreakdown.length || (detailData?.channels ?? []).length) },
                 {
-                  label: '期間トレンド',
-                  value: periodComparison ? `${periodComparison.change > 0 ? '+' : ''}${periodComparison.change.toFixed(1)}%` : '-',
-                  color: periodComparison && periodComparison.change >= 0 ? '#22c55e' : '#ef4444',
+                  label: t('최근 추이', '期間トレンド'),
+                  value: prevMonth > 0 ? `${periodChange > 0 ? '+' : ''}${periodChange.toFixed(1)}%` : '-',
+                  color: periodChange >= 0 ? '#22c55e' : '#ef4444',
                 },
               ].map((kpi, idx) => (
-                <motion.div
-                  key={idx}
-                  variants={cardVariants}
-                  className="rounded-2xl p-6"
-                  style={GLASS_CARD}
-                >
+                <motion.div key={idx} variants={cardVariants} className="rounded-2xl p-6" style={GLASS_CARD}>
                   <p className="text-xs font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>{kpi.label}</p>
                   <p className="text-2xl font-bold" style={{ color: kpi.color ?? 'var(--color-text-primary)' }}>{kpi.value}</p>
                 </motion.div>
               ))}
             </div>
 
-            {/* Granularity selector + area chart */}
-            <motion.div variants={cardVariants} className="rounded-2xl p-6" style={GLASS_CARD}>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>売上推移</h2>
-                <div className="flex gap-1 p-1 rounded-xl" style={{ background: 'var(--color-input-bg)' }}>
-                  {(['daily', 'weekly', 'monthly'] as TimeGranularity[]).map((g) => (
-                    <button
-                      key={g}
-                      onClick={() => setGranularity(g)}
-                      className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer"
-                      style={{
-                        background: granularity === g ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
-                        color: granularity === g ? '#a5b4fc' : 'var(--color-text-muted)',
-                        border: granularity === g ? '1px solid rgba(99, 102, 241, 0.3)' : '1px solid transparent',
-                      }}
-                    >
-                      {{ daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly' }[g]}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <ResponsiveContainer width="100%" height={320}>
-                <AreaChart data={timeSeries}>
-                  <defs>
-                    <linearGradient id="titleGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#818cf8" stopOpacity={0.3} />
-                      <stop offset="100%" stopColor="#818cf8" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
-                  <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatYenShort} width={60} />
-                  <ReTooltip {...darkTooltipStyle} formatter={(v: unknown) => [formatYen(Number(v ?? 0)), '売上']} />
-                  <Area type="monotone" dataKey="sales" stroke="#818cf8" strokeWidth={2} fill="url(#titleGrad)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </motion.div>
+            {/* Monthly trend area chart */}
+            {monthlyTrend.length > 0 && (
+              <motion.div variants={cardVariants} className="rounded-2xl p-6" style={GLASS_CARD}>
+                <h2 className="text-lg font-semibold mb-6" style={{ color: 'var(--color-text-primary)' }}>
+                  {t('월별 매출 추이', '月別売上推移')}
+                </h2>
+                <ResponsiveContainer width="100%" height={320}>
+                  <AreaChart data={monthlyTrend.map((d) => ({ label: d.month, sales: d.sales }))}>
+                    <defs>
+                      <linearGradient id="titleGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#818cf8" stopOpacity={0.3} />
+                        <stop offset="100%" stopColor="#818cf8" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
+                    <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={60} />
+                    <ReTooltip {...darkTooltipStyle} formatter={(v: unknown) => [formatCurrency(Number(v ?? 0)), t('매출', '売上')]} />
+                    <Area type="monotone" dataKey="sales" stroke="#818cf8" strokeWidth={2} fill="url(#titleGrad)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </motion.div>
+            )}
 
             {/* Platform breakdown bar chart */}
-            <motion.div variants={cardVariants} className="rounded-2xl p-6" style={GLASS_CARD}>
-              <h2 className="text-base font-semibold mb-6" style={{ color: 'var(--color-text-primary)' }}>
-                プラットフォーム別売上
-              </h2>
-              {platformBreakdown.length > 0 ? (
+            {platformBreakdown.length > 0 && (
+              <motion.div variants={cardVariants} className="rounded-2xl p-6" style={GLASS_CARD}>
+                <h2 className="text-base font-semibold mb-6" style={{ color: 'var(--color-text-primary)' }}>
+                  {t('플랫폼별 매출', 'プラットフォーム別売上')}
+                </h2>
                 <ResponsiveContainer width="100%" height={Math.max(200, platformBreakdown.length * 48)}>
                   <BarChart data={platformBreakdown} layout="vertical" margin={{ left: 80 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" horizontal={false} />
-                    <XAxis type="number" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatYenShort} />
-                    <YAxis type="category" dataKey="platform" tick={{ fill: 'var(--color-text-secondary)', fontSize: 12 }} axisLine={false} tickLine={false} width={80} />
-                    <ReTooltip {...darkTooltipStyle} formatter={(v: unknown) => [formatYen(Number(v ?? 0)), '売上']} />
+                    <XAxis type="number" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatShort} />
+                    <YAxis type="category" dataKey="channel" tick={{ fill: 'var(--color-text-secondary)', fontSize: 12 }} axisLine={false} tickLine={false} width={80} />
+                    <ReTooltip {...darkTooltipStyle} formatter={(v: unknown) => [formatCurrency(Number(v ?? 0)), t('매출', '売上')]} />
                     <Bar dataKey="sales" radius={[0, 6, 6, 0]} barSize={24}>
                       {platformBreakdown.map((entry, idx) => (
                         <Cell key={idx} fill={entry.color} fillOpacity={0.8} />
@@ -377,29 +303,53 @@ export function TitleAnalysis() {
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
-              ) : (
-                <p className="text-center py-8" style={{ color: 'var(--color-text-muted)' }}>データがありません</p>
-              )}
-            </motion.div>
+              </motion.div>
+            )}
+
+            {/* Recent daily chart */}
+            {dailyRecent.length > 0 && (
+              <motion.div variants={cardVariants} className="rounded-2xl p-6" style={GLASS_CARD}>
+                <h2 className="text-base font-semibold mb-6" style={{ color: 'var(--color-text-primary)' }}>
+                  {t('최근 일별 매출', '直近の日別売上')}
+                </h2>
+                <ResponsiveContainer width="100%" height={280}>
+                  <AreaChart data={dailyRecent}>
+                    <defs>
+                      <linearGradient id="dailyGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#34d399" stopOpacity={0.3} />
+                        <stop offset="100%" stopColor="#34d399" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
+                    <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={60} />
+                    <ReTooltip {...darkTooltipStyle} formatter={(v: unknown) => [formatCurrency(Number(v ?? 0)), t('매출', '売上')]} />
+                    <Area type="monotone" dataKey="sales" stroke="#34d399" strokeWidth={2} fill="url(#dailyGrad)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </motion.div>
+            )}
 
             {/* Period comparison */}
-            {periodComparison && (
+            {prevMonth > 0 && (
               <motion.div variants={cardVariants} className="rounded-2xl p-6" style={GLASS_CARD}>
-                <h2 className="text-base font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>期間比較</h2>
+                <h2 className="text-base font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
+                  {t('기간 비교', '期間比較')}
+                </h2>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="rounded-xl p-4" style={{ background: 'var(--color-glass)' }}>
-                    <p className="text-xs mb-1" style={{ color: 'var(--color-text-secondary)' }}>前半期間</p>
-                    <p className="text-lg font-bold" style={{ color: 'var(--color-text-primary)' }}>{formatYen(periodComparison.firstHalf)}</p>
+                    <p className="text-xs mb-1" style={{ color: 'var(--color-text-secondary)' }}>{t('전월', '前月')}</p>
+                    <p className="text-lg font-bold" style={{ color: 'var(--color-text-primary)' }}>{formatCurrency(prevMonth)}</p>
                   </div>
                   <div className="rounded-xl p-4" style={{ background: 'var(--color-glass)' }}>
-                    <p className="text-xs mb-1" style={{ color: 'var(--color-text-secondary)' }}>後半期間</p>
-                    <p className="text-lg font-bold" style={{ color: 'var(--color-text-primary)' }}>{formatYen(periodComparison.secondHalf)}</p>
+                    <p className="text-xs mb-1" style={{ color: 'var(--color-text-secondary)' }}>{t('이번달', '今月')}</p>
+                    <p className="text-lg font-bold" style={{ color: 'var(--color-text-primary)' }}>{formatCurrency(recentMonth)}</p>
                   </div>
                 </div>
                 <div className="mt-4 flex items-center gap-2">
-                  <TrendingUp size={16} color={periodComparison.change >= 0 ? '#22c55e' : '#ef4444'} />
-                  <span className="text-sm font-semibold" style={{ color: periodComparison.change >= 0 ? '#22c55e' : '#ef4444' }}>
-                    {periodComparison.change > 0 ? '+' : ''}{periodComparison.change.toFixed(1)}% 変化
+                  <TrendingUp size={16} color={periodChange >= 0 ? '#22c55e' : '#ef4444'} />
+                  <span className="text-sm font-semibold" style={{ color: periodChange >= 0 ? '#22c55e' : '#ef4444' }}>
+                    {periodChange > 0 ? '+' : ''}{periodChange.toFixed(1)}% {t('변화', '変化')}
                   </span>
                 </div>
               </motion.div>
@@ -422,14 +372,16 @@ export function TitleAnalysis() {
     >
       {/* Header */}
       <div className="flex items-center gap-3 mb-8">
-        <div
-          className="w-11 h-11 rounded-xl flex items-center justify-center page-icon-glow"
-        >
+        <div className="w-11 h-11 rounded-xl flex items-center justify-center page-icon-glow">
           <BookOpen size={20} color="white" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>Title Analysis</h1>
-          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>作品別の売上分析・トレンド</p>
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
+            {t('작품 분석', 'タイトル分析')}
+          </h1>
+          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+            {t('작품별 매출 분석 및 트렌드', '作品別の売上分析・トレンド')}
+          </p>
         </div>
       </div>
 
@@ -445,7 +397,7 @@ export function TitleAnalysis() {
           <Search size={18} color="var(--color-text-muted)" />
           <input
             type="text"
-            placeholder="タイトル名で検索 (JP / KR)..."
+            placeholder={t('작품명으로 검색 (JP / KR)...', 'タイトル名で検索 (JP / KR)...')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="flex-1 bg-transparent outline-none text-sm"
@@ -453,7 +405,7 @@ export function TitleAnalysis() {
           />
           {searchQuery && (
             <button onClick={() => setSearchQuery('')} className="text-xs cursor-pointer" style={{ color: 'var(--color-text-secondary)' }}>
-              クリア
+              {t('초기화', 'クリア')}
             </button>
           )}
         </div>
@@ -461,7 +413,7 @@ export function TitleAnalysis() {
 
       {/* Results count */}
       <p className="text-xs mb-4" style={{ color: 'var(--color-text-muted)' }}>
-        {filteredTitles.length} タイトル {searchQuery && `(「${searchQuery}」で検索)`}
+        {filteredTitles.length} {t('개 작품', 'タイトル')} {searchQuery && `(\"${searchQuery}\")`}
       </p>
 
       {/* Title list */}
@@ -471,50 +423,50 @@ export function TitleAnalysis() {
         <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-3">
           {filteredTitles.slice(0, 50).map((title) => (
             <motion.div
-              key={title.titleJP}
+              key={title.title_jp}
               variants={cardVariants}
               whileHover={{ scale: 1.01, background: 'var(--color-glass-hover)' }}
               className="rounded-2xl p-5 cursor-pointer transition-all"
               style={GLASS_CARD}
-              onClick={() => loadTitleDetail(title.titleJP)}
+              onClick={() => loadTitleDetail(title.title_jp)}
             >
               <div className="flex items-center gap-4">
                 <div
                   className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold"
                   style={{
-                    background: `${getPlatformColor(title.platforms[0])}20`,
-                    color: getPlatformColor(title.platforms[0]),
+                    background: `${getPlatformColor(title.channels[0])}20`,
+                    color: getPlatformColor(title.channels[0]),
                   }}
                 >
-                  {title.platforms.length}P
+                  {title.channels.length}P
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold truncate" style={{ color: 'var(--color-text-primary)' }}>
-                    {title.titleJP}
+                    {title.title_jp}
                   </p>
-                  {title.titleKR && (
-                    <p className="text-xs truncate" style={{ color: 'var(--color-text-muted)' }}>{title.titleKR}</p>
+                  {title.title_kr && (
+                    <p className="text-xs truncate" style={{ color: 'var(--color-text-muted)' }}>{title.title_kr}</p>
                   )}
                 </div>
                 <div className="flex gap-1 shrink-0">
-                  {title.platforms.slice(0, 3).map((p) => (
+                  {title.channels.slice(0, 3).map((p) => (
                     <PlatformBadge key={p} name={p} showName={false} size="sm" />
                   ))}
-                  {title.platforms.length > 3 && (
+                  {title.channels.length > 3 && (
                     <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ color: 'var(--color-text-muted)' }}>
-                      +{title.platforms.length - 3}
+                      +{title.channels.length - 3}
                     </span>
                   )}
                 </div>
                 <p className="text-sm font-bold shrink-0" style={{ color: 'var(--color-text-primary)' }}>
-                  {formatYen(title.totalSales)}
+                  {formatCurrency(title.total_sales)}
                 </p>
               </div>
             </motion.div>
           ))}
           {filteredTitles.length === 0 && (
             <div className="text-center py-12" style={{ color: 'var(--color-text-muted)' }}>
-              該当するタイトルがありません
+              {t('해당하는 작품이 없습니다', '該当するタイトルがありません')}
             </div>
           )}
         </motion.div>

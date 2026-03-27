@@ -106,6 +106,20 @@ export const PLATFORM_BRANDS: Record<string, PlatformBrand> = {
   },
 };
 
+// Alias map: DB channel names that differ from platformConfig keys
+const CHANNEL_ALIASES: Record<string, string> = {
+  'Piccoma': 'piccoma',
+  'CMOA': 'cmoa',
+  'mechacomic': 'Mechacomic',
+  'renta': 'Renta',
+  'dmm': 'DMM',
+  'u-next': 'U-NEXT',
+};
+
+function resolveChannelName(name: string): string {
+  return CHANNEL_ALIASES[name] ?? name;
+}
+
 const DEFAULT_BRAND: PlatformBrand = {
   color: '#94A3B8',
   bgColor: '#F1F5F9',
@@ -117,15 +131,16 @@ const DEFAULT_BRAND: PlatformBrand = {
 };
 
 export function getPlatformBrand(name: string): PlatformBrand {
-  return PLATFORM_BRANDS[name] ?? { ...DEFAULT_BRAND, icon: name.charAt(0).toUpperCase(), nameKR: name, nameJP: name };
+  const resolved = resolveChannelName(name);
+  return PLATFORM_BRANDS[resolved] ?? { ...DEFAULT_BRAND, icon: name.charAt(0).toUpperCase(), nameKR: name, nameJP: name };
 }
 
 export function getPlatformColor(name: string): string {
-  return PLATFORM_BRANDS[name]?.color ?? '#94A3B8';
+  return PLATFORM_BRANDS[resolveChannelName(name)]?.color ?? '#94A3B8';
 }
 
 export function getPlatformLogo(name: string): string {
-  return PLATFORM_BRANDS[name]?.logo ?? '';
+  return PLATFORM_BRANDS[resolveChannelName(name)]?.logo ?? '';
 }
 
 /** Build a Record<string, string> color map for a set of platform names */

@@ -9,6 +9,7 @@ import { generateDailyRawExcel } from '@/utils/dailyRawExporter';
 import type { DailySale } from '@/types';
 import { getPlatformBrand } from '@/utils/platformConfig';
 import { PlatformBadge } from '@/components/PlatformBadge';
+import { useApp } from '@/context/AppContext';
 import { supabase } from '@/lib/supabase';
 
 // ============================================================
@@ -40,12 +41,6 @@ const cardVariants = {
 // Helpers
 // ============================================================
 
-function formatYen(value: number): string {
-  if (value >= 100_000_000) return `¥${(value / 100_000_000).toFixed(2)}億`;
-  if (value >= 10_000) return `¥${(value / 10_000).toFixed(1)}万`;
-  return `¥${value.toLocaleString()}`;
-}
-
 // ============================================================
 // Loading Skeleton
 // ============================================================
@@ -73,6 +68,8 @@ function TableSkeleton() {
 const PAGE_SIZE = 50;
 
 export function RawData() {
+  const { formatCurrency, t } = useApp();
+
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<DailySale[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -171,8 +168,12 @@ export function RawData() {
           <Database size={20} color="white" />
         </div>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>Raw Data</h1>
-          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>売上データ閲覧・エクスポート</p>
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
+            {t('원본 데이터', 'Raw Data')}
+          </h1>
+          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+            {t('매출 데이터 열람 및 내보내기', '売上データ閲覧・エクスポート')}
+          </p>
         </div>
         <motion.button
           whileHover={{ scale: 1.04 }}
@@ -281,12 +282,12 @@ export function RawData() {
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--color-table-border)' }}>
                   {[
-                    { key: 'sale_date', label: '日付', align: 'left' as const },
-                    { key: 'title_jp', label: 'タイトル(JP)', align: 'left' as const },
-                    { key: 'title_kr', label: 'タイトル(KR)', align: 'left' as const },
+                    { key: 'sale_date', label: t('날짜', '日付'), align: 'left' as const },
+                    { key: 'title_jp', label: t('작품(JP)', 'タイトル(JP)'), align: 'left' as const },
+                    { key: 'title_kr', label: t('작품(KR)', 'タイトル(KR)'), align: 'left' as const },
                     { key: 'channel', label: 'PF', align: 'left' as const },
-                    { key: 'sales_amount', label: '売上', align: 'right' as const },
-                    { key: 'data_source', label: 'ソース', align: 'center' as const },
+                    { key: 'sales_amount', label: t('매출', '売上'), align: 'right' as const },
+                    { key: 'data_source', label: t('소스', 'ソース'), align: 'center' as const },
                   ].map((col) => (
                     <th
                       key={col.key}
@@ -316,7 +317,7 @@ export function RawData() {
                         <PlatformBadge name={row.channel} showName={false} size="sm" />
                       </td>
                       <td className="py-3 px-2 text-right font-mono font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                        {formatYen(row.sales_amount)}
+                        {formatCurrency(row.sales_amount)}
                       </td>
                       <td className="py-3 px-2 text-center">
                         <span

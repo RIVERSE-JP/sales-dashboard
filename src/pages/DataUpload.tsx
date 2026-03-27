@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, FileSpreadsheet, CheckCircle, AlertCircle, Loader2, Trash2, Clock } from 'lucide-react';
 import { supabase, upsertDailySales } from '@/lib/supabase';
+import { useApp } from '@/context/AppContext';
 import type { UploadLog } from '@/types';
 import ExcelJS from 'exceljs';
 
@@ -181,6 +182,8 @@ async function parseSokuhochi(buffer: ArrayBuffer): Promise<ParsedRow[]> {
 // ============================================================
 
 export function DataUpload() {
+  const { t } = useApp();
+
   const [status, setStatus] = useState<UploadStatus>('idle');
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
   const [fileName, setFileName] = useState('');
@@ -312,8 +315,12 @@ export function DataUpload() {
           <Upload size={20} color="white" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>Data Upload</h1>
-          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>Excelファイルからデータをアップロード</p>
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
+            {t('데이터 업로드', 'データアップロード')}
+          </h1>
+          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+            {t('엑셀 파일로 데이터 업로드', 'Excelファイルからデータをアップロード')}
+          </p>
         </div>
       </div>
 

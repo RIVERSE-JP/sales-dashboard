@@ -2,13 +2,14 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip,
-  Legend, AreaChart, Area,
+  Legend, AreaChart, Area, ResponsiveContainer,
 } from 'recharts';
 import {
   Rocket, Search, X, ChevronDown, ChevronUp, Check, BarChart3,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PlatformBadge } from '@/components/PlatformBadge';
+import { useApp } from '@/context/AppContext';
 import { format, parseISO, addDays } from 'date-fns';
 
 // ============================================================
@@ -91,12 +92,6 @@ const CHART_COLORS = [
 // Helpers
 // ============================================================
 
-function formatYen(value: number): string {
-  if (value >= 100_000_000) return `¥${(value / 100_000_000).toFixed(2)}億`;
-  if (value >= 10_000) return `¥${(value / 10_000).toFixed(1)}万`;
-  return `¥${value.toLocaleString()}`;
-}
-
 function formatYenShort(value: number): string {
   if (value >= 100_000_000) return `${(value / 100_000_000).toFixed(1)}億`;
   if (value >= 10_000) return `${(value / 10_000).toFixed(0)}万`;
@@ -134,6 +129,8 @@ function Skeleton() {
 // ============================================================
 
 export function InitialSales() {
+  const { formatCurrency, t } = useApp();
+
   const [loading, setLoading] = useState(true);
   const [titles, setTitles] = useState<TitleSummary[]>([]);
   const [search, setSearch] = useState('');
@@ -348,8 +345,8 @@ export function InitialSales() {
           <Rocket size={22} className="text-white" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">초동매출 비교</h1>
-          <p className="text-sm text-[var(--color-text-secondary)]">런칭일 기준 4주간 매출 비교 분석</p>
+          <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">{t('초동매출 비교', '初動売上比較')}</h1>
+          <p className="text-sm text-[var(--color-text-secondary)]">{t('런칭일 기준 4주간 매출 비교 분석', 'ローンチ日基準4週間売上比較分析')}</p>
         </div>
       </motion.div>
 
@@ -470,7 +467,7 @@ export function InitialSales() {
                       {format(parseISO(t.firstDate), 'yyyy/MM/dd')}
                     </td>
                     <td className="px-4 py-2.5 text-right text-[var(--color-text-primary)] text-xs font-medium">
-                      {formatYen(t.totalSales)}
+                      {formatCurrency(t.totalSales)}
                     </td>
                     <td className="px-4 py-2.5 text-right text-[var(--color-text-secondary)] text-xs">
                       {t.dayCount}일
@@ -558,71 +555,13 @@ export function InitialSales() {
               <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
                 {viewMode === 'daily' ? '일별 매출 비교 (런칭일 기준 D1~D28)' : '주별 매출 비교 (W1~W4)'}
               </h3>
-              <div style={{ width: '100%', overflowX: 'auto' }}>
-                  {chartType === 'area' ? (
-                    <AreaChart data={chartData} width={600} height={350}>
-                      <defs>
-                        {selectedData.map((sel, i) => (
-                          <linearGradient key={i} id={`grad-${i}`} x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor={sel.color} stopOpacity={0.3} />
-                            <stop offset="95%" stopColor={sel.color} stopOpacity={0} />
-                          </linearGradient>
-                        ))}
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
-                      <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatYenShort} width={60} />
-                      <ReTooltip {...darkTooltipStyle} formatter={(v: unknown) => [formatYen(Number(v ?? 0)), '']} />
-                      <Legend wrapperStyle={{ fontSize: 11, color: 'var(--color-text-secondary)' }} />
-                      {selectedData.map((sel, i) => {
-                        const key = sel.title_kr || sel.title_jp.slice(0, 12);
-                        return (
-                          <Area
-                            key={key}
-                            type="monotone"
-                            dataKey={key}
-                            stroke={sel.color}
-                            strokeWidth={2}
-                            fill={`url(#grad-${i})`}
-                          />
-                        );
-                      })}
-                    </AreaChart>
-                  ) : (
-                    <LineChart data={chartData} width={600} height={350}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
-                      <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatYenShort} width={60} />
-                      <ReTooltip {...darkTooltipStyle} formatter={(v: unknown) => [formatYen(Number(v ?? 0)), '']} />
-                      <Legend wrapperStyle={{ fontSize: 11, color: 'var(--color-text-secondary)' }} />
-                      {selectedData.map((sel) => {
-                        const key = sel.title_kr || sel.title_jp.slice(0, 12);
-                        return (
-                          <Line
-                            key={key}
-                            type="monotone"
-                            dataKey={key}
-                            stroke={sel.color}
-                            strokeWidth={2.5}
-                            dot={{ r: 3, fill: sel.color }}
-                            activeDot={{ r: 5, stroke: sel.color, strokeWidth: 2, fill: '#0a0a0f' }}
-                          />
-                        );
-                      })}
-                    </LineChart>
-                  )}
-              </div>
-            </div>
-
-            {/* Cumulative Chart */}
-            <div className="rounded-2xl p-6" style={GLASS_CARD}>
-              <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">누적 매출 비교 (D1~D28)</h3>
-              <div style={{ width: '100%', overflowX: 'auto' }}>
-                  <AreaChart data={cumulativeData} width={600} height={320}>
+              {chartType === 'area' ? (
+                <ResponsiveContainer width="100%" height={350}>
+                  <AreaChart data={chartData}>
                     <defs>
                       {selectedData.map((sel, i) => (
-                        <linearGradient key={i} id={`cumGrad-${i}`} x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor={sel.color} stopOpacity={0.2} />
+                        <linearGradient key={i} id={`grad-${i}`} x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor={sel.color} stopOpacity={0.3} />
                           <stop offset="95%" stopColor={sel.color} stopOpacity={0} />
                         </linearGradient>
                       ))}
@@ -630,7 +569,7 @@ export function InitialSales() {
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
                     <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatYenShort} width={60} />
-                    <ReTooltip {...darkTooltipStyle} formatter={(v: unknown) => [formatYen(Number(v ?? 0)), '']} />
+                    <ReTooltip {...darkTooltipStyle} formatter={(v: unknown) => [formatCurrency(Number(v ?? 0)), '']} />
                     <Legend wrapperStyle={{ fontSize: 11, color: 'var(--color-text-secondary)' }} />
                     {selectedData.map((sel, i) => {
                       const key = sel.title_kr || sel.title_jp.slice(0, 12);
@@ -641,12 +580,72 @@ export function InitialSales() {
                           dataKey={key}
                           stroke={sel.color}
                           strokeWidth={2}
-                          fill={`url(#cumGrad-${i})`}
+                          fill={`url(#grad-${i})`}
                         />
                       );
                     })}
                   </AreaChart>
-              </div>
+                </ResponsiveContainer>
+              ) : (
+                <ResponsiveContainer width="100%" height={350}>
+                  <LineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
+                    <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatYenShort} width={60} />
+                    <ReTooltip {...darkTooltipStyle} formatter={(v: unknown) => [formatCurrency(Number(v ?? 0)), '']} />
+                    <Legend wrapperStyle={{ fontSize: 11, color: 'var(--color-text-secondary)' }} />
+                    {selectedData.map((sel) => {
+                      const key = sel.title_kr || sel.title_jp.slice(0, 12);
+                      return (
+                        <Line
+                          key={key}
+                          type="monotone"
+                          dataKey={key}
+                          stroke={sel.color}
+                          strokeWidth={2.5}
+                          dot={{ r: 3, fill: sel.color }}
+                          activeDot={{ r: 5, stroke: sel.color, strokeWidth: 2, fill: '#0a0a0f' }}
+                        />
+                      );
+                    })}
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+
+            {/* Cumulative Chart */}
+            <div className="rounded-2xl p-6" style={GLASS_CARD}>
+              <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">누적 매출 비교 (D1~D28)</h3>
+              <ResponsiveContainer width="100%" height={320}>
+                <AreaChart data={cumulativeData}>
+                  <defs>
+                    {selectedData.map((sel, i) => (
+                      <linearGradient key={i} id={`cumGrad-${i}`} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={sel.color} stopOpacity={0.2} />
+                        <stop offset="95%" stopColor={sel.color} stopOpacity={0} />
+                      </linearGradient>
+                    ))}
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
+                  <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatYenShort} width={60} />
+                  <ReTooltip {...darkTooltipStyle} formatter={(v: unknown) => [formatCurrency(Number(v ?? 0)), '']} />
+                  <Legend wrapperStyle={{ fontSize: 11, color: 'var(--color-text-secondary)' }} />
+                  {selectedData.map((sel, i) => {
+                    const key = sel.title_kr || sel.title_jp.slice(0, 12);
+                    return (
+                      <Area
+                        key={key}
+                        type="monotone"
+                        dataKey={key}
+                        stroke={sel.color}
+                        strokeWidth={2}
+                        fill={`url(#cumGrad-${i})`}
+                      />
+                    );
+                  })}
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
 
             {/* Summary Table */}
@@ -679,21 +678,21 @@ export function InitialSales() {
                           </div>
                         </td>
                         <td className="px-3 py-2.5 text-right text-xs text-[var(--color-text-primary)]">
-                          {formatYen(sel.dailyData[0]?.sales ?? 0)}
+                          {formatCurrency(sel.dailyData[0]?.sales ?? 0)}
                         </td>
                         <td className="px-3 py-2.5 text-right text-xs text-[var(--color-text-primary)]">
-                          {formatYen(sel.dailyData.slice(0, 3).reduce((s, d) => s + d.sales, 0))}
+                          {formatCurrency(sel.dailyData.slice(0, 3).reduce((s, d) => s + d.sales, 0))}
                         </td>
                         <td className="px-3 py-2.5 text-right text-xs text-[var(--color-text-primary)]">
-                          {formatYen(sel.dailyData.slice(0, 7).reduce((s, d) => s + d.sales, 0))}
+                          {formatCurrency(sel.dailyData.slice(0, 7).reduce((s, d) => s + d.sales, 0))}
                         </td>
                         {sel.weeklyData.map((w) => (
                           <td key={w.week} className="px-3 py-2.5 text-right text-xs text-[var(--color-text-primary)]">
-                            {formatYen(w.sales)}
+                            {formatCurrency(w.sales)}
                           </td>
                         ))}
                         <td className="px-3 py-2.5 text-right text-xs font-bold" style={{ color: sel.color }}>
-                          {formatYen(sel.total28d)}
+                          {formatCurrency(sel.total28d)}
                         </td>
                       </tr>
                     ))}
