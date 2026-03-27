@@ -15,34 +15,34 @@ export interface PlatformBrand {
 
 export const PLATFORM_BRANDS: Record<string, PlatformBrand> = {
   piccoma: {
-    color: '#6B3FA0',
-    bgColor: '#F3ECFC',
-    borderColor: '#D8C4F0',
+    color: '#F2C811',        // 옐로우 (말풍선)
+    bgColor: '#FFF9E0',
+    borderColor: '#F5E08A',
     icon: 'P',
     logo: '/icons/piccoma.png',
     nameKR: '피코마',
     nameJP: 'ピッコマ',
   },
   Mechacomic: {
-    color: '#E91E8C',
-    bgColor: '#FDE7F5',
-    borderColor: '#F5B0DC',
+    color: '#2DC8C8',        // 터콰이즈 (배경)
+    bgColor: '#E6F9F9',
+    borderColor: '#A3E8E8',
     icon: 'MC',
     logo: '/icons/mechacomic.png',
     nameKR: '메차코믹',
-    nameJP: 'メチャコミ',
+    nameJP: 'めちゃコミ',
   },
   cmoa: {
-    color: '#0068B7',
-    bgColor: '#E6F0FA',
-    borderColor: '#B0D4F1',
+    color: '#F27D1E',        // 오렌지 (캐릭터+텍스트)
+    bgColor: '#FFF2E6',
+    borderColor: '#FDC99B',
     icon: 'C',
     logo: '/icons/cmoa.png',
     nameKR: 'CMOA',
     nameJP: 'コミックシーモア',
   },
   'LINEマンガ': {
-    color: '#06C755',
+    color: '#06C755',        // LINE 그린
     bgColor: '#E6F9ED',
     borderColor: '#A3E4BB',
     icon: 'L',
@@ -51,7 +51,7 @@ export const PLATFORM_BRANDS: Record<string, PlatformBrand> = {
     nameJP: 'LINEマンガ',
   },
   ebookjapan: {
-    color: '#E8546D',
+    color: '#E8546D',        // 코랄 레드 (책 아이콘)
     bgColor: '#FDECEF',
     borderColor: '#F5B3BF',
     icon: 'eB',
@@ -60,7 +60,7 @@ export const PLATFORM_BRANDS: Record<string, PlatformBrand> = {
     nameJP: 'ebookjapan',
   },
   'DMM（FANZA）': {
-    color: '#D4272E',
+    color: '#D4272E',        // 레드 (FANZA 로고)
     bgColor: '#FDE8E9',
     borderColor: '#F5AAAD',
     icon: 'FZ',
@@ -69,34 +69,34 @@ export const PLATFORM_BRANDS: Record<string, PlatformBrand> = {
     nameJP: 'FANZAブックス',
   },
   Renta: {
-    color: '#FF6633',
-    bgColor: '#FFF0EB',
-    borderColor: '#FFBFA8',
+    color: '#8DC21F',        // 라임 그린 (배경)
+    bgColor: '#F2FAE6',
+    borderColor: '#C8E89B',
     icon: 'R',
     logo: '/icons/renta.png',
     nameKR: 'Renta',
     nameJP: 'Renta!',
   },
   'U-NEXT': {
-    color: '#00BED6',
-    bgColor: '#E6F9FB',
-    borderColor: '#A3E5ED',
+    color: '#232323',        // 블랙 (배경)
+    bgColor: '#F0F0F0',
+    borderColor: '#C0C0C0',
     icon: 'U',
     logo: '/icons/unext.png',
     nameKR: 'U-NEXT',
     nameJP: 'U-NEXT',
   },
   DMM: {
-    color: '#232323',
-    bgColor: '#F0F0F0',
-    borderColor: '#C0C0C0',
+    color: '#E8820E',        // 오렌지 (밑줄 악센트)
+    bgColor: '#FFF4E6',
+    borderColor: '#FDC99B',
     icon: 'D',
     logo: '/icons/dmm.png',
     nameKR: 'DMM',
     nameJP: 'DMMブックス',
   },
   'まんが王国': {
-    color: '#F5921B',
+    color: '#F5921B',        // 오렌지 (책 아이콘)
     bgColor: '#FFF4E5',
     borderColor: '#FDD19B',
     icon: '王',
