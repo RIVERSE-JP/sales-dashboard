@@ -59,14 +59,14 @@ const GLASS_CARD = {
 
 const containerVariants = {
   hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.08 } },
+  show: { opacity: 1, transition: { staggerChildren: 0.03 } },
 };
 
 const cardVariants = {
-  hidden: { opacity: 0, y: 24, scale: 0.96 },
+  hidden: { opacity: 0, y: 12 },
   show: {
-    opacity: 1, y: 0, scale: 1,
-    transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
+    opacity: 1, y: 0,
+    transition: { duration: 0.2 },
   },
 };
 
@@ -219,19 +219,16 @@ export function InitialSales() {
     });
   }, []);
 
-  // ---- Load 28-day curves for selected titles ----
+  // ---- Load 28-day curves for selected titles (parallel) ----
   const loadCurves = useCallback(async () => {
     if (checkedTitles.size === 0) return;
     setLoadingCurves(true);
 
-    const results: SelectedTitle[] = [];
-    let colorIdx = 0;
-
-    for (const titleJP of checkedTitles) {
-      // Get 28-day sales via RPC (server-side aggregation)
+    const titleList = Array.from(checkedTitles);
+    const promises = titleList.map(async (titleJP, idx) => {
       const { data } = await supabase.rpc('get_title_daily_sales', { p_title_jp: titleJP });
 
-      if (!data || data.length === 0) continue;
+      if (!data || data.length === 0) return null;
 
       const titleInfo = titles.find((t) => t.title_jp === titleJP);
       const firstDate = parseISO((data as Array<{ sale_date: string; daily_total: number }>)[0].sale_date);
@@ -266,15 +263,20 @@ export function InitialSales() {
 
       const total28d = dailyData.reduce((s, p) => s + p.sales, 0);
 
-      results.push({
+      return {
         title_jp: titleJP,
         title_kr: titleInfo?.title_kr ?? null,
-        color: CHART_COLORS[colorIdx % CHART_COLORS.length],
+        color: CHART_COLORS[idx % CHART_COLORS.length],
         dailyData,
         weeklyData,
         total28d,
-      });
-      colorIdx++;
+      } as SelectedTitle;
+    });
+
+    const settled = await Promise.allSettled(promises);
+    const results: SelectedTitle[] = [];
+    for (const r of settled) {
+      if (r.status === 'fulfilled' && r.value) results.push(r.value);
     }
 
     setSelectedData(results);

@@ -7,6 +7,23 @@ const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ============================================================
+// Simple TTL cache for RPC results
+// ============================================================
+
+const cache = new Map<string, { data: unknown; expiry: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+function getCached<T>(key: string): T | null {
+  const entry = cache.get(key);
+  if (entry && Date.now() < entry.expiry) return entry.data as T;
+  return null;
+}
+
+function setCache(key: string, data: unknown) {
+  cache.set(key, { data, expiry: Date.now() + CACHE_TTL });
+}
+
+// ============================================================
 // Platform & Genre lookups (cached)
 // ============================================================
 
@@ -131,60 +148,87 @@ export async function fetchDashboardSummary() {
 // ============================================================
 
 export async function fetchDashboardKPIs() {
+  const cached = getCached('dashboard_kpis');
+  if (cached) return cached;
   const { data, error } = await supabase.rpc('get_dashboard_kpis');
   if (error) { console.error('RPC error:', error.message); return data ?? null; }
+  setCache('dashboard_kpis', data);
   return data;
 }
 
 export async function fetchMonthlyTrend() {
+  const cached = getCached('monthly_trend');
+  if (cached) return cached;
   const { data, error } = await supabase.rpc('get_monthly_sales_trend');
   if (error) { console.error('RPC error:', error.message); return data ?? null; }
+  setCache('monthly_trend', data ?? []);
   return data ?? [];
 }
 
 export async function fetchPlatformSummary() {
+  const cached = getCached('platform_summary');
+  if (cached) return cached;
   const { data, error } = await supabase.rpc('get_platform_sales_summary');
   if (error) { console.error('RPC error:', error.message); return data ?? null; }
+  setCache('platform_summary', data ?? []);
   return data ?? [];
 }
 
 export async function fetchTopTitles(limit = 20, month?: string) {
+  const key = `top_titles_${limit}_${month ?? 'all'}`;
+  const cached = getCached(key);
+  if (cached) return cached;
   const { data, error } = await supabase.rpc('get_top_titles', {
     p_limit: limit,
     p_month: month || null,
   });
   if (error) { console.error('RPC error:', error.message); return data ?? null; }
+  setCache(key, data ?? []);
   return data ?? [];
 }
 
 export async function fetchPlatformDetail(channel: string) {
+  const key = `platform_detail_${channel}`;
+  const cached = getCached(key);
+  if (cached) return cached;
   const { data, error } = await supabase.rpc('get_platform_detail', {
     p_channel: channel,
   });
   if (error) { console.error('RPC error:', error.message); return data ?? null; }
+  setCache(key, data);
   return data;
 }
 
 export async function fetchTitleDetail(titleJP: string) {
+  const key = `title_detail_${titleJP}`;
+  const cached = getCached(key);
+  if (cached) return cached;
   const { data, error } = await supabase.rpc('get_title_detail', {
     p_title_jp: titleJP,
   });
   if (error) { console.error('RPC error:', error.message); return data ?? null; }
+  setCache(key, data);
   return data;
 }
 
 export async function fetchGrowthAlerts() {
+  const cached = getCached('growth_alerts');
+  if (cached) return cached;
   const { data, error } = await supabase.rpc('get_growth_alerts');
   if (error) {
     console.warn('get_growth_alerts failed (non-critical):', error.message);
     return [];
   }
+  setCache('growth_alerts', data ?? []);
   return data ?? [];
 }
 
 export async function fetchTitleSummaries() {
+  const cached = getCached('title_summaries');
+  if (cached) return cached;
   const { data, error } = await supabase.rpc('get_title_summaries');
   if (error) { console.error('RPC error:', error.message); return data ?? null; }
+  setCache('title_summaries', data ?? []);
   return data ?? [];
 }
 

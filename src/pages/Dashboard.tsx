@@ -107,14 +107,14 @@ const GLASS_CARD_HOVER = {
 
 const containerVariants = {
   hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.1 } },
+  show: { opacity: 1, transition: { staggerChildren: 0.03 } },
 };
 
 const cardVariants = {
-  hidden: { opacity: 0, y: 24, scale: 0.96 },
+  hidden: { opacity: 0, y: 12 },
   show: {
-    opacity: 1, y: 0, scale: 1,
-    transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
+    opacity: 1, y: 0,
+    transition: { duration: 0.2 },
   },
 };
 
@@ -283,34 +283,38 @@ export function Dashboard() {
     setLoading(true);
     setError(null);
     try {
-      // Sequential calls to avoid Supabase free-tier concurrent connection limits
-      const kpiData = await fetchDashboardKPIs();
-      setKpis(kpiData as KPIData);
-      setLoading(false); // Show KPIs immediately
+      // Batch 1: Critical KPIs (fastest, show immediately)
+      const [kpiResult, trendResult] = await Promise.allSettled([
+        fetchDashboardKPIs(),
+        fetchMonthlyTrend(),
+      ]);
 
-      const trendData = await fetchMonthlyTrend();
-      setMonthlyTrend((trendData as MonthlyTrendRow[]) ?? []);
+      if (kpiResult.status === 'fulfilled') setKpis(kpiResult.value as KPIData);
+      if (trendResult.status === 'fulfilled') setMonthlyTrend((trendResult.value as MonthlyTrendRow[]) ?? []);
+      setLoading(false); // Show KPIs + trend immediately
 
-      const platformData = await fetchPlatformSummary();
-      setPlatformSummary((platformData as PlatformSummaryRow[]) ?? []);
+      // Batch 2: Secondary data (load in background)
+      const [platformResult, titleResult, alertResult] = await Promise.allSettled([
+        fetchPlatformSummary(),
+        fetchTopTitles(20),
+        fetchGrowthAlerts(),
+      ]);
 
-      const titleData = await fetchTopTitles(20);
-      setTopTitles((titleData as TopTitleRow[]) ?? []);
-
-      // Growth alerts - non-critical, load last
-      const alertData = await fetchGrowthAlerts();
-      setGrowthAlerts(((alertData as Array<Record<string, unknown>>) ?? []).map((r) => ({
-        title_jp: String(r.out_title_jp ?? r.title_jp ?? ''),
-        title_kr: r.out_title_kr != null ? String(r.out_title_kr) : r.title_kr != null ? String(r.title_kr) : null,
-        this_month: Number(r.out_this_month ?? r.this_month ?? 0),
-        last_month: Number(r.out_last_month ?? r.last_month ?? 0),
-        growth_pct: Number(r.out_growth_pct ?? r.growth_pct ?? 0),
-      })));
+      if (platformResult.status === 'fulfilled') setPlatformSummary((platformResult.value as PlatformSummaryRow[]) ?? []);
+      if (titleResult.status === 'fulfilled') setTopTitles((titleResult.value as TopTitleRow[]) ?? []);
+      if (alertResult.status === 'fulfilled') {
+        const alertData = alertResult.value;
+        setGrowthAlerts(((alertData as Array<Record<string, unknown>>) ?? []).map((r) => ({
+          title_jp: String(r.out_title_jp ?? r.title_jp ?? ''),
+          title_kr: r.out_title_kr != null ? String(r.out_title_kr) : r.title_kr != null ? String(r.title_kr) : null,
+          this_month: Number(r.out_this_month ?? r.this_month ?? 0),
+          last_month: Number(r.out_last_month ?? r.last_month ?? 0),
+          growth_pct: Number(r.out_growth_pct ?? r.growth_pct ?? 0),
+        })));
+      }
     } catch (err: unknown) {
       console.error('Dashboard data load error:', err);
       setError(err instanceof Error ? err.message : 'Failed to load data');
-    } finally {
-      setLoading(false);
     }
   }, []);
 
@@ -360,9 +364,9 @@ export function Dashboard() {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.15 }}
     >
       {/* ---- Header ---- */}
       <div className="flex items-center gap-4 mb-8">
