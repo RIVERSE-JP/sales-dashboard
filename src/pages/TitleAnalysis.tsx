@@ -1,865 +1,528 @@
-import { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Search, TrendingUp, TrendingDown, Minus, BarChart3, Filter, Zap } from 'lucide-react';
-import { InitialSalesView } from './InitialSalesView';
-import { useDataLoader, useDailySales } from '@/hooks/useDataLoader';
-import { useAppState } from '@/hooks/useAppState';
-import { t } from '@/i18n';
-import { formatSales, formatSalesShort, formatPercent, getChangeColor } from '@/utils/formatters';
-import { getPlatformBrand, buildPlatformColorMap } from '@/utils/platformConfig';
-import { PlatformIcon, PlatformBadge } from '@/components/PlatformIcon';
-import { Card } from '@/components/ui/card';
-import { ChartCard } from '@/components/ui/chart-card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { DashboardGrid } from '@/components/layout/DashboardGrid';
-import { BilingualTitle } from '@/components/BilingualTitle';
-import { ContentTypeBadge } from '@/components/ContentTypeBadge';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import {
-  Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
-} from '@/components/ui/table';
-import { CHART_COLORS, tooltipStyle, staggerContainer, staggerItem } from '@/lib/constants';
-import {
-  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip,
+  ResponsiveContainer, BarChart, Bar, Cell,
 } from 'recharts';
+import { BookOpen, Search, ArrowLeft, TrendingUp } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import type { DailySale, TimeGranularity } from '@/types';
+import { getPlatformColor, PLATFORM_BRANDS } from '@/utils/platformConfig';
+import { startOfWeek, format, parseISO } from 'date-fns';
 
-// ---------------------------------------------------------------------------
-// Local animation variant (unique to this page) - uses "show" to match constants
-// ---------------------------------------------------------------------------
-const detailReveal = {
-  hidden: { opacity: 0, x: 20 },
-  show: { opacity: 1, x: 0, transition: { duration: 0.4, ease: 'easeOut' as const } },
+// ============================================================
+// Shared styles & animation variants (mirrors Dashboard.tsx)
+// ============================================================
+
+const GLASS_CARD = {
+  background: 'rgba(255, 255, 255, 0.03)',
+  backdropFilter: 'blur(12px)',
+  WebkitBackdropFilter: 'blur(12px)',
+  border: '1px solid rgba(255, 255, 255, 0.06)',
+  borderRadius: '16px',
+} as const;
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.1 } },
 };
 
-type SortKey = 'sales' | 'platforms' | 'name';
+const cardVariants = {
+  hidden: { opacity: 0, y: 24, scale: 0.96 },
+  show: {
+    opacity: 1, y: 0, scale: 1,
+    transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
+  },
+};
 
-// ---------------------------------------------------------------------------
-// Loading skeleton
-// ---------------------------------------------------------------------------
-function LoadingSkeleton() {
+const darkTooltipStyle = {
+  contentStyle: {
+    backgroundColor: 'rgba(15, 15, 25, 0.95)',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    borderRadius: '12px',
+    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+    padding: '12px 16px',
+  },
+  labelStyle: { color: '#a0a0b8', fontWeight: 600, fontSize: '12px', marginBottom: '4px' },
+  itemStyle: { color: '#e0e0f0', fontWeight: 700, fontSize: '13px' },
+};
+
+// ============================================================
+// Helpers
+// ============================================================
+
+function formatYen(value: number): string {
+  if (value >= 100_000_000) return `¥${(value / 100_000_000).toFixed(2)}億`;
+  if (value >= 10_000) return `¥${(value / 10_000).toFixed(1)}万`;
+  return `¥${value.toLocaleString()}`;
+}
+
+function formatYenShort(value: number): string {
+  if (value >= 100_000_000) return `${(value / 100_000_000).toFixed(1)}億`;
+  if (value >= 10_000) return `${(value / 10_000).toFixed(0)}万`;
+  return value.toLocaleString();
+}
+
+interface TitleSummary {
+  titleJP: string;
+  titleKR: string | null;
+  totalSales: number;
+  platforms: string[];
+  salesCount: number;
+}
+
+interface TimeSeriesPoint {
+  period: string;
+  label: string;
+  sales: number;
+}
+
+interface PlatformBreakdown {
+  platform: string;
+  sales: number;
+  color: string;
+}
+
+// ============================================================
+// Loading Skeletons
+// ============================================================
+
+function ListSkeleton() {
   return (
-    <div className="space-y-6">
-      <Skeleton className="h-10 w-64" /> {/* Title */}
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Left panel */}
-        <Card variant="glass" className="w-full lg:w-80 p-4 space-y-3">
-          <Skeleton className="h-8 w-full" /> {/* Search */}
-          <div className="flex gap-1.5">
-            {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-7 w-16" />)}
-          </div>
-          {[...Array(8)].map((_, i) => (
-            <div key={i} className="space-y-2 py-2">
-              <div className="flex justify-between"><Skeleton className="h-4 w-32" /><Skeleton className="h-4 w-20" /></div>
-              <div className="flex gap-1">{[...Array(3)].map((_, j) => <Skeleton key={j} className="h-5 w-5 rounded" />)}</div>
+    <div className="space-y-3">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div key={i} className="rounded-2xl p-5 animate-pulse" style={GLASS_CARD}>
+          <div className="flex items-center gap-4">
+            <div className="h-10 w-10 rounded-xl bg-white/5" />
+            <div className="flex-1">
+              <div className="h-4 w-48 rounded skeleton-shimmer mb-2" />
+              <div className="h-3 w-32 rounded skeleton-shimmer" />
             </div>
-          ))}
-        </Card>
-        {/* Right panel */}
-        <div className="flex-1 space-y-6">
-          <div className="flex justify-between"><Skeleton className="h-8 w-48" /><Skeleton className="h-10 w-36" /></div>
-          <DashboardGrid cols={4}>
-            {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
-          </DashboardGrid>
-          <DashboardGrid cols={2}>
-            {[...Array(2)].map((_, i) => <Skeleton key={i} className="h-72 rounded-xl" />)}
-          </DashboardGrid>
-          <Skeleton className="h-96 rounded-xl" />
+            <div className="h-5 w-24 rounded skeleton-shimmer" />
+          </div>
         </div>
+      ))}
+    </div>
+  );
+}
+
+function ChartSkeleton({ height = 360 }: { height?: number }) {
+  return (
+    <div className="rounded-2xl p-6 animate-pulse" style={{ ...GLASS_CARD, minHeight: height }}>
+      <div className="h-4 w-40 rounded skeleton-shimmer mb-6" />
+      <div className="flex items-end gap-1" style={{ height: height - 100 }}>
+        {Array.from({ length: 20 }).map((_, i) => (
+          <div key={i} className="flex-1 rounded-t bg-white/[0.03]" style={{ height: `${30 + Math.random() * 60}%` }} />
+        ))}
       </div>
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Main component
-// ---------------------------------------------------------------------------
-type MainTab = 'analysis' | 'initial';
+// ============================================================
+// Data aggregation
+// ============================================================
+
+function aggregateTimeSeries(rows: DailySale[], granularity: TimeGranularity): TimeSeriesPoint[] {
+  const map = new Map<string, number>();
+  for (const row of rows) {
+    let key: string;
+    const d = parseISO(row.sale_date);
+    switch (granularity) {
+      case 'daily': key = row.sale_date; break;
+      case 'weekly': key = format(startOfWeek(d, { weekStartsOn: 1 }), 'yyyy-MM-dd'); break;
+      case 'monthly': key = format(d, 'yyyy-MM'); break;
+    }
+    map.set(key, (map.get(key) ?? 0) + row.sales_amount);
+  }
+  return Array.from(map.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([period, sales]) => {
+      let label: string;
+      switch (granularity) {
+        case 'daily': label = format(parseISO(period), 'M/d'); break;
+        case 'weekly': label = format(parseISO(period), 'M/d') + '~'; break;
+        case 'monthly': label = period.slice(0, 7); break;
+      }
+      return { period, label, sales };
+    });
+}
+
+function computePlatformBreakdown(rows: DailySale[]): PlatformBreakdown[] {
+  const map = new Map<string, number>();
+  for (const row of rows) {
+    map.set(row.channel, (map.get(row.channel) ?? 0) + row.sales_amount);
+  }
+  return Array.from(map.entries())
+    .sort(([, a], [, b]) => b - a)
+    .map(([platform, sales]) => ({ platform, sales, color: getPlatformColor(platform) }));
+}
+
+// ============================================================
+// Main Component
+// ============================================================
 
 export function TitleAnalysis() {
-  const { language, currency, exchangeRate } = useAppState();
-  const data = useDataLoader();
-  const { dailySales, loading: dailyLoading } = useDailySales(data);
-
-  const [mainTab, setMainTab] = useState<MainTab>('analysis');
-  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [titles, setTitles] = useState<TitleSummary[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedTitle, setSelectedTitle] = useState<string | null>(null);
-  const [sortKey, setSortKey] = useState<SortKey>('sales');
-  // Period filter for detail panel
-  const [periodStart, setPeriodStart] = useState('');
-  const [periodEnd, setPeriodEnd] = useState('');
-  const [platformFilter, setPlatformFilter] = useState('');
+  const [titleSales, setTitleSales] = useState<DailySale[]>([]);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [granularity, setGranularity] = useState<TimeGranularity>('daily');
 
-  // Build platform -> color map (consistent across the page)
-  const platformColorMap = useMemo(() => {
-    const allPlatforms = new Set<string>();
-    data.titleSummary.forEach(ts => ts.platforms.forEach(p => allPlatforms.add(p.name)));
-    return buildPlatformColorMap(allPlatforms);
-  }, [data.titleSummary]);
+  // Fetch all sales to build title summaries
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      const { data } = await supabase
+        .from('daily_sales_v2')
+        .select('title_jp, title_kr, channel, sales_amount');
 
-  // Growth for every title (last month vs previous month)
-  const titleGrowths = useMemo(() => {
-    const map: Record<string, number> = {};
-    data.titleSummary.forEach(ts => {
-      const trend = [...ts.monthlyTrend].sort((a, b) => a.month.localeCompare(b.month));
-      if (trend.length < 2) { map[ts.titleKR] = 0; return; }
-      const last = trend[trend.length - 1].sales;
-      const prev = trend[trend.length - 2].sales;
-      map[ts.titleKR] = prev > 0 ? ((last - prev) / prev) * 100 : 0;
-    });
-    return map;
-  }, [data.titleSummary]);
+      if (data) {
+        const map = new Map<string, TitleSummary>();
+        for (const row of data as Array<{ title_jp: string; title_kr: string | null; channel: string; sales_amount: number }>) {
+          const existing = map.get(row.title_jp);
+          if (existing) {
+            existing.totalSales += row.sales_amount;
+            existing.salesCount += 1;
+            if (!existing.platforms.includes(row.channel)) existing.platforms.push(row.channel);
+            if (row.title_kr && !existing.titleKR) existing.titleKR = row.title_kr;
+          } else {
+            map.set(row.title_jp, {
+              titleJP: row.title_jp,
+              titleKR: row.title_kr,
+              totalSales: row.sales_amount,
+              platforms: [row.channel],
+              salesCount: 1,
+            });
+          }
+        }
+        setTitles(Array.from(map.values()).sort((a, b) => b.totalSales - a.totalSales));
+      }
+      setLoading(false);
+    }
+    load();
+  }, []);
 
-  // Filter by search
+  // Fetch detail data when a title is selected
+  const loadTitleDetail = useCallback(async (titleJP: string) => {
+    setDetailLoading(true);
+    setSelectedTitle(titleJP);
+    const { data } = await supabase
+      .from('daily_sales_v2')
+      .select('*')
+      .eq('title_jp', titleJP)
+      .order('sale_date', { ascending: true });
+    setTitleSales((data as DailySale[] | null) ?? []);
+    setDetailLoading(false);
+  }, []);
+
+  // Filtered title list
   const filteredTitles = useMemo(() => {
-    if (!search.trim()) return data.titleSummary;
-    const q = search.toLowerCase();
-    return data.titleSummary.filter(
-      ts => ts.titleKR.toLowerCase().includes(q) || ts.titleJP.toLowerCase().includes(q),
+    if (!searchQuery.trim()) return titles;
+    const q = searchQuery.toLowerCase();
+    return titles.filter(
+      (t) => t.titleJP.toLowerCase().includes(q) || (t.titleKR?.toLowerCase().includes(q) ?? false)
     );
-  }, [data.titleSummary, search]);
+  }, [titles, searchQuery]);
 
-  // Sort
-  const sortedTitles = useMemo(() => {
-    const arr = [...filteredTitles];
-    switch (sortKey) {
-      case 'sales':
-        return arr.sort((a, b) => b.totalSales - a.totalSales);
-      case 'platforms':
-        return arr.sort((a, b) => b.platforms.length - a.platforms.length || b.totalSales - a.totalSales);
-      case 'name':
-        return arr.sort((a, b) => {
-          const nameA = language === 'ko' ? a.titleKR : a.titleJP;
-          const nameB = language === 'ko' ? b.titleKR : b.titleJP;
-          return nameA.localeCompare(nameB);
-        });
-      default:
-        return arr;
-    }
-  }, [filteredTitles, sortKey, language]);
+  // Detail computations
+  const timeSeries = useMemo(() => aggregateTimeSeries(titleSales, granularity), [titleSales, granularity]);
+  const platformBreakdown = useMemo(() => computePlatformBreakdown(titleSales), [titleSales]);
 
-  // Auto-select first title when none selected
-  const activeTitleKey = selectedTitle ?? (sortedTitles.length > 0 ? sortedTitles[0].titleKR : null);
+  const selectedTitleInfo = useMemo(
+    () => titles.find((t) => t.titleJP === selectedTitle),
+    [titles, selectedTitle]
+  );
 
-  // Selected title data
-  const selectedTitleData = useMemo(() => {
-    if (!activeTitleKey) return null;
-    return data.titleSummary.find(ts => ts.titleKR === activeTitleKey) ?? null;
-  }, [data.titleSummary, activeTitleKey]);
+  // Period comparison
+  const periodComparison = useMemo(() => {
+    if (titleSales.length === 0) return null;
+    const dates = titleSales.map((r) => r.sale_date).sort();
+    const mid = dates[Math.floor(dates.length / 2)];
+    const firstHalf = titleSales.filter((r) => r.sale_date <= mid).reduce((s, r) => s + r.sales_amount, 0);
+    const secondHalf = titleSales.filter((r) => r.sale_date > mid).reduce((s, r) => s + r.sales_amount, 0);
+    const change = firstHalf > 0 ? ((secondHalf - firstHalf) / firstHalf) * 100 : 0;
+    return { firstHalf, secondHalf, change };
+  }, [titleSales]);
 
-  // Donut chart: platform sales share
-  const platformShareData = useMemo(() => {
-    if (!selectedTitleData) return [];
-    const total = selectedTitleData.platforms.reduce((s, p) => s + p.sales, 0);
-    return selectedTitleData.platforms
-      .map(p => ({ name: p.name, sales: p.sales, percent: total > 0 ? (p.sales / total) * 100 : 0 }))
-      .sort((a, b) => b.sales - a.sales);
-  }, [selectedTitleData]);
+  // ============================================================
+  // Detail view
+  // ============================================================
 
-  // Monthly trend bar chart data
-  const monthlyTrendData = useMemo(() => {
-    if (!selectedTitleData) return [];
-    return [...selectedTitleData.monthlyTrend]
-      .sort((a, b) => a.month.localeCompare(b.month))
-      .map(m => ({
-        month: m.month,
-        label: `${parseInt(m.month.split('-')[1])}${language === 'ko' ? '월' : '月'}`,
-        sales: m.sales,
-      }));
-  }, [selectedTitleData, language]);
-
-  // Weekly platform trend (multi-line chart)
-  const weeklyPlatformTrend = useMemo(() => {
-    if (!activeTitleKey) return { data: [] as Record<string, string | number>[], platforms: [] as string[] };
-
-    const titleSales = dailySales.filter(d => d.titleKR === activeTitleKey);
-
-    const platformSet = new Set<string>();
-    titleSales.forEach(d => platformSet.add(d.channel));
-    const platforms = Array.from(platformSet);
-
-    // Group by week + channel
-    const weekMap = new Map<string, Record<string, number>>();
-    titleSales.forEach(d => {
-      const date = new Date(d.date);
-      const weekStart = new Date(date);
-      weekStart.setDate(date.getDate() - date.getDay());
-      const weekKey = weekStart.toISOString().substring(0, 10);
-
-      if (!weekMap.has(weekKey)) weekMap.set(weekKey, {});
-      const entry = weekMap.get(weekKey)!;
-      entry[d.channel] = (entry[d.channel] || 0) + d.sales;
-    });
-
-    const weeks = Array.from(weekMap.keys()).sort();
-    const chartData = weeks.map(week => {
-      const ws = new Date(week);
-      const we = new Date(ws);
-      we.setDate(ws.getDate() + 6);
-      const label = `${ws.getMonth() + 1}/${ws.getDate()}-${we.getMonth() + 1}/${we.getDate()}`;
-
-      const row: Record<string, string | number> = { week, label };
-      const entry = weekMap.get(week)!;
-      platforms.forEach(p => { row[p] = entry[p] || 0; });
-      return row;
-    });
-
-    return { data: chartData, platforms };
-  }, [dailySales, activeTitleKey]);
-
-  // Per-platform growth for selected title
-  const platformGrowths = useMemo(() => {
-    if (!activeTitleKey || !selectedTitleData) return new Map<string, number>();
-
-    const titleSales = dailySales.filter(d => d.titleKR === activeTitleKey);
-    const map = new Map<string, number>();
-
-    selectedTitleData.platforms.forEach(p => {
-      const platformSales = titleSales.filter(d => d.channel === p.name);
-      const monthMap = new Map<string, number>();
-      platformSales.forEach(d => {
-        const month = d.date.substring(0, 7);
-        monthMap.set(month, (monthMap.get(month) || 0) + d.sales);
-      });
-
-      const months = Array.from(monthMap.keys()).sort();
-      if (months.length < 2) { map.set(p.name, 0); return; }
-      const last = monthMap.get(months[months.length - 1]) || 0;
-      const prev = monthMap.get(months[months.length - 2]) || 0;
-      map.set(p.name, prev > 0 ? ((last - prev) / prev) * 100 : 0);
-    });
-
-    return map;
-  }, [dailySales, activeTitleKey, selectedTitleData]);
-
-  // Date range for quick buttons
-  const dataDateRange = useMemo(() => {
-    if (dailySales.length === 0) return { min: '', max: '' };
-    const dates = dailySales.map(d => d.date).sort();
-    return { min: dates[0], max: dates[dates.length - 1] };
-  }, [dailySales]);
-
-  // Filtered daily sales for selected title + period + platform
-  const filteredDailySales = useMemo(() => {
-    if (!activeTitleKey) return [];
-    let sales = dailySales.filter(d => d.titleKR === activeTitleKey);
-    if (periodStart) sales = sales.filter(d => d.date >= periodStart);
-    if (periodEnd) sales = sales.filter(d => d.date <= periodEnd);
-    if (platformFilter) sales = sales.filter(d => d.channel === platformFilter);
-    return sales;
-  }, [dailySales, activeTitleKey, periodStart, periodEnd, platformFilter]);
-
-  // Platform period summary table
-  const platformPeriodSummary = useMemo(() => {
-    if (!activeTitleKey) return [];
-    let sales = dailySales.filter(d => d.titleKR === activeTitleKey);
-    if (periodStart) sales = sales.filter(d => d.date >= periodStart);
-    if (periodEnd) sales = sales.filter(d => d.date <= periodEnd);
-
-    const platformMap = new Map<string, number>();
-    sales.forEach(d => {
-      platformMap.set(d.channel, (platformMap.get(d.channel) || 0) + d.sales);
-    });
-
-    const total = Array.from(platformMap.values()).reduce((s, v) => s + v, 0);
-    return Array.from(platformMap.entries())
-      .map(([name, pSales]) => ({
-        name,
-        sales: pSales,
-        percent: total > 0 ? (pSales / total) * 100 : 0,
-      }))
-      .sort((a, b) => b.sales - a.sales);
-  }, [dailySales, activeTitleKey, periodStart, periodEnd]);
-
-  const filteredPeriodTotal = useMemo(() => {
-    return filteredDailySales.reduce((s, d) => s + d.sales, 0);
-  }, [filteredDailySales]);
-
-  // Quick period buttons helper
-  const setQuickPeriod = (days: number | null) => {
-    if (days === null) {
-      setPeriodStart('');
-      setPeriodEnd('');
-    } else {
-      const end = dataDateRange.max;
-      const start = new Date(end);
-      start.setDate(start.getDate() - days);
-      setPeriodStart(start.toISOString().substring(0, 10));
-      setPeriodEnd(end);
-    }
-  };
-
-  // Reset filters when title changes
-  useMemo(() => {
-    setPlatformFilter('');
-  }, [activeTitleKey]);
-
-  // titleName kept for chart axis labels (single-line)
-  const titleName = (ts: { titleKR: string; titleJP: string }) =>
-    language === 'ko' ? ts.titleKR : ts.titleJP;
-
-  // ---------------------------------------------------------------------------
-  // Loading — wait for both summaries and dailySales
-  // ---------------------------------------------------------------------------
-  if (data.loading || dailyLoading) {
-    return <LoadingSkeleton />;
-  }
-
-  // ---------------------------------------------------------------------------
-  // Render
-  // ---------------------------------------------------------------------------
-  const sortOptions: { key: SortKey; label: string }[] = [
-    { key: 'sales', label: language === 'ko' ? '매출순' : '売上順' },
-    { key: 'platforms', label: language === 'ko' ? '플랫폼수' : 'PF数' },
-    { key: 'name', label: language === 'ko' ? '가나다순' : '名前順' },
-  ];
-
-  return (
-    <motion.div initial="hidden" animate="show" variants={staggerContainer}>
-      {/* Page Title */}
-      <motion.h1
-        variants={staggerItem}
-        className="font-bold mb-4 text-primary text-2xl md:text-3xl tracking-tight"
+  if (selectedTitle) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.4 }}
+        style={{ minHeight: '100vh' }}
       >
-        {t(language, 'nav.titles')}
-      </motion.h1>
-
-      {/* Main Tab Toggle: 매출 분석 | 초동매출 */}
-      <motion.div variants={staggerItem} className="mb-5">
-        <Tabs defaultValue="analysis" value={mainTab} onValueChange={(v) => setMainTab(v as MainTab)}>
-          <TabsList>
-            <TabsTrigger value="analysis" className="gap-1.5">
-              <BarChart3 size={14} />
-              {t(language, 'initialSales.salesAnalysis')}
-            </TabsTrigger>
-            <TabsTrigger value="initial" className="gap-1.5">
-              <Zap size={14} />
-              {t(language, 'initialSales.tab')}
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </motion.div>
-
-      {/* Tab Content */}
-      {mainTab === 'initial' ? (
-        <InitialSalesView />
-      ) : (
-      <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 lg:h-[calc(100vh-200px)]">
-        {/* ================================================================ */}
-        {/* LEFT PANEL -- Title List                                         */}
-        {/* ================================================================ */}
-        <motion.div variants={staggerItem} className="flex-shrink-0 w-full lg:w-80 max-h-[40vh] lg:max-h-none">
-          <Card
-            variant="glass"
-            className="flex flex-col overflow-hidden h-full"
+        {/* Back button + title */}
+        <div className="flex items-center gap-3 mb-8">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => { setSelectedTitle(null); setTitleSales([]); }}
+            className="w-10 h-10 rounded-xl flex items-center justify-center cursor-pointer"
+            style={{ ...GLASS_CARD }}
           >
-            {/* Header + Search + Sort */}
-            <div className="px-4 pt-5 pb-3">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <BarChart3 size={18} className="text-primary" />
-                  <h2 className="font-bold text-primary text-[15px]">
-                    {language === 'ko' ? '작품 목록' : '作品一覧'}
-                  </h2>
-                </div>
-                <Badge variant="secondary">
-                  {filteredTitles.length}{language === 'ko' ? '개' : '件'}
-                </Badge>
-              </div>
+            <ArrowLeft size={18} color="#8888a0" />
+          </motion.button>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl font-bold truncate" style={{ color: '#f0f0f5' }}>
+              {selectedTitle}
+            </h1>
+            {selectedTitleInfo?.titleKR && (
+              <p className="text-sm truncate" style={{ color: '#55556a' }}>
+                {selectedTitleInfo.titleKR}
+              </p>
+            )}
+          </div>
+        </div>
 
-              {/* Search */}
-              <div className="relative mb-3">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search size={15} className="text-text-muted" />
+        {detailLoading ? (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="rounded-2xl p-6 animate-pulse" style={{ ...GLASS_CARD, minHeight: 100 }}>
+                  <div className="h-3 w-20 rounded skeleton-shimmer mb-3" />
+                  <div className="h-7 w-28 rounded skeleton-shimmer" />
                 </div>
-                <Input
-                  type="text"
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  placeholder={language === 'ko' ? '작품명 검색...' : '作品名検索...'}
-                  className="pl-9 text-[13px] bg-background"
-                />
-              </div>
-
-              {/* Sort tabs */}
-              <Tabs
-                defaultValue="sales"
-                value={sortKey}
-                onValueChange={(v) => setSortKey(v as SortKey)}
-              >
-                <TabsList className="w-full">
-                  {sortOptions.map(opt => (
-                    <TabsTrigger
-                      key={opt.key}
-                      value={opt.key}
-                      className="text-[11px] flex-1"
-                    >
-                      {opt.label}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              </Tabs>
+              ))}
+            </div>
+            <ChartSkeleton />
+          </div>
+        ) : (
+          <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-6">
+            {/* KPI cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {[
+                { label: '累計売上', value: formatYen(selectedTitleInfo?.totalSales ?? 0) },
+                { label: 'プラットフォーム数', value: String(platformBreakdown.length) },
+                {
+                  label: '期間トレンド',
+                  value: periodComparison ? `${periodComparison.change > 0 ? '+' : ''}${periodComparison.change.toFixed(1)}%` : '-',
+                  color: periodComparison && periodComparison.change >= 0 ? '#22c55e' : '#ef4444',
+                },
+              ].map((kpi, idx) => (
+                <motion.div
+                  key={idx}
+                  variants={cardVariants}
+                  className="rounded-2xl p-6"
+                  style={GLASS_CARD}
+                >
+                  <p className="text-xs font-medium mb-2" style={{ color: '#8888a0' }}>{kpi.label}</p>
+                  <p className="text-2xl font-bold" style={{ color: kpi.color ?? '#f0f0f5' }}>{kpi.value}</p>
+                </motion.div>
+              ))}
             </div>
 
-            {/* Scrollable list */}
-            <ScrollArea className="flex-1 px-2 pb-2">
-              {sortedTitles.map(title => {
-                const isSelected = activeTitleKey === title.titleKR;
-                const growth = titleGrowths[title.titleKR] || 0;
+            {/* Granularity selector + area chart */}
+            <motion.div variants={cardVariants} className="rounded-2xl p-6" style={GLASS_CARD}>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-semibold" style={{ color: '#f0f0f5' }}>売上推移</h2>
+                <div className="flex gap-1 p-1 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)' }}>
+                  {(['daily', 'weekly', 'monthly'] as TimeGranularity[]).map((g) => (
+                    <button
+                      key={g}
+                      onClick={() => setGranularity(g)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer"
+                      style={{
+                        background: granularity === g ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
+                        color: granularity === g ? '#a5b4fc' : '#55556a',
+                        border: granularity === g ? '1px solid rgba(99, 102, 241, 0.3)' : '1px solid transparent',
+                      }}
+                    >
+                      {{ daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly' }[g]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <ResponsiveContainer width="100%" height={320}>
+                <AreaChart data={timeSeries}>
+                  <defs>
+                    <linearGradient id="titleGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#818cf8" stopOpacity={0.3} />
+                      <stop offset="100%" stopColor="#818cf8" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+                  <XAxis dataKey="label" tick={{ fill: '#55556a', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: '#55556a', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatYenShort} width={60} />
+                  <ReTooltip {...darkTooltipStyle} formatter={(v: unknown) => [formatYen(Number(v ?? 0)), '売上']} />
+                  <Area type="monotone" dataKey="sales" stroke="#818cf8" strokeWidth={2} fill="url(#titleGrad)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </motion.div>
 
-                return (
-                  <div
-                    key={title.titleKR}
-                    onClick={() => setSelectedTitle(title.titleKR)}
-                    className={`px-3 py-3 rounded-xl mb-1 cursor-pointer transition-all duration-150
-                      ${isSelected
-                        ? 'bg-blue-50 border border-blue-200'
-                        : 'border border-transparent hover:bg-background'
-                      }`}
-                  >
-                    <div className="flex items-start justify-between gap-2 mb-1.5">
-                      <div className={`max-w-[180px] ${isSelected ? 'text-blue-600' : 'text-foreground'}`}>
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-semibold leading-tight text-[13px] truncate">{titleName(title)}</span>
-                          {title.contentType && title.contentType !== 'UNKNOWN' && (
-                            <ContentTypeBadge type={title.contentType} language={language} size="sm" />
-                          )}
-                        </div>
-                        <div className="text-[10px] text-muted-foreground truncate mt-0.5">
-                          {language === 'ko' ? title.titleJP : title.titleKR}
-                        </div>
-                      </div>
-                      <span className="font-bold flex-shrink-0 text-foreground text-[13px]">
-                        {formatSales(title.totalSales, currency, exchangeRate, language)}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      {/* Platform dots */}
-                      <div className="flex items-center gap-1.5">
-                        {title.platforms.slice(0, 5).map((p, i) => (
-                          <PlatformIcon key={i} name={p.name} size={22} />
-                        ))}
-                        {title.platforms.length > 5 && (
-                          <div
-                            className="flex items-center justify-center flex-shrink-0 rounded-[5px] bg-border text-muted-foreground text-[9px] font-bold leading-none"
-                            style={{ width: 22, height: 22 }}
-                            title={title.platforms.slice(5).map(p => p.name).join(', ')}
-                          >
-                            +{title.platforms.length - 5}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Growth + platform count */}
-                      <div className="flex items-center gap-1.5">
-                        {growth > 5 ? (
-                          <TrendingUp size={13} color="#16A34A" />
-                        ) : growth < -5 ? (
-                          <TrendingDown size={13} color="#DC2626" />
-                        ) : (
-                          <Minus size={13} className="text-text-muted" />
-                        )}
-                        <span className="text-text-muted text-[11px] font-medium">
-                          {title.platforms.length}{language === 'ko' ? '개 플랫폼' : 'PF'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </ScrollArea>
-          </Card>
-        </motion.div>
-
-        {/* ================================================================ */}
-        {/* RIGHT PANEL -- Detail View                                       */}
-        {/* ================================================================ */}
-        <ScrollArea className="flex-1 pr-1">
-          {selectedTitleData ? (
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeTitleKey}
-                initial="hidden"
-                animate="show"
-                variants={staggerContainer}
-                className="space-y-6 pb-8"
-              >
-                {/* Header: Title Name + Cumulative Sales */}
-                <motion.div
-                  variants={detailReveal}
-                  className="flex items-start justify-between flex-wrap gap-4"
-                >
-                  <div className="min-w-0">
-                    <BilingualTitle
-                      titleKR={selectedTitleData.titleKR}
-                      titleJP={selectedTitleData.titleJP}
-                      language={language}
-                      variant="default"
-                      className="text-primary [&>div:first-child]:text-2xl [&>div:first-child]:font-bold [&>div:last-child]:text-sm"
-                    />
-                    <div className="flex flex-wrap items-center gap-2 mt-2">
-                      {selectedTitleData.platforms.map((p, i) => (
-                        <PlatformBadge key={i} name={p.name} />
+            {/* Platform breakdown bar chart */}
+            <motion.div variants={cardVariants} className="rounded-2xl p-6" style={GLASS_CARD}>
+              <h2 className="text-base font-semibold mb-6" style={{ color: '#f0f0f5' }}>
+                プラットフォーム別売上
+              </h2>
+              {platformBreakdown.length > 0 ? (
+                <ResponsiveContainer width="100%" height={Math.max(200, platformBreakdown.length * 48)}>
+                  <BarChart data={platformBreakdown} layout="vertical" margin={{ left: 80 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" horizontal={false} />
+                    <XAxis type="number" tick={{ fill: '#55556a', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatYenShort} />
+                    <YAxis type="category" dataKey="platform" tick={{ fill: '#8888a0', fontSize: 12 }} axisLine={false} tickLine={false} width={80} />
+                    <ReTooltip {...darkTooltipStyle} formatter={(v: unknown) => [formatYen(Number(v ?? 0)), '売上']} />
+                    <Bar dataKey="sales" radius={[0, 6, 6, 0]} barSize={24}>
+                      {platformBreakdown.map((entry, idx) => (
+                        <Cell key={idx} fill={entry.color} fillOpacity={0.8} />
                       ))}
-                    </div>
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-center py-8" style={{ color: '#55556a' }}>データがありません</p>
+              )}
+            </motion.div>
+
+            {/* Period comparison */}
+            {periodComparison && (
+              <motion.div variants={cardVariants} className="rounded-2xl p-6" style={GLASS_CARD}>
+                <h2 className="text-base font-semibold mb-4" style={{ color: '#f0f0f5' }}>期間比較</h2>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="rounded-xl p-4" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                    <p className="text-xs mb-1" style={{ color: '#8888a0' }}>前半期間</p>
+                    <p className="text-lg font-bold" style={{ color: '#f0f0f5' }}>{formatYen(periodComparison.firstHalf)}</p>
                   </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-muted-foreground text-[13px] font-medium">
-                      {language === 'ko' ? '누적 매출' : '累計売上'}
-                    </p>
-                    <p className="font-extrabold text-primary text-[32px] leading-tight">
-                      {formatSales(selectedTitleData.totalSales, currency, exchangeRate, language)}
-                    </p>
+                  <div className="rounded-xl p-4" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                    <p className="text-xs mb-1" style={{ color: '#8888a0' }}>後半期間</p>
+                    <p className="text-lg font-bold" style={{ color: '#f0f0f5' }}>{formatYen(periodComparison.secondHalf)}</p>
                   </div>
-                </motion.div>
-
-                {/* Period & Platform Filter */}
-                <motion.div variants={detailReveal}>
-                  <Card variant="glass" className="p-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Filter size={15} className="text-primary" />
-                      <span className="text-sm font-bold text-primary">
-                        {language === 'ko' ? '기간 · 플랫폼 필터' : '期間・PFフィルター'}
-                      </span>
-                      {(periodStart || periodEnd || platformFilter) && (
-                        <button
-                          onClick={() => { setPeriodStart(''); setPeriodEnd(''); setPlatformFilter(''); }}
-                          className="ml-auto text-[11px] text-muted-foreground hover:text-foreground cursor-pointer bg-transparent border-none"
-                        >
-                          {language === 'ko' ? '초기화' : 'リセット'}
-                        </button>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap items-end gap-3">
-                      {/* Quick period buttons */}
-                      <div className="flex gap-1.5">
-                        {[
-                          { days: 7, label: language === 'ko' ? '7일' : '7日' },
-                          { days: 30, label: language === 'ko' ? '30일' : '30日' },
-                          { days: 90, label: language === 'ko' ? '90일' : '90日' },
-                          { days: null as number | null, label: language === 'ko' ? '전체' : '全体' },
-                        ].map((btn) => (
-                          <button
-                            key={btn.label}
-                            onClick={() => setQuickPeriod(btn.days)}
-                            className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold cursor-pointer transition-colors border ${
-                              (btn.days === null && !periodStart && !periodEnd) ||
-                              (btn.days !== null && periodStart && periodEnd)
-                                ? ''
-                                : ''
-                            } ${
-                              btn.days === null && !periodStart && !periodEnd
-                                ? 'bg-primary text-white border-primary'
-                                : 'bg-background text-muted-foreground border-border hover:bg-muted'
-                            }`}
-                          >
-                            {btn.label}
-                          </button>
-                        ))}
-                      </div>
-                      {/* Date range inputs */}
-                      <div className="flex items-center gap-1.5">
-                        <Input
-                          type="date"
-                          value={periodStart}
-                          onChange={e => setPeriodStart(e.target.value)}
-                          className="h-8 text-[11px] w-[130px] rounded-lg"
-                        />
-                        <span className="text-muted-foreground text-xs">~</span>
-                        <Input
-                          type="date"
-                          value={periodEnd}
-                          onChange={e => setPeriodEnd(e.target.value)}
-                          className="h-8 text-[11px] w-[130px] rounded-lg"
-                        />
-                      </div>
-                      {/* Platform filter */}
-                      <Select
-                        value={platformFilter}
-                        onChange={e => setPlatformFilter(e.target.value)}
-                        className="h-8 text-[11px] min-w-[140px] rounded-lg"
-                      >
-                        <option value="">{language === 'ko' ? '전체 플랫폼' : '全PF'}</option>
-                        {selectedTitleData.platforms.map(p => (
-                          <option key={p.name} value={p.name}>{p.name}</option>
-                        ))}
-                      </Select>
-                    </div>
-                    {/* Period total */}
-                    {(periodStart || periodEnd || platformFilter) && (
-                      <div className="mt-3 pt-3 border-t border-border/60">
-                        <span className="text-xs text-muted-foreground">
-                          {language === 'ko' ? '필터 적용 매출: ' : 'フィルター適用売上: '}
-                        </span>
-                        <span className="text-sm font-bold text-primary">
-                          {formatSales(filteredPeriodTotal, currency, exchangeRate, language)}
-                        </span>
-                      </div>
-                    )}
-                  </Card>
-                </motion.div>
-
-                {/* Platform Period Summary Table */}
-                {(periodStart || periodEnd) && platformPeriodSummary.length > 0 && (
-                  <motion.div variants={detailReveal}>
-                    <Card variant="glass" className="overflow-hidden">
-                      <div className="px-4 py-3 border-b border-border/60">
-                        <h3 className="font-bold text-primary text-sm">
-                          {language === 'ko' ? '기간별 플랫폼 매출 요약' : '期間別PF売上サマリー'}
-                        </h3>
-                      </div>
-                      <Table className="text-sm">
-                        <TableHeader>
-                          <TableRow className="bg-muted hover:bg-muted">
-                            <TableHead className="font-semibold text-xs">{t(language, 'table.platform')}</TableHead>
-                            <TableHead className="text-right font-semibold text-xs">{t(language, 'table.sales')}</TableHead>
-                            <TableHead className="text-right font-semibold text-xs">{language === 'ko' ? '비중' : 'シェア'}</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {platformPeriodSummary.map((p, idx) => (
-                            <TableRow key={p.name} className={idx % 2 === 1 ? 'bg-background' : 'bg-card'}>
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  <PlatformIcon name={p.name} size={18} />
-                                  <span className="font-medium text-foreground text-[13px]">{p.name}</span>
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-right font-mono text-[13px] font-semibold text-foreground">
-                                {formatSales(p.sales, currency, exchangeRate, language)}
-                              </TableCell>
-                              <TableCell className="text-right font-mono text-[13px] text-muted-foreground">
-                                {p.percent.toFixed(1)}%
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </Card>
-                  </motion.div>
-                )}
-
-                {/* Platform Cards Grid */}
-                <motion.div variants={detailReveal}>
-                  <h3 className="font-bold mb-3 text-primary text-base">
-                    {language === 'ko' ? '서비스 플랫폼' : 'サービスプラットフォーム'}
-                  </h3>
-                  <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                    {selectedTitleData.platforms
-                      .sort((a, b) => b.sales - a.sales)
-                      .map((p, i) => {
-                        const growth = platformGrowths.get(p.name) || 0;
-                        return (
-                          <Card
-                            key={i}
-                            variant="glass"
-                            className="p-4 transition-shadow duration-200 hover:shadow-md"
-                            style={{
-                              borderLeft: `3px solid ${getPlatformBrand(p.name).color}`,
-                            }}
-                          >
-                            <div className="flex items-center gap-2 mb-2">
-                              <PlatformIcon name={p.name} size={22} />
-                              <span className="font-semibold truncate text-primary text-[13px]">
-                                {p.name}
-                              </span>
-                            </div>
-                            <p className="font-bold mb-1 text-foreground text-base">
-                              {formatSales(p.sales, currency, exchangeRate, language)}
-                            </p>
-                            <div className="flex items-center gap-1">
-                              {growth > 0 ? (
-                                <TrendingUp size={12} color="#16A34A" />
-                              ) : growth < 0 ? (
-                                <TrendingDown size={12} color="#DC2626" />
-                              ) : (
-                                <Minus size={12} className="text-text-muted" />
-                              )}
-                              <span
-                                className="font-medium text-xs"
-                                style={{ color: getChangeColor(growth) }}
-                              >
-                                {formatPercent(growth)}
-                              </span>
-                            </div>
-                          </Card>
-                        );
-                      })}
-                  </div>
-                </motion.div>
-
-                {/* Two charts side by side: Donut + Monthly Bar */}
-                <motion.div variants={detailReveal} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Donut: Platform Sales Share */}
-                  <ChartCard
-                    title={language === 'ko' ? '누적 플랫폼별 매출 비중' : '累計PF別売上シェア'}
-                    subtitle={
-                      language === 'ko'
-                        ? `전체 기간 누적 · 총 ${formatSales(selectedTitleData.totalSales, currency, exchangeRate, language)}`
-                        : `全期間累計 · 合計 ${formatSales(selectedTitleData.totalSales, currency, exchangeRate, language)}`
-                    }
-                    variant="glass"
-                  >
-                    <ResponsiveContainer width="100%" height={240}>
-                      <PieChart>
-                        <Pie
-                          data={platformShareData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={55}
-                          outerRadius={95}
-                          dataKey="sales"
-                          nameKey="name"
-                          paddingAngle={3}
-                        >
-                          {platformShareData.map((entry, idx) => (
-                            <Cell
-                              key={idx}
-                              fill={platformColorMap[entry.name] || CHART_COLORS[idx % CHART_COLORS.length]}
-                              stroke="#ffffff"
-                              strokeWidth={2}
-                            />
-                          ))}
-                        </Pie>
-                        <Tooltip
-                          {...tooltipStyle}
-                          formatter={(value: any, name: any) => [
-                            formatSales(value, currency, exchangeRate, language),
-                            name,
-                          ]}
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mt-3">
-                      {platformShareData.map((entry) => (
-                        <div key={entry.name} className="flex items-center gap-1.5">
-                          <PlatformIcon name={entry.name} size={18} />
-                          <span className="text-text-secondary text-xs font-medium">
-                            {entry.name}
-                          </span>
-                          <span className="text-text-muted text-xs">
-                            {entry.percent.toFixed(1)}%
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </ChartCard>
-
-                  {/* Monthly Sales Bar Chart */}
-                  <ChartCard
-                    title={language === 'ko' ? '월별 매출 추이' : '月別売上推移'}
-                    subtitle={
-                      language === 'ko'
-                        ? `전체 플랫폼 합산 · ${monthlyTrendData.length}개월`
-                        : `全PF合計 · ${monthlyTrendData.length}ヶ月`
-                    }
-                    variant="glass"
-                  >
-                    <ResponsiveContainer width="100%" height={280}>
-                      <BarChart data={monthlyTrendData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-                        <XAxis
-                          dataKey="label"
-                          stroke="#CBD5E1"
-                          tick={{ fill: '#64748B', fontSize: 12 }}
-                        />
-                        <YAxis
-                          stroke="#CBD5E1"
-                          tick={{ fill: '#64748B', fontSize: 12 }}
-                          tickFormatter={(v: any) => formatSalesShort(v)}
-                        />
-                        <Tooltip
-                          {...tooltipStyle}
-                          formatter={(value: any) => [
-                            formatSales(value, currency, exchangeRate, language),
-                            language === 'ko' ? '매출' : '売上',
-                          ]}
-                        />
-                        <Bar dataKey="sales" fill="#2563EB" radius={[6, 6, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </ChartCard>
-                </motion.div>
-
-                {/* Weekly Platform Trend - Multi-line Chart */}
-                <motion.div variants={detailReveal}>
-                  <ChartCard
-                    title={language === 'ko' ? '플랫폼별 주간 매출 추이' : 'PF別週間売上推移'}
-                    subtitle={
-                      language === 'ko'
-                        ? `거래액 기준 (엔) · ${weeklyPlatformTrend.data.length}주간`
-                        : `取引額基準 (円) · ${weeklyPlatformTrend.data.length}週間`
-                    }
-                    variant="glass"
-                  >
-                    <ResponsiveContainer width="100%" height={350}>
-                      <LineChart data={weeklyPlatformTrend.data}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-                        <XAxis
-                          dataKey="label"
-                          stroke="#CBD5E1"
-                          tick={{ fill: '#64748B', fontSize: 11 }}
-                          interval={Math.max(0, Math.floor(weeklyPlatformTrend.data.length / 10))}
-                        />
-                        <YAxis
-                          stroke="#CBD5E1"
-                          tick={{ fill: '#64748B', fontSize: 12 }}
-                          tickFormatter={(v: any) => formatSalesShort(v)}
-                        />
-                        <Tooltip
-                          {...tooltipStyle}
-                          formatter={(value: any, name: any) => [
-                            formatSales(value, currency, exchangeRate, language),
-                            name,
-                          ]}
-                        />
-                        <Legend content={() => null} />
-                        {weeklyPlatformTrend.platforms.map((platform, idx) => (
-                          <Line
-                            key={platform}
-                            type="monotone"
-                            dataKey={platform}
-                            stroke={platformColorMap[platform] || CHART_COLORS[idx % CHART_COLORS.length]}
-                            strokeWidth={2}
-                            dot={false}
-                            activeDot={{ r: 4 }}
-                          />
-                        ))}
-                      </LineChart>
-                    </ResponsiveContainer>
-                    <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mt-2 px-2">
-                      {weeklyPlatformTrend.platforms.map((platform) => (
-                        <div key={platform} className="flex items-center gap-1.5">
-                          <PlatformIcon name={platform} size={16} />
-                          <span className="text-text-secondary text-xs font-medium">{platform}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </ChartCard>
-                </motion.div>
+                </div>
+                <div className="mt-4 flex items-center gap-2">
+                  <TrendingUp size={16} color={periodComparison.change >= 0 ? '#22c55e' : '#ef4444'} />
+                  <span className="text-sm font-semibold" style={{ color: periodComparison.change >= 0 ? '#22c55e' : '#ef4444' }}>
+                    {periodComparison.change > 0 ? '+' : ''}{periodComparison.change.toFixed(1)}% 変化
+                  </span>
+                </div>
               </motion.div>
-            </AnimatePresence>
-          ) : (
-            /* Empty state */
-            <Card
-              variant="glass"
-              className="flex items-center justify-center h-full min-h-[400px]"
+            )}
+          </motion.div>
+        )}
+      </motion.div>
+    );
+  }
+
+  // ============================================================
+  // List view
+  // ============================================================
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+    >
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-8">
+        <div
+          className="w-11 h-11 rounded-xl flex items-center justify-center page-icon-glow"
+        >
+          <BookOpen size={20} color="white" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold" style={{ color: '#f0f0f5' }}>Title Analysis</h1>
+          <p className="text-sm" style={{ color: '#55556a' }}>作品別の売上分析・トレンド</p>
+        </div>
+      </div>
+
+      {/* Search bar */}
+      <motion.div
+        variants={cardVariants}
+        initial="hidden"
+        animate="show"
+        className="rounded-2xl p-4 mb-6"
+        style={GLASS_CARD}
+      >
+        <div className="flex items-center gap-3">
+          <Search size={18} color="#55556a" />
+          <input
+            type="text"
+            placeholder="タイトル名で検索 (JP / KR)..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="flex-1 bg-transparent outline-none text-sm"
+            style={{ color: '#f0f0f5' }}
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} className="text-xs cursor-pointer" style={{ color: '#8888a0' }}>
+              クリア
+            </button>
+          )}
+        </div>
+      </motion.div>
+
+      {/* Results count */}
+      <p className="text-xs mb-4" style={{ color: '#55556a' }}>
+        {filteredTitles.length} タイトル {searchQuery && `(「${searchQuery}」で検索)`}
+      </p>
+
+      {/* Title list */}
+      {loading ? (
+        <ListSkeleton />
+      ) : (
+        <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-3">
+          {filteredTitles.slice(0, 50).map((title) => (
+            <motion.div
+              key={title.titleJP}
+              variants={cardVariants}
+              whileHover={{ scale: 1.01, background: 'rgba(255,255,255,0.05)' }}
+              className="rounded-2xl p-5 cursor-pointer transition-all"
+              style={GLASS_CARD}
+              onClick={() => loadTitleDetail(title.titleJP)}
             >
-              <div className="text-center">
-                <BarChart3 size={48} className="mx-auto mb-4 text-border" />
-                <p className="font-semibold text-muted-foreground text-base">
-                  {language === 'ko' ? '작품을 선택하세요' : '作品を選択してください'}
+              <div className="flex items-center gap-4">
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold"
+                  style={{
+                    background: `${getPlatformColor(title.platforms[0])}20`,
+                    color: getPlatformColor(title.platforms[0]),
+                  }}
+                >
+                  {title.platforms.length}P
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold truncate" style={{ color: '#f0f0f5' }}>
+                    {title.titleJP}
+                  </p>
+                  {title.titleKR && (
+                    <p className="text-xs truncate" style={{ color: '#55556a' }}>{title.titleKR}</p>
+                  )}
+                </div>
+                <div className="flex gap-1 shrink-0">
+                  {title.platforms.slice(0, 3).map((p) => (
+                    <span
+                      key={p}
+                      className="text-[10px] px-2 py-0.5 rounded-full font-medium"
+                      style={{ background: `${getPlatformColor(p)}20`, color: getPlatformColor(p) }}
+                    >
+                      {PLATFORM_BRANDS[p]?.icon ?? p.charAt(0)}
+                    </span>
+                  ))}
+                  {title.platforms.length > 3 && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ color: '#55556a' }}>
+                      +{title.platforms.length - 3}
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm font-bold shrink-0" style={{ color: '#f0f0f5' }}>
+                  {formatYen(title.totalSales)}
                 </p>
               </div>
-            </Card>
+            </motion.div>
+          ))}
+          {filteredTitles.length === 0 && (
+            <div className="text-center py-12" style={{ color: '#55556a' }}>
+              該当するタイトルがありません
+            </div>
           )}
-        </ScrollArea>
-      </div>
+        </motion.div>
       )}
     </motion.div>
   );
