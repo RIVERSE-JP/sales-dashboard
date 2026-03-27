@@ -132,19 +132,19 @@ export async function fetchDashboardSummary() {
 
 export async function fetchDashboardKPIs() {
   const { data, error } = await supabase.rpc('get_dashboard_kpis');
-  if (error) throw error;
+  if (error) { console.error('RPC error:', error.message); return data ?? null; }
   return data;
 }
 
 export async function fetchMonthlyTrend() {
   const { data, error } = await supabase.rpc('get_monthly_sales_trend');
-  if (error) throw error;
+  if (error) { console.error('RPC error:', error.message); return data ?? null; }
   return data ?? [];
 }
 
 export async function fetchPlatformSummary() {
   const { data, error } = await supabase.rpc('get_platform_sales_summary');
-  if (error) throw error;
+  if (error) { console.error('RPC error:', error.message); return data ?? null; }
   return data ?? [];
 }
 
@@ -153,7 +153,7 @@ export async function fetchTopTitles(limit = 20, month?: string) {
     p_limit: limit,
     p_month: month || null,
   });
-  if (error) throw error;
+  if (error) { console.error('RPC error:', error.message); return data ?? null; }
   return data ?? [];
 }
 
@@ -161,7 +161,7 @@ export async function fetchPlatformDetail(channel: string) {
   const { data, error } = await supabase.rpc('get_platform_detail', {
     p_channel: channel,
   });
-  if (error) throw error;
+  if (error) { console.error('RPC error:', error.message); return data ?? null; }
   return data;
 }
 
@@ -169,19 +169,22 @@ export async function fetchTitleDetail(titleJP: string) {
   const { data, error } = await supabase.rpc('get_title_detail', {
     p_title_jp: titleJP,
   });
-  if (error) throw error;
+  if (error) { console.error('RPC error:', error.message); return data ?? null; }
   return data;
 }
 
 export async function fetchGrowthAlerts() {
   const { data, error } = await supabase.rpc('get_growth_alerts');
-  if (error) throw error;
+  if (error) {
+    console.warn('get_growth_alerts failed (non-critical):', error.message);
+    return [];
+  }
   return data ?? [];
 }
 
 export async function fetchTitleSummaries() {
   const { data, error } = await supabase.rpc('get_title_summaries');
-  if (error) throw error;
+  if (error) { console.error('RPC error:', error.message); return data ?? null; }
   return data ?? [];
 }
 

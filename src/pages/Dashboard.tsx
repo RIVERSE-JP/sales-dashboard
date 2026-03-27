@@ -295,7 +295,13 @@ export function Dashboard() {
       setMonthlyTrend((trendData as MonthlyTrendRow[]) ?? []);
       setPlatformSummary((platformData as PlatformSummaryRow[]) ?? []);
       setTopTitles((titleData as TopTitleRow[]) ?? []);
-      setGrowthAlerts((alertData as GrowthAlertRow[]) ?? []);
+      setGrowthAlerts(((alertData as Array<Record<string, unknown>>) ?? []).map((r) => ({
+        title_jp: String(r.out_title_jp ?? r.title_jp ?? ''),
+        title_kr: r.out_title_kr != null ? String(r.out_title_kr) : r.title_kr != null ? String(r.title_kr) : null,
+        this_month: Number(r.out_this_month ?? r.this_month ?? 0),
+        last_month: Number(r.out_last_month ?? r.last_month ?? 0),
+        growth_pct: Number(r.out_growth_pct ?? r.growth_pct ?? 0),
+      })));
     } catch (err: unknown) {
       console.error('Dashboard data load error:', err);
       setError(err instanceof Error ? err.message : 'Failed to load data');
