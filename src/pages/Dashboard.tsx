@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import {
   fetchDashboardKPIs, fetchMonthlyTrend, fetchPlatformSummary,
-  fetchTopTitles, fetchGrowthAlerts,
+  fetchTopTitles,
 } from '@/lib/supabase';
 import { getPlatformColor, PLATFORM_BRANDS } from '@/utils/platformConfig';
 import { PlatformBadge } from '@/components/PlatformBadge';
@@ -283,35 +283,20 @@ export function Dashboard() {
     setLoading(true);
     setError(null);
     try {
-      // Batch 1: Critical KPIs (fastest, show immediately)
-      const [kpiResult, trendResult] = await Promise.allSettled([
+      // All 4 RPCs in parallel — max wait = slowest RPC (~2.3s)
+      const [kpiResult, trendResult, platformResult, titleResult] = await Promise.allSettled([
         fetchDashboardKPIs(),
         fetchMonthlyTrend(),
+        fetchPlatformSummary(),
+        fetchTopTitles(20),
       ]);
 
       if (kpiResult.status === 'fulfilled') setKpis(kpiResult.value as KPIData);
       if (trendResult.status === 'fulfilled') setMonthlyTrend((trendResult.value as MonthlyTrendRow[]) ?? []);
-      setLoading(false); // Show KPIs + trend immediately
-
-      // Batch 2: Secondary data (load in background)
-      const [platformResult, titleResult, alertResult] = await Promise.allSettled([
-        fetchPlatformSummary(),
-        fetchTopTitles(20),
-        fetchGrowthAlerts(),
-      ]);
-
       if (platformResult.status === 'fulfilled') setPlatformSummary((platformResult.value as PlatformSummaryRow[]) ?? []);
       if (titleResult.status === 'fulfilled') setTopTitles((titleResult.value as TopTitleRow[]) ?? []);
-      if (alertResult.status === 'fulfilled') {
-        const alertData = alertResult.value;
-        setGrowthAlerts(((alertData as Array<Record<string, unknown>>) ?? []).map((r) => ({
-          title_jp: String(r.out_title_jp ?? r.title_jp ?? ''),
-          title_kr: r.out_title_kr != null ? String(r.out_title_kr) : r.title_kr != null ? String(r.title_kr) : null,
-          this_month: Number(r.out_this_month ?? r.this_month ?? 0),
-          last_month: Number(r.out_last_month ?? r.last_month ?? 0),
-          growth_pct: Number(r.out_growth_pct ?? r.growth_pct ?? 0),
-        })));
-      }
+      setGrowthAlerts([]); // TODO: fix get_growth_alerts RPC type mismatch
+      setLoading(false);
     } catch (err: unknown) {
       console.error('Dashboard data load error:', err);
       setError(err instanceof Error ? err.message : 'Failed to load data');
