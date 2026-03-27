@@ -48,12 +48,10 @@ function ToggleButton({
   active,
   onClick,
   children,
-  isLight,
 }: {
   active: boolean;
   onClick: () => void;
   children: React.ReactNode;
-  isLight: boolean;
 }) {
   return (
     <button
@@ -255,10 +253,10 @@ export function Layout() {
                   border: '1px solid var(--color-glass-border)',
                 }}
               >
-                <ToggleButton active={theme === 'dark'} onClick={() => setTheme('dark')} isLight={isLight}>
+                <ToggleButton active={theme === 'dark'} onClick={() => setTheme('dark')}>
                   Dark
                 </ToggleButton>
-                <ToggleButton active={theme === 'light'} onClick={() => setTheme('light')} isLight={isLight}>
+                <ToggleButton active={theme === 'light'} onClick={() => setTheme('light')}>
                   Light
                 </ToggleButton>
               </div>
@@ -278,10 +276,10 @@ export function Layout() {
                   border: '1px solid var(--color-glass-border)',
                 }}
               >
-                <ToggleButton active={lang === 'ko'} onClick={() => setLang('ko')} isLight={isLight}>
+                <ToggleButton active={lang === 'ko'} onClick={() => setLang('ko')}>
                   KO
                 </ToggleButton>
-                <ToggleButton active={lang === 'ja'} onClick={() => setLang('ja')} isLight={isLight}>
+                <ToggleButton active={lang === 'ja'} onClick={() => setLang('ja')}>
                   JA
                 </ToggleButton>
               </div>
@@ -301,10 +299,10 @@ export function Layout() {
                   border: '1px solid var(--color-glass-border)',
                 }}
               >
-                <ToggleButton active={currency === 'JPY'} onClick={() => setCurrency('JPY')} isLight={isLight}>
+                <ToggleButton active={currency === 'JPY'} onClick={() => setCurrency('JPY')}>
                   JPY
                 </ToggleButton>
-                <ToggleButton active={currency === 'KRW'} onClick={() => setCurrency('KRW')} isLight={isLight}>
+                <ToggleButton active={currency === 'KRW'} onClick={() => setCurrency('KRW')}>
                   KRW
                 </ToggleButton>
               </div>
