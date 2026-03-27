@@ -66,14 +66,8 @@ function ToggleButton({
       onClick={onClick}
       className="px-2.5 py-1 text-[11px] font-semibold transition-all duration-200 cursor-pointer"
       style={{
-        background: active
-          ? 'linear-gradient(135deg, #3b82f6, #6366f1)'
-          : 'transparent',
-        color: active
-          ? '#ffffff'
-          : isLight
-            ? '#9999aa'
-            : '#55556a',
+        background: active ? '#1A2B5E' : 'transparent',
+        color: active ? '#ffffff' : 'var(--color-text-muted)',
         borderRadius: '6px',
         border: 'none',
       }}
@@ -96,7 +90,7 @@ export function Layout() {
   return (
     <div
       className={`flex h-screen overflow-hidden ${isLight ? 'theme-light' : ''}`}
-      style={{ backgroundColor: isLight ? '#f5f5f8' : '#0a0a0f' }}
+      style={{ backgroundColor: 'var(--color-background)' }}
     >
       {/* ---- Mobile overlay ---- */}
       <AnimatePresence>
@@ -120,19 +114,10 @@ export function Layout() {
         `}
         animate={{ width: sidebarWidth }}
         transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-        style={
-          isLight
-            ? {
-                background: '#ffffff',
-                borderRight: '1px solid #e2e2ea',
-              }
-            : {
-                background: 'rgba(12, 12, 20, 0.80)',
-                backdropFilter: 'blur(20px)',
-                WebkitBackdropFilter: 'blur(20px)',
-                borderRight: '1px solid rgba(255, 255, 255, 0.08)',
-              }
-        }
+        style={{
+          background: 'var(--color-sidebar-bg)',
+          borderRight: '1px solid var(--color-glass-border)',
+        }}
       >
         {/* Logo area */}
         <div className="flex items-center h-16 px-4 shrink-0">
@@ -153,7 +138,7 @@ export function Layout() {
               >
                 <span
                   className="block text-sm font-bold"
-                  style={{ color: isLight ? '#1a1a2e' : '#f0f0f5' }}
+                  style={{ color: 'var(--color-text-primary)' }}
                 >
                   {t('매출 현황 보드', '売上現況ボード')}
                 </span>
@@ -166,7 +151,7 @@ export function Layout() {
             onClick={() => setMobileOpen(false)}
             className="ml-auto md:hidden p-1.5 rounded-lg"
             style={{
-              color: isLight ? '#9999aa' : '#8888a0',
+              color: 'var(--color-text-muted)',
               background: 'transparent',
               border: 'none',
               cursor: 'pointer',
@@ -180,9 +165,7 @@ export function Layout() {
         <div
           className="mx-4 mb-2"
           style={{
-            borderBottom: isLight
-              ? '1px solid #e2e2ea'
-              : '1px solid rgba(255, 255, 255, 0.04)',
+            borderBottom: '1px solid var(--color-glass-border)',
           }}
         />
 
@@ -197,21 +180,8 @@ export function Layout() {
               style={({ isActive }) => ({
                 padding: collapsed ? '10px 0' : '10px 12px',
                 justifyContent: collapsed ? 'center' : 'flex-start',
-                color: isActive
-                  ? isLight
-                    ? '#1a1a2e'
-                    : '#f0f0f5'
-                  : isLight
-                    ? '#6b6b80'
-                    : '#8888a0',
-                background: isActive
-                  ? isLight
-                    ? 'rgba(99, 102, 241, 0.08)'
-                    : 'linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(139, 92, 246, 0.08))'
-                  : 'transparent',
-                boxShadow: isActive && !isLight
-                  ? '0 0 20px rgba(99, 102, 241, 0.15), inset 0 0 20px rgba(99, 102, 241, 0.05)'
-                  : 'none',
+                color: isActive ? 'var(--color-sidebar-active-text)' : 'var(--color-text-secondary)',
+                background: isActive ? 'var(--color-sidebar-active)' : 'transparent',
                 textDecoration: 'none',
               })}
             >
@@ -224,8 +194,8 @@ export function Layout() {
                       className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full"
                       style={{
                         height: '60%',
-                        background: 'linear-gradient(180deg, #3b82f6, #8b5cf6)',
-                        boxShadow: '0 0 12px rgba(99, 102, 241, 0.5)',
+                        background: '#1A2B5E',
+                        boxShadow: '0 0 8px rgba(26, 43, 94, 0.4)',
                       }}
                       transition={{ type: 'spring', stiffness: 350, damping: 30 }}
                     />
@@ -233,7 +203,7 @@ export function Layout() {
 
                   <div
                     className="shrink-0 transition-colors duration-200"
-                    style={{ color: isActive ? '#a78bfa' : undefined }}
+                    style={{ color: isActive ? 'var(--color-sidebar-active-text)' : undefined }}
                   >
                     <item.icon size={20} />
                   </div>
@@ -274,21 +244,21 @@ export function Layout() {
           <div
             className="px-4 py-3 space-y-2.5"
             style={{
-              borderTop: isLight ? '1px solid #e2e2ea' : '1px solid rgba(255, 255, 255, 0.06)',
+              borderTop: '1px solid var(--color-glass-border)',
             }}
           >
             {/* Theme toggle */}
             <div className="flex items-center justify-between">
               <span
                 className="text-[11px] font-medium tracking-wider"
-                style={{ color: isLight ? '#9999aa' : '#8888a0' }}
+                style={{ color: 'var(--color-text-muted)' }}
               >
                 THEME
               </span>
               <div
                 className="flex rounded-lg overflow-hidden"
                 style={{
-                  border: isLight ? '1px solid #e2e2ea' : '1px solid rgba(255, 255, 255, 0.10)',
+                  border: '1px solid var(--color-glass-border)',
                 }}
               >
                 <ToggleButton active={theme === 'dark'} onClick={() => setTheme('dark')} isLight={isLight}>
@@ -304,14 +274,14 @@ export function Layout() {
             <div className="flex items-center justify-between">
               <span
                 className="text-[11px] font-medium tracking-wider"
-                style={{ color: isLight ? '#9999aa' : '#8888a0' }}
+                style={{ color: 'var(--color-text-muted)' }}
               >
                 LANG
               </span>
               <div
                 className="flex rounded-lg overflow-hidden"
                 style={{
-                  border: isLight ? '1px solid #e2e2ea' : '1px solid rgba(255, 255, 255, 0.10)',
+                  border: '1px solid var(--color-glass-border)',
                 }}
               >
                 <ToggleButton active={lang === 'ko'} onClick={() => setLang('ko')} isLight={isLight}>
@@ -327,14 +297,14 @@ export function Layout() {
             <div className="flex items-center justify-between">
               <span
                 className="text-[11px] font-medium tracking-wider"
-                style={{ color: isLight ? '#9999aa' : '#8888a0' }}
+                style={{ color: 'var(--color-text-muted)' }}
               >
                 CURRENCY
               </span>
               <div
                 className="flex rounded-lg overflow-hidden"
                 style={{
-                  border: isLight ? '1px solid #e2e2ea' : '1px solid rgba(255, 255, 255, 0.10)',
+                  border: '1px solid var(--color-glass-border)',
                 }}
               >
                 <ToggleButton active={currency === 'JPY'} onClick={() => setCurrency('JPY')} isLight={isLight}>
@@ -355,9 +325,9 @@ export function Layout() {
             className="w-full flex items-center justify-center rounded-xl transition-all duration-200"
             style={{
               padding: '8px 0',
-              color: isLight ? '#9999aa' : '#55556a',
-              background: isLight ? '#f0f0f5' : 'rgba(255, 255, 255, 0.03)',
-              border: isLight ? '1px solid #e2e2ea' : '1px solid rgba(255, 255, 255, 0.04)',
+              color: 'var(--color-text-muted)',
+              background: 'var(--color-glass)',
+              border: '1px solid var(--color-glass-border)',
               cursor: 'pointer',
             }}
           >
@@ -391,7 +361,7 @@ export function Layout() {
               onClick={() => setMobileOpen(true)}
               className="md:hidden p-2 -ml-2 mr-3 rounded-lg"
               style={{
-                color: isLight ? '#6b6b80' : '#8888a0',
+                color: 'var(--color-text-secondary)',
                 background: 'transparent',
                 border: 'none',
                 cursor: 'pointer',
@@ -402,9 +372,9 @@ export function Layout() {
 
             {/* Breadcrumb */}
             <div className="flex items-center gap-2 text-sm">
-              <span style={{ color: isLight ? '#9999aa' : '#55556a' }}>RVJP</span>
-              <span style={{ color: isLight ? '#d0d0e0' : '#2a2a3e' }}>/</span>
-              <span style={{ color: isLight ? '#6b6b80' : '#8888a0' }}>
+              <span style={{ color: 'var(--color-text-muted)' }}>RVJP</span>
+              <span style={{ color: 'var(--color-text-subtle)' }}>/</span>
+              <span style={{ color: 'var(--color-text-secondary)' }}>
                 {(() => {
                   const item = navItems.find((n) => location.pathname.startsWith(n.to));
                   return item ? (lang === 'ko' ? item.ko : item.ja) : t('\uACBD\uC601 \uC694\uC57D', '\u30C0\u30C3\u30B7\u30E5\u30DC\u30FC\u30C9');
@@ -428,10 +398,10 @@ export function Layout() {
                       }
                 }
               >
-                <Clock size={12} style={{ color: isLight ? '#9999aa' : '#55556a' }} />
+                <Clock size={12} style={{ color: 'var(--color-text-muted)' }} />
                 <span
                   className="text-xs font-medium"
-                  style={{ color: isLight ? '#6b6b80' : '#8888a0' }}
+                  style={{ color: 'var(--color-text-secondary)' }}
                 >
                   {now.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric', weekday: 'short' })}
                   {' '}
@@ -447,7 +417,7 @@ export function Layout() {
                     background: 'linear-gradient(135deg, #10b981, #3b82f6)',
                   }}
                 />
-                <span className="text-xs font-medium" style={{ color: isLight ? '#9999aa' : '#55556a' }}>
+                <span className="text-xs font-medium" style={{ color: 'var(--color-text-muted)' }}>
                   Live
                 </span>
               </div>

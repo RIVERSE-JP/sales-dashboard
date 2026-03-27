@@ -3,22 +3,15 @@ import { getPlatformBrand } from '@/utils/platformConfig';
 interface Props {
   name: string;
   showName?: boolean;
-  size?: 'sm' | 'md';
+  size?: 'sm' | 'md' | 'lg';
 }
 
-export function PlatformBadge({ name, showName = true, size = 'sm' }: Props) {
+export function PlatformBadge({ name, showName = false, size = 'sm' }: Props) {
   const brand = getPlatformBrand(name);
-  const iconSize = size === 'sm' ? 16 : 20;
+  const iconSize = size === 'sm' ? 18 : size === 'md' ? 24 : 32;
 
   return (
-    <span
-      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium"
-      style={{
-        backgroundColor: brand.bgColor,
-        color: brand.color,
-        border: `1px solid ${brand.borderColor}`,
-      }}
-    >
+    <span className="inline-flex items-center gap-1" title={brand.nameJP || name}>
       {brand.logo ? (
         <img
           src={brand.logo}
@@ -27,9 +20,18 @@ export function PlatformBadge({ name, showName = true, size = 'sm' }: Props) {
           style={{ width: iconSize, height: iconSize }}
         />
       ) : (
-        <span className="font-bold">{brand.icon}</span>
+        <span
+          className="inline-flex items-center justify-center rounded text-[9px] font-bold text-white"
+          style={{ width: iconSize, height: iconSize, backgroundColor: brand.color }}
+        >
+          {brand.icon}
+        </span>
       )}
-      {showName && <span>{brand.nameJP || name}</span>}
+      {showName && (
+        <span className="text-[11px] text-[var(--color-text-secondary)]">
+          {brand.nameJP || name}
+        </span>
+      )}
     </span>
   );
 }
