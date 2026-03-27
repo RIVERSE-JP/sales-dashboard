@@ -283,18 +283,22 @@ export function Dashboard() {
     setLoading(true);
     setError(null);
     try {
-      const [kpiData, trendData, platformData, titleData, alertData] = await Promise.all([
-        fetchDashboardKPIs(),
-        fetchMonthlyTrend(),
-        fetchPlatformSummary(),
-        fetchTopTitles(20),
-        fetchGrowthAlerts(),
-      ]);
-
+      // Sequential calls to avoid Supabase free-tier concurrent connection limits
+      const kpiData = await fetchDashboardKPIs();
       setKpis(kpiData as KPIData);
+      setLoading(false); // Show KPIs immediately
+
+      const trendData = await fetchMonthlyTrend();
       setMonthlyTrend((trendData as MonthlyTrendRow[]) ?? []);
+
+      const platformData = await fetchPlatformSummary();
       setPlatformSummary((platformData as PlatformSummaryRow[]) ?? []);
+
+      const titleData = await fetchTopTitles(20);
       setTopTitles((titleData as TopTitleRow[]) ?? []);
+
+      // Growth alerts - non-critical, load last
+      const alertData = await fetchGrowthAlerts();
       setGrowthAlerts(((alertData as Array<Record<string, unknown>>) ?? []).map((r) => ({
         title_jp: String(r.out_title_jp ?? r.title_jp ?? ''),
         title_kr: r.out_title_kr != null ? String(r.out_title_kr) : r.title_kr != null ? String(r.title_kr) : null,

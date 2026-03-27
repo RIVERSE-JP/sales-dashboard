@@ -167,16 +167,14 @@ export function PlatformAnalysis() {
     async function loadAll() {
       setCompareLoading(true);
       const newMap = new Map<string, PlatformDetailData>();
-      await Promise.all(
-        comparePlatforms.map(async (ch) => {
-          try {
-            const data = await fetchPlatformDetail(ch);
-            if (!cancelled && data) newMap.set(ch, data as PlatformDetailData);
-          } catch (err) {
-            console.error(`Failed to load detail for ${ch}:`, err);
-          }
-        })
-      );
+      for (const ch of comparePlatforms) {
+        try {
+          const data = await fetchPlatformDetail(ch);
+          if (!cancelled && data) newMap.set(ch, data as PlatformDetailData);
+        } catch (err) {
+          console.error(`Failed to load detail for ${ch}:`, err);
+        }
+      }
       if (!cancelled) {
         setCompareDetails(newMap);
         setCompareLoading(false);
