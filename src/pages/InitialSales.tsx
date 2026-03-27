@@ -135,8 +135,13 @@ export function InitialSales() {
   const [titles, setTitles] = useState<TitleSummary[]>([]);
   const [search, setSearch] = useState('');
   const [channelFilter, setChannelFilter] = useState('');
-  const [sortKey, setSortKey] = useState<'totalSales' | 'firstDate' | 'dayCount'>('totalSales');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [salesMin, setSalesMin] = useState('');
+  const [pfCountFilter, setPfCountFilter] = useState(''); // '1', '2-3', '4+'
+  const [sortKey, setSortKey] = useState<'totalSales' | 'firstDate' | 'dayCount' | 'channelCount'>('totalSales');
   const [sortAsc, setSortAsc] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const [checkedTitles, setCheckedTitles] = useState<Set<string>>(new Set());
   const [selectedData, setSelectedData] = useState<SelectedTitle[]>([]);
   const [loadingCurves, setLoadingCurves] = useState(false);
@@ -178,9 +183,19 @@ export function InitialSales() {
     return Array.from(set).sort();
   }, [titles]);
 
+  // Date range options for quick filter
+  const dateRanges = useMemo(() => {
+    const months = new Set<string>();
+    for (const t of titles) {
+      if (t.firstDate) months.add(t.firstDate.slice(0, 7)); // YYYY-MM
+    }
+    return Array.from(months).sort();
+  }, [titles]);
+
   const filteredTitles = useMemo(() => {
     let list = titles;
 
+    // Text search
     if (search) {
       const q = search.toLowerCase();
       list = list.filter(
@@ -190,14 +205,41 @@ export function InitialSales() {
       );
     }
 
+    // Platform filter
     if (channelFilter) {
       list = list.filter((t) => t.channels.includes(channelFilter));
     }
 
+    // Date range filter
+    if (dateFrom) {
+      list = list.filter((t) => t.firstDate >= dateFrom);
+    }
+    if (dateTo) {
+      list = list.filter((t) => t.firstDate <= dateTo + '-31');
+    }
+
+    // Sales minimum filter
+    if (salesMin) {
+      const min = Number(salesMin);
+      if (min > 0) list = list.filter((t) => t.totalSales >= min);
+    }
+
+    // Platform count filter
+    if (pfCountFilter === '1') {
+      list = list.filter((t) => t.channels.length === 1);
+    } else if (pfCountFilter === '2-3') {
+      list = list.filter((t) => t.channels.length >= 2 && t.channels.length <= 3);
+    } else if (pfCountFilter === '4+') {
+      list = list.filter((t) => t.channels.length >= 4);
+    }
+
+    // Sort
     list = [...list].sort((a, b) => {
       let va: number | string, vb: number | string;
       if (sortKey === 'firstDate') {
         va = a.firstDate; vb = b.firstDate;
+      } else if (sortKey === 'channelCount') {
+        va = a.channels.length; vb = b.channels.length;
       } else {
         va = a[sortKey]; vb = b[sortKey];
       }
@@ -207,7 +249,9 @@ export function InitialSales() {
     });
 
     return list;
-  }, [titles, search, channelFilter, sortKey, sortAsc]);
+  }, [titles, search, channelFilter, dateFrom, dateTo, salesMin, pfCountFilter, sortKey, sortAsc]);
+
+  const activeFilterCount = [channelFilter, dateFrom, dateTo, salesMin, pfCountFilter].filter(Boolean).length;
 
   // ---- Toggle title selection ----
   const toggleTitle = useCallback((titleJP: string) => {
@@ -354,15 +398,16 @@ export function InitialSales() {
 
       {/* Search & Filters */}
       <motion.div variants={cardVariants} className="rounded-2xl p-5" style={GLASS_CARD}>
+        {/* Row 1: Search + Filter toggle + Compare button */}
         <div className="flex flex-col md:flex-row gap-3">
           <div className="relative flex-1">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
             <input
               type="text"
-              placeholder="작품 검색 (JP/KR)..."
+              placeholder={t('작품명 검색 (JP/KR)...', 'タイトル検索 (JP/KR)...')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--color-glass)] border border-[var(--color-input-border)] text-[var(--color-text-primary)] text-sm focus:outline-none focus:border-indigo-500/50 placeholder:text-[var(--color-text-muted)]"
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--color-input-bg)] border border-[var(--color-input-border)] text-[var(--color-text-primary)] text-sm focus:outline-none focus:border-[#1A2B5E]/50 placeholder:text-[var(--color-text-muted)]"
             />
             {search && (
               <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">
@@ -370,29 +415,188 @@ export function InitialSales() {
               </button>
             )}
           </div>
-          <select
-            value={channelFilter}
-            onChange={(e) => setChannelFilter(e.target.value)}
-            className="px-4 py-2.5 rounded-xl bg-[var(--color-glass)] border border-[var(--color-input-border)] text-[var(--color-text-primary)] text-sm focus:outline-none"
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="px-4 py-2.5 rounded-xl text-sm flex items-center gap-2 transition-colors"
+            style={{
+              background: showFilters ? 'var(--color-sidebar-active)' : 'var(--color-input-bg)',
+              border: '1px solid var(--color-input-border)',
+              color: showFilters ? 'var(--color-sidebar-active-text)' : 'var(--color-text-secondary)',
+            }}
           >
-            <option value="">전체 플랫폼</option>
-            {channels.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
+            {showFilters ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            {t('필터', 'フィルター')}
+            {activeFilterCount > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold text-white" style={{ background: '#1A2B5E' }}>
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
         </div>
 
+        {/* Row 2: Expandable filter panel */}
+        {showFilters && (
+          <div className="mt-4 pt-4 grid grid-cols-2 md:grid-cols-4 gap-3" style={{ borderTop: '1px solid var(--color-glass-border)' }}>
+            {/* Platform */}
+            <div>
+              <label className="block text-[10px] font-medium mb-1 tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
+                {t('플랫폼', 'プラットフォーム')}
+              </label>
+              <select
+                value={channelFilter}
+                onChange={(e) => setChannelFilter(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg text-xs bg-[var(--color-input-bg)] border border-[var(--color-input-border)] text-[var(--color-text-primary)] focus:outline-none"
+              >
+                <option value="">{t('전체', 'すべて')}</option>
+                {channels.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Date From */}
+            <div>
+              <label className="block text-[10px] font-medium mb-1 tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
+                {t('런칭 시작월', '開始月')}
+              </label>
+              <select
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg text-xs bg-[var(--color-input-bg)] border border-[var(--color-input-border)] text-[var(--color-text-primary)] focus:outline-none"
+              >
+                <option value="">{t('전체', 'すべて')}</option>
+                {dateRanges.map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Date To */}
+            <div>
+              <label className="block text-[10px] font-medium mb-1 tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
+                {t('런칭 종료월', '終了月')}
+              </label>
+              <select
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg text-xs bg-[var(--color-input-bg)] border border-[var(--color-input-border)] text-[var(--color-text-primary)] focus:outline-none"
+              >
+                <option value="">{t('전체', 'すべて')}</option>
+                {dateRanges.map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Platform count */}
+            <div>
+              <label className="block text-[10px] font-medium mb-1 tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
+                {t('배포 플랫폼 수', '配信PF数')}
+              </label>
+              <select
+                value={pfCountFilter}
+                onChange={(e) => setPfCountFilter(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg text-xs bg-[var(--color-input-bg)] border border-[var(--color-input-border)] text-[var(--color-text-primary)] focus:outline-none"
+              >
+                <option value="">{t('전체', 'すべて')}</option>
+                <option value="1">{t('단독 (1개)', '単独 (1PF)')}</option>
+                <option value="2-3">{t('2~3개', '2~3PF')}</option>
+                <option value="4+">{t('4개 이상', '4PF以上')}</option>
+              </select>
+            </div>
+
+            {/* Sales minimum */}
+            <div>
+              <label className="block text-[10px] font-medium mb-1 tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
+                {t('최소 매출', '最低売上')}
+              </label>
+              <select
+                value={salesMin}
+                onChange={(e) => setSalesMin(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg text-xs bg-[var(--color-input-bg)] border border-[var(--color-input-border)] text-[var(--color-text-primary)] focus:outline-none"
+              >
+                <option value="">{t('전체', 'すべて')}</option>
+                <option value="100000000">{t('1억엔 이상', '1億円以上')}</option>
+                <option value="50000000">{t('5000만엔 이상', '5000万以上')}</option>
+                <option value="10000000">{t('1000만엔 이상', '1000万以上')}</option>
+                <option value="1000000">{t('100만엔 이상', '100万以上')}</option>
+              </select>
+            </div>
+
+            {/* Sort by */}
+            <div>
+              <label className="block text-[10px] font-medium mb-1 tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
+                {t('정렬 기준', '並び順')}
+              </label>
+              <select
+                value={sortKey}
+                onChange={(e) => setSortKey(e.target.value as typeof sortKey)}
+                className="w-full px-3 py-2 rounded-lg text-xs bg-[var(--color-input-bg)] border border-[var(--color-input-border)] text-[var(--color-text-primary)] focus:outline-none"
+              >
+                <option value="totalSales">{t('총 매출순', '累計売上順')}</option>
+                <option value="firstDate">{t('런칭일순', 'ローンチ日順')}</option>
+                <option value="dayCount">{t('데이터일수순', 'データ日数順')}</option>
+                <option value="channelCount">{t('플랫폼 수순', 'PF数順')}</option>
+              </select>
+            </div>
+
+            {/* Sort direction */}
+            <div>
+              <label className="block text-[10px] font-medium mb-1 tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
+                {t('정렬 방향', '昇降順')}
+              </label>
+              <select
+                value={sortAsc ? 'asc' : 'desc'}
+                onChange={(e) => setSortAsc(e.target.value === 'asc')}
+                className="w-full px-3 py-2 rounded-lg text-xs bg-[var(--color-input-bg)] border border-[var(--color-input-border)] text-[var(--color-text-primary)] focus:outline-none"
+              >
+                <option value="desc">{t('내림차순 ↓', '降順 ↓')}</option>
+                <option value="asc">{t('오름차순 ↑', '昇順 ↑')}</option>
+              </select>
+            </div>
+
+            {/* Clear all filters */}
+            <div className="flex items-end">
+              <button
+                onClick={() => {
+                  setChannelFilter('');
+                  setDateFrom('');
+                  setDateTo('');
+                  setSalesMin('');
+                  setPfCountFilter('');
+                }}
+                className="w-full px-3 py-2 rounded-lg text-xs font-medium transition-colors"
+                style={{
+                  background: activeFilterCount > 0 ? 'rgba(239, 68, 68, 0.08)' : 'var(--color-input-bg)',
+                  color: activeFilterCount > 0 ? '#ef4444' : 'var(--color-text-muted)',
+                  border: '1px solid var(--color-input-border)',
+                }}
+              >
+                {t('필터 초기화', 'フィルターリセット')}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Result summary + Compare button */}
         <div className="mt-3 flex items-center gap-3 text-xs text-[var(--color-text-secondary)]">
-          <span>{filteredTitles.length}개 작품</span>
+          <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>{filteredTitles.length}</span>
+          <span>{t('개 작품', 'タイトル')}</span>
+          {activeFilterCount > 0 && (
+            <span style={{ color: 'var(--color-text-muted)' }}>
+              ({activeFilterCount}{t('개 필터 적용', 'フィルター適用')})
+            </span>
+          )}
           <span>|</span>
-          <span className="text-indigo-400">{checkedTitles.size}/10 선택됨</span>
+          <span style={{ color: '#1A2B5E', fontWeight: 600 }}>{checkedTitles.size}/10 {t('선택됨', '選択中')}</span>
           {checkedTitles.size > 0 && (
             <button
               onClick={loadCurves}
-              className="ml-auto px-4 py-1.5 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-xs font-semibold hover:opacity-90 transition-opacity flex items-center gap-1.5"
+              className="ml-auto px-4 py-1.5 rounded-lg text-white text-xs font-semibold hover:opacity-90 transition-opacity flex items-center gap-1.5"
+              style={{ background: '#1A2B5E' }}
             >
               <BarChart3 size={13} />
-              비교 시작 ({checkedTitles.size}개)
+              {t('비교 시작', '比較開始')} ({checkedTitles.size}{t('개', '件')})
             </button>
           )}
         </div>
@@ -428,7 +632,7 @@ export function InitialSales() {
               </tr>
             </thead>
             <tbody>
-              {filteredTitles.slice(0, 15).map((t) => {
+              {filteredTitles.slice(0, 30).map((t) => {
                 const checked = checkedTitles.has(t.title_jp);
                 return (
                   <tr
@@ -480,9 +684,9 @@ export function InitialSales() {
             </tbody>
           </table>
         </div>
-        {filteredTitles.length > 15 && (
+        {filteredTitles.length > 30 && (
           <div className="px-4 py-2 text-[11px] text-[var(--color-text-muted)] text-center border-t border-[var(--color-glass-border)]">
-            상위 15개 표시 중 (총 {filteredTitles.length}개) — 검색으로 필터링하세요
+            {t(`상위 30개 표시 중 (총 ${filteredTitles.length}개) — 필터로 좁혀보세요`, `上位30件表示中 (全${filteredTitles.length}件) — フィルターで絞り込み`)}
           </div>
         )}
       </motion.div>
