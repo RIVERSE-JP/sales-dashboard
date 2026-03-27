@@ -29,13 +29,7 @@ const navItems = [
 ] as const;
 
 // ---------------------------------------------------------------------------
-// Page transition variants
-// ---------------------------------------------------------------------------
-const pageVariants = {
-  initial: { opacity: 0 },
-  enter: { opacity: 1, transition: { duration: 0.15 } },
-  exit: { opacity: 0, transition: { duration: 0.1 } },
-};
+// Page transitions removed — instant navigation via prefetched cache
 
 // ---------------------------------------------------------------------------
 // Layout
@@ -432,18 +426,9 @@ export function Layout() {
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto">
-          <AnimatePresence mode="popLayout">
-            <motion.div
-              key={location.pathname}
-              variants={pageVariants}
-              initial="initial"
-              animate="enter"
-              exit="exit"
-              className="min-h-full p-4 md:p-6 lg:p-8"
-            >
-              <Outlet />
-            </motion.div>
-          </AnimatePresence>
+          <div className="min-h-full p-4 md:p-6 lg:p-8">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

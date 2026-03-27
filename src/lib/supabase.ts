@@ -223,6 +223,29 @@ export async function fetchGrowthAlerts() {
   return data ?? [];
 }
 
+// ============================================================
+// Prefetch ALL page data on app startup (background)
+// This ensures every page loads instantly from cache
+// ============================================================
+
+let _prefetchStarted = false;
+
+export function prefetchAllData() {
+  if (_prefetchStarted) return;
+  _prefetchStarted = true;
+
+  // Fire all RPCs in parallel — don't await, let them fill cache in background
+  Promise.allSettled([
+    fetchDashboardKPIs(),
+    fetchMonthlyTrend(),
+    fetchPlatformSummary(),
+    fetchTopTitles(20),
+    fetchTitleSummaries(),
+  ]).then(() => {
+    console.log('[prefetch] All core data cached');
+  });
+}
+
 export async function fetchTitleSummaries() {
   const cached = getCached('title_summaries');
   if (cached) return cached;
