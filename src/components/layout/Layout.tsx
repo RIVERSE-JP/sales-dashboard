@@ -146,25 +146,12 @@ export function Layout() {
       >
         {/* Logo area */}
         <div className="flex items-center h-16 px-4 shrink-0">
-          <div
-            className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-            style={{
-              background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
-              boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
-            }}
-          >
-            <span
-              style={{
-                fontWeight: 900,
-                fontSize: '14px',
-                color: '#fff',
-                letterSpacing: '-0.02em',
-                lineHeight: 1,
-              }}
-            >
-              RV
-            </span>
-          </div>
+          <img
+            src="/riverse_logo.png"
+            alt="RIVERSE"
+            className="shrink-0"
+            style={{ height: collapsed ? 26 : 30, width: 'auto', objectFit: 'contain' }}
+          />
           <AnimatePresence>
             {!collapsed && (
               <motion.div
@@ -172,26 +159,13 @@ export function Layout() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -8 }}
                 transition={{ duration: 0.2 }}
-                className="ml-3 overflow-hidden whitespace-nowrap"
+                className="ml-2 overflow-hidden whitespace-nowrap"
               >
                 <span
-                  className="font-extrabold text-base tracking-wider"
-                  style={{
-                    background: isLight
-                      ? 'linear-gradient(135deg, #1a1a2e 0%, #6366f1 50%, #3b82f6 100%)'
-                      : 'linear-gradient(135deg, #f0f0f5 0%, #a78bfa 50%, #3b82f6 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    letterSpacing: '0.15em',
-                  }}
+                  className="block text-sm font-bold"
+                  style={{ color: isLight ? '#1a1a2e' : '#f0f0f5' }}
                 >
-                  RIVERSE
-                </span>
-                <span
-                  className="block text-[10px] tracking-[0.15em] font-medium"
-                  style={{ color: isLight ? '#9999aa' : '#55556a' }}
-                >
-                  {t('\uB9E4\uCD9C \uD604\uD669 \uBCF4\uB4DC', '\u58F2\u4E0A\u73FE\u6CC1\u30DC\u30FC\u30C9')}
+                  {t('매출 현황 보드', '売上現況ボード')}
                 </span>
               </motion.div>
             )}
