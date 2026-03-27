@@ -7,7 +7,8 @@ import {
 import { BookOpen, Search, ArrowLeft, TrendingUp } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import type { DailySale, TimeGranularity } from '@/types';
-import { getPlatformColor, PLATFORM_BRANDS } from '@/utils/platformConfig';
+import { getPlatformColor } from '@/utils/platformConfig';
+import { PlatformBadge } from '@/components/PlatformBadge';
 import { startOfWeek, format, parseISO } from 'date-fns';
 
 // ============================================================
@@ -15,10 +16,10 @@ import { startOfWeek, format, parseISO } from 'date-fns';
 // ============================================================
 
 const GLASS_CARD = {
-  background: 'rgba(255, 255, 255, 0.03)',
+  background: 'var(--color-glass)',
   backdropFilter: 'blur(12px)',
   WebkitBackdropFilter: 'blur(12px)',
-  border: '1px solid rgba(255, 255, 255, 0.06)',
+  border: '1px solid var(--color-glass-border)',
   borderRadius: '16px',
 } as const;
 
@@ -37,14 +38,14 @@ const cardVariants = {
 
 const darkTooltipStyle = {
   contentStyle: {
-    backgroundColor: 'rgba(15, 15, 25, 0.95)',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'var(--color-tooltip-bg)',
+    border: '1px solid var(--color-tooltip-border)',
     borderRadius: '12px',
     boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
     padding: '12px 16px',
   },
-  labelStyle: { color: '#a0a0b8', fontWeight: 600, fontSize: '12px', marginBottom: '4px' },
-  itemStyle: { color: '#e0e0f0', fontWeight: 700, fontSize: '13px' },
+  labelStyle: { color: 'var(--color-tooltip-label)', fontWeight: 600, fontSize: '12px', marginBottom: '4px' },
+  itemStyle: { color: 'var(--color-tooltip-value)', fontWeight: 700, fontSize: '13px' },
 };
 
 // ============================================================
@@ -93,7 +94,7 @@ function ListSkeleton() {
       {Array.from({ length: 6 }).map((_, i) => (
         <div key={i} className="rounded-2xl p-5 animate-pulse" style={GLASS_CARD}>
           <div className="flex items-center gap-4">
-            <div className="h-10 w-10 rounded-xl bg-white/5" />
+            <div className="h-10 w-10 rounded-xl bg-[var(--color-glass)]" />
             <div className="flex-1">
               <div className="h-4 w-48 rounded skeleton-shimmer mb-2" />
               <div className="h-3 w-32 rounded skeleton-shimmer" />
@@ -112,7 +113,7 @@ function ChartSkeleton({ height = 360 }: { height?: number }) {
       <div className="h-4 w-40 rounded skeleton-shimmer mb-6" />
       <div className="flex items-end gap-1" style={{ height: height - 100 }}>
         {Array.from({ length: 20 }).map((_, i) => (
-          <div key={i} className="flex-1 rounded-t bg-white/[0.03]" style={{ height: `${30 + Math.random() * 60}%` }} />
+          <div key={i} className="flex-1 rounded-t bg-[var(--color-glass)]" style={{ height: `${30 + Math.random() * 60}%` }} />
         ))}
       </div>
     </div>
@@ -268,14 +269,14 @@ export function TitleAnalysis() {
             className="w-10 h-10 rounded-xl flex items-center justify-center cursor-pointer"
             style={{ ...GLASS_CARD }}
           >
-            <ArrowLeft size={18} color="#8888a0" />
+            <ArrowLeft size={18} color="var(--color-text-secondary)" />
           </motion.button>
           <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-bold truncate" style={{ color: '#f0f0f5' }}>
+            <h1 className="text-xl font-bold truncate" style={{ color: 'var(--color-text-primary)' }}>
               {selectedTitle}
             </h1>
             {selectedTitleInfo?.titleKR && (
-              <p className="text-sm truncate" style={{ color: '#55556a' }}>
+              <p className="text-sm truncate" style={{ color: 'var(--color-text-muted)' }}>
                 {selectedTitleInfo.titleKR}
               </p>
             )}
@@ -313,8 +314,8 @@ export function TitleAnalysis() {
                   className="rounded-2xl p-6"
                   style={GLASS_CARD}
                 >
-                  <p className="text-xs font-medium mb-2" style={{ color: '#8888a0' }}>{kpi.label}</p>
-                  <p className="text-2xl font-bold" style={{ color: kpi.color ?? '#f0f0f5' }}>{kpi.value}</p>
+                  <p className="text-xs font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>{kpi.label}</p>
+                  <p className="text-2xl font-bold" style={{ color: kpi.color ?? 'var(--color-text-primary)' }}>{kpi.value}</p>
                 </motion.div>
               ))}
             </div>
@@ -322,8 +323,8 @@ export function TitleAnalysis() {
             {/* Granularity selector + area chart */}
             <motion.div variants={cardVariants} className="rounded-2xl p-6" style={GLASS_CARD}>
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-semibold" style={{ color: '#f0f0f5' }}>売上推移</h2>
-                <div className="flex gap-1 p-1 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)' }}>
+                <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>売上推移</h2>
+                <div className="flex gap-1 p-1 rounded-xl" style={{ background: 'var(--color-input-bg)' }}>
                   {(['daily', 'weekly', 'monthly'] as TimeGranularity[]).map((g) => (
                     <button
                       key={g}
@@ -331,7 +332,7 @@ export function TitleAnalysis() {
                       className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer"
                       style={{
                         background: granularity === g ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
-                        color: granularity === g ? '#a5b4fc' : '#55556a',
+                        color: granularity === g ? '#a5b4fc' : 'var(--color-text-muted)',
                         border: granularity === g ? '1px solid rgba(99, 102, 241, 0.3)' : '1px solid transparent',
                       }}
                     >
@@ -348,9 +349,9 @@ export function TitleAnalysis() {
                       <stop offset="100%" stopColor="#818cf8" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                  <XAxis dataKey="label" tick={{ fill: '#55556a', fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: '#55556a', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatYenShort} width={60} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
+                  <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatYenShort} width={60} />
                   <ReTooltip {...darkTooltipStyle} formatter={(v: unknown) => [formatYen(Number(v ?? 0)), '売上']} />
                   <Area type="monotone" dataKey="sales" stroke="#818cf8" strokeWidth={2} fill="url(#titleGrad)" />
                 </AreaChart>
@@ -359,15 +360,15 @@ export function TitleAnalysis() {
 
             {/* Platform breakdown bar chart */}
             <motion.div variants={cardVariants} className="rounded-2xl p-6" style={GLASS_CARD}>
-              <h2 className="text-base font-semibold mb-6" style={{ color: '#f0f0f5' }}>
+              <h2 className="text-base font-semibold mb-6" style={{ color: 'var(--color-text-primary)' }}>
                 プラットフォーム別売上
               </h2>
               {platformBreakdown.length > 0 ? (
                 <ResponsiveContainer width="100%" height={Math.max(200, platformBreakdown.length * 48)}>
                   <BarChart data={platformBreakdown} layout="vertical" margin={{ left: 80 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" horizontal={false} />
-                    <XAxis type="number" tick={{ fill: '#55556a', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatYenShort} />
-                    <YAxis type="category" dataKey="platform" tick={{ fill: '#8888a0', fontSize: 12 }} axisLine={false} tickLine={false} width={80} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" horizontal={false} />
+                    <XAxis type="number" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatYenShort} />
+                    <YAxis type="category" dataKey="platform" tick={{ fill: 'var(--color-text-secondary)', fontSize: 12 }} axisLine={false} tickLine={false} width={80} />
                     <ReTooltip {...darkTooltipStyle} formatter={(v: unknown) => [formatYen(Number(v ?? 0)), '売上']} />
                     <Bar dataKey="sales" radius={[0, 6, 6, 0]} barSize={24}>
                       {platformBreakdown.map((entry, idx) => (
@@ -377,22 +378,22 @@ export function TitleAnalysis() {
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <p className="text-center py-8" style={{ color: '#55556a' }}>データがありません</p>
+                <p className="text-center py-8" style={{ color: 'var(--color-text-muted)' }}>データがありません</p>
               )}
             </motion.div>
 
             {/* Period comparison */}
             {periodComparison && (
               <motion.div variants={cardVariants} className="rounded-2xl p-6" style={GLASS_CARD}>
-                <h2 className="text-base font-semibold mb-4" style={{ color: '#f0f0f5' }}>期間比較</h2>
+                <h2 className="text-base font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>期間比較</h2>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="rounded-xl p-4" style={{ background: 'rgba(255,255,255,0.02)' }}>
-                    <p className="text-xs mb-1" style={{ color: '#8888a0' }}>前半期間</p>
-                    <p className="text-lg font-bold" style={{ color: '#f0f0f5' }}>{formatYen(periodComparison.firstHalf)}</p>
+                  <div className="rounded-xl p-4" style={{ background: 'var(--color-glass)' }}>
+                    <p className="text-xs mb-1" style={{ color: 'var(--color-text-secondary)' }}>前半期間</p>
+                    <p className="text-lg font-bold" style={{ color: 'var(--color-text-primary)' }}>{formatYen(periodComparison.firstHalf)}</p>
                   </div>
-                  <div className="rounded-xl p-4" style={{ background: 'rgba(255,255,255,0.02)' }}>
-                    <p className="text-xs mb-1" style={{ color: '#8888a0' }}>後半期間</p>
-                    <p className="text-lg font-bold" style={{ color: '#f0f0f5' }}>{formatYen(periodComparison.secondHalf)}</p>
+                  <div className="rounded-xl p-4" style={{ background: 'var(--color-glass)' }}>
+                    <p className="text-xs mb-1" style={{ color: 'var(--color-text-secondary)' }}>後半期間</p>
+                    <p className="text-lg font-bold" style={{ color: 'var(--color-text-primary)' }}>{formatYen(periodComparison.secondHalf)}</p>
                   </div>
                 </div>
                 <div className="mt-4 flex items-center gap-2">
@@ -427,8 +428,8 @@ export function TitleAnalysis() {
           <BookOpen size={20} color="white" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: '#f0f0f5' }}>Title Analysis</h1>
-          <p className="text-sm" style={{ color: '#55556a' }}>作品別の売上分析・トレンド</p>
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>Title Analysis</h1>
+          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>作品別の売上分析・トレンド</p>
         </div>
       </div>
 
@@ -441,17 +442,17 @@ export function TitleAnalysis() {
         style={GLASS_CARD}
       >
         <div className="flex items-center gap-3">
-          <Search size={18} color="#55556a" />
+          <Search size={18} color="var(--color-text-muted)" />
           <input
             type="text"
             placeholder="タイトル名で検索 (JP / KR)..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="flex-1 bg-transparent outline-none text-sm"
-            style={{ color: '#f0f0f5' }}
+            style={{ color: 'var(--color-text-primary)' }}
           />
           {searchQuery && (
-            <button onClick={() => setSearchQuery('')} className="text-xs cursor-pointer" style={{ color: '#8888a0' }}>
+            <button onClick={() => setSearchQuery('')} className="text-xs cursor-pointer" style={{ color: 'var(--color-text-secondary)' }}>
               クリア
             </button>
           )}
@@ -459,7 +460,7 @@ export function TitleAnalysis() {
       </motion.div>
 
       {/* Results count */}
-      <p className="text-xs mb-4" style={{ color: '#55556a' }}>
+      <p className="text-xs mb-4" style={{ color: 'var(--color-text-muted)' }}>
         {filteredTitles.length} タイトル {searchQuery && `(「${searchQuery}」で検索)`}
       </p>
 
@@ -472,7 +473,7 @@ export function TitleAnalysis() {
             <motion.div
               key={title.titleJP}
               variants={cardVariants}
-              whileHover={{ scale: 1.01, background: 'rgba(255,255,255,0.05)' }}
+              whileHover={{ scale: 1.01, background: 'var(--color-glass-hover)' }}
               className="rounded-2xl p-5 cursor-pointer transition-all"
               style={GLASS_CARD}
               onClick={() => loadTitleDetail(title.titleJP)}
@@ -488,37 +489,31 @@ export function TitleAnalysis() {
                   {title.platforms.length}P
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate" style={{ color: '#f0f0f5' }}>
+                  <p className="text-sm font-semibold truncate" style={{ color: 'var(--color-text-primary)' }}>
                     {title.titleJP}
                   </p>
                   {title.titleKR && (
-                    <p className="text-xs truncate" style={{ color: '#55556a' }}>{title.titleKR}</p>
+                    <p className="text-xs truncate" style={{ color: 'var(--color-text-muted)' }}>{title.titleKR}</p>
                   )}
                 </div>
                 <div className="flex gap-1 shrink-0">
                   {title.platforms.slice(0, 3).map((p) => (
-                    <span
-                      key={p}
-                      className="text-[10px] px-2 py-0.5 rounded-full font-medium"
-                      style={{ background: `${getPlatformColor(p)}20`, color: getPlatformColor(p) }}
-                    >
-                      {PLATFORM_BRANDS[p]?.icon ?? p.charAt(0)}
-                    </span>
+                    <PlatformBadge key={p} name={p} showName={false} size="sm" />
                   ))}
                   {title.platforms.length > 3 && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ color: '#55556a' }}>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ color: 'var(--color-text-muted)' }}>
                       +{title.platforms.length - 3}
                     </span>
                   )}
                 </div>
-                <p className="text-sm font-bold shrink-0" style={{ color: '#f0f0f5' }}>
+                <p className="text-sm font-bold shrink-0" style={{ color: 'var(--color-text-primary)' }}>
                   {formatYen(title.totalSales)}
                 </p>
               </div>
             </motion.div>
           ))}
           {filteredTitles.length === 0 && (
-            <div className="text-center py-12" style={{ color: '#55556a' }}>
+            <div className="text-center py-12" style={{ color: 'var(--color-text-muted)' }}>
               該当するタイトルがありません
             </div>
           )}

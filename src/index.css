@@ -9,6 +9,9 @@
   --color-text-primary: #f0f0f5;
   --color-text-secondary: #8888a0;
   --color-text-muted: #55556a;
+  --color-text-heading: #d0d0e0;
+  --color-text-table: #c0c0d0;
+  --color-text-subtle: #44445a;
   --color-accent-blue: #3b82f6;
   --color-accent-purple: #8b5cf6;
   --color-accent-pink: #ec4899;
@@ -17,6 +20,19 @@
   --color-accent-amber: #f59e0b;
   --color-glass: rgba(255, 255, 255, 0.03);
   --color-glass-border: rgba(255, 255, 255, 0.06);
+  --color-glass-hover: rgba(255, 255, 255, 0.05);
+  --color-glass-hover-border: rgba(255, 255, 255, 0.10);
+  --color-tooltip-bg: rgba(15, 15, 25, 0.95);
+  --color-tooltip-border: rgba(255, 255, 255, 0.1);
+  --color-tooltip-label: #a0a0b8;
+  --color-tooltip-value: #e0e0f0;
+  --color-chart-grid: rgba(255, 255, 255, 0.04);
+  --color-table-row-alt: rgba(255, 255, 255, 0.015);
+  --color-table-row-hover: rgba(255, 255, 255, 0.04);
+  --color-table-border: rgba(255, 255, 255, 0.06);
+  --color-table-border-subtle: rgba(255, 255, 255, 0.03);
+  --color-input-bg: rgba(255, 255, 255, 0.04);
+  --color-input-border: rgba(255, 255, 255, 0.08);
 }
 
 body {
@@ -253,8 +269,24 @@ body {
   --color-text-primary: #1a1a2e;
   --color-text-secondary: #6b6b80;
   --color-text-muted: #9999aa;
+  --color-text-heading: #1a1a2e;
+  --color-text-table: #333350;
+  --color-text-subtle: #b0b0c0;
   --color-glass: rgba(255, 255, 255, 0.80);
   --color-glass-border: rgba(0, 0, 0, 0.08);
+  --color-glass-hover: rgba(0, 0, 0, 0.03);
+  --color-glass-hover-border: rgba(0, 0, 0, 0.12);
+  --color-tooltip-bg: rgba(255, 255, 255, 0.96);
+  --color-tooltip-border: rgba(0, 0, 0, 0.1);
+  --color-tooltip-label: #6b6b80;
+  --color-tooltip-value: #1a1a2e;
+  --color-chart-grid: rgba(0, 0, 0, 0.06);
+  --color-table-row-alt: rgba(0, 0, 0, 0.02);
+  --color-table-row-hover: rgba(0, 0, 0, 0.04);
+  --color-table-border: rgba(0, 0, 0, 0.08);
+  --color-table-border-subtle: rgba(0, 0, 0, 0.04);
+  --color-input-bg: rgba(0, 0, 0, 0.03);
+  --color-input-border: rgba(0, 0, 0, 0.08);
 }
 
 .theme-light .glass-card {

@@ -11,6 +11,7 @@ import {
 import { supabase } from '@/lib/supabase';
 import type { Platform, TimeGranularity } from '@/types';
 import { getPlatformColor, PLATFORM_BRANDS } from '@/utils/platformConfig';
+import { PlatformBadge } from '@/components/PlatformBadge';
 import {
   startOfWeek, format, parseISO, subDays,
 } from 'date-fns';
@@ -123,16 +124,16 @@ function AnimatedCount({ value }: { value: number }) {
 // ============================================================
 
 const GLASS_CARD = {
-  background: 'rgba(255, 255, 255, 0.03)',
+  background: 'var(--color-glass)',
   backdropFilter: 'blur(12px)',
   WebkitBackdropFilter: 'blur(12px)',
-  border: '1px solid rgba(255, 255, 255, 0.06)',
+  border: '1px solid var(--color-glass-border)',
   borderRadius: '16px',
 } as const;
 
 const GLASS_CARD_HOVER = {
-  background: 'rgba(255, 255, 255, 0.05)',
-  border: '1px solid rgba(255, 255, 255, 0.10)',
+  background: 'var(--color-glass-hover)',
+  border: '1px solid var(--color-glass-hover-border)',
 } as const;
 
 const containerVariants = {
@@ -168,20 +169,20 @@ const chartVariants = {
 
 const darkTooltipStyle = {
   contentStyle: {
-    backgroundColor: 'rgba(15, 15, 25, 0.95)',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'var(--color-tooltip-bg)',
+    border: '1px solid var(--color-tooltip-border)',
     borderRadius: '12px',
     boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
     padding: '12px 16px',
   },
   labelStyle: {
-    color: '#a0a0b8',
+    color: 'var(--color-tooltip-label)',
     fontWeight: 600,
     fontSize: '12px',
     marginBottom: '4px',
   },
   itemStyle: {
-    color: '#e0e0f0',
+    color: 'var(--color-tooltip-value)',
     fontWeight: 700,
     fontSize: '13px',
   },
@@ -411,7 +412,7 @@ function renderDonutLabel(props: any) {
     <text
       x={x}
       y={y}
-      fill="#a0a0b8"
+      fill="var(--color-text-secondary)"
       textAnchor={x > cx ? 'start' : 'end'}
       dominantBaseline="central"
       fontSize={11}
@@ -435,15 +436,15 @@ function AreaChartTooltip({ active, payload, label }: {
   return (
     <div
       style={{
-        background: 'rgba(10, 10, 20, 0.96)',
-        border: '1px solid rgba(99, 102, 241, 0.2)',
+        background: 'var(--color-tooltip-bg)',
+        border: '1px solid var(--color-tooltip-border)',
         borderRadius: '12px',
         padding: '12px 16px',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.6), 0 0 20px rgba(99, 102, 241, 0.1)',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
         backdropFilter: 'blur(8px)',
       }}
     >
-      <p style={{ color: '#8888a0', fontSize: 11, marginBottom: 6, fontWeight: 500 }}>{label}</p>
+      <p style={{ color: 'var(--color-text-secondary)', fontSize: 11, marginBottom: 6, fontWeight: 500 }}>{label}</p>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <div style={{
           width: 8,
@@ -452,7 +453,7 @@ function AreaChartTooltip({ active, payload, label }: {
           background: 'linear-gradient(135deg, #3b82f6, #a78bfa)',
           boxShadow: '0 0 6px rgba(99, 102, 241, 0.5)',
         }} />
-        <p style={{ color: '#f0f0f5', fontSize: 15, fontWeight: 700, margin: 0 }}>
+        <p style={{ color: 'var(--color-text-primary)', fontSize: 15, fontWeight: 700, margin: 0 }}>
           {formatYen(payload[0].value)}
         </p>
       </div>
@@ -460,26 +461,7 @@ function AreaChartTooltip({ active, payload, label }: {
   );
 }
 
-// ============================================================
-// PlatformBadge component
-// ============================================================
-
-function PlatformBadge({ name }: { name: string }) {
-  const color = getPlatformColor(name);
-  const displayName = PLATFORM_BRANDS[name]?.nameJP || name;
-  return (
-    <span
-      className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium mr-1 mb-1"
-      style={{
-        color,
-        background: `${color}15`,
-        border: `1px solid ${color}30`,
-      }}
-    >
-      {displayName.length > 6 ? (PLATFORM_BRANDS[name]?.icon || displayName.slice(0, 3)) : displayName}
-    </span>
-  );
-}
+// PlatformBadge is imported from shared component
 
 // ============================================================
 // Granularity Toggle
@@ -502,8 +484,8 @@ function GranularityToggle({
     <div
       className="inline-flex rounded-xl p-1"
       style={{
-        background: 'rgba(255,255,255,0.04)',
-        border: '1px solid rgba(255,255,255,0.06)',
+        background: 'var(--color-input-bg)',
+        border: '1px solid var(--color-table-border)',
       }}
     >
       {GRANULARITY_OPTIONS.map((opt) => (
@@ -512,7 +494,7 @@ function GranularityToggle({
           onClick={() => onChange(opt.key)}
           className="px-4 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200"
           style={{
-            color: value === opt.key ? '#fff' : '#55556a',
+            color: value === opt.key ? '#fff' : 'var(--color-text-muted)',
             background: value === opt.key
               ? 'linear-gradient(135deg, #3b82f6, #8b5cf6)'
               : 'transparent',
@@ -665,10 +647,10 @@ export function Dashboard() {
           <LayoutDashboard size={22} color="white" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: '#f0f0f5' }}>
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
             Dashboard
           </h1>
-          <p className="text-sm" style={{ color: '#55556a' }}>
+          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
             Sales overview and key metrics
           </p>
         </div>
@@ -689,8 +671,8 @@ export function Dashboard() {
           className="rounded-2xl p-12 flex flex-col items-center justify-center min-h-[300px]"
           style={GLASS_CARD}
         >
-          <BookOpen size={48} style={{ color: '#55556a' }} className="mb-4" />
-          <p style={{ color: '#55556a', fontSize: 15 }}>
+          <BookOpen size={48} style={{ color: 'var(--color-text-muted)' }} className="mb-4" />
+          <p style={{ color: 'var(--color-text-muted)', fontSize: 15 }}>
             No sales data available yet. Upload data to get started.
           </p>
         </div>
@@ -721,7 +703,7 @@ export function Dashboard() {
               }}
             >
               <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none shimmer-bg" />
-              <p className="text-xs font-medium tracking-wide mb-3" style={{ color: '#55556a' }}>
+              <p className="text-xs font-medium tracking-wide mb-3" style={{ color: 'var(--color-text-muted)' }}>
                 TOTAL CUMULATIVE SALES
               </p>
               <p
@@ -734,7 +716,7 @@ export function Dashboard() {
               >
                 <AnimatedNumber value={kpis.totalSales} useManUnit />
               </p>
-              <p className="text-xs" style={{ color: '#44445a' }}>
+              <p className="text-xs" style={{ color: 'var(--color-text-subtle)' }}>
                 All-time total
               </p>
             </motion.div>
@@ -754,10 +736,10 @@ export function Dashboard() {
               }}
             >
               <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none shimmer-bg" />
-              <p className="text-xs font-medium tracking-wide mb-3" style={{ color: '#55556a' }}>
+              <p className="text-xs font-medium tracking-wide mb-3" style={{ color: 'var(--color-text-muted)' }}>
                 THIS MONTH
               </p>
-              <p className="text-4xl font-extrabold mb-2" style={{ color: '#f0f0f5' }}>
+              <p className="text-4xl font-extrabold mb-2" style={{ color: 'var(--color-text-primary)' }}>
                 <AnimatedNumber value={kpis.thisMonthSales} useManUnit />
               </p>
               <span className={kpis.momChange >= 0 ? 'pill-positive' : 'pill-negative'}>
@@ -785,16 +767,16 @@ export function Dashboard() {
               }}
             >
               <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none shimmer-bg" />
-              <p className="text-xs font-medium tracking-wide mb-3" style={{ color: '#55556a' }}>
+              <p className="text-xs font-medium tracking-wide mb-3" style={{ color: 'var(--color-text-muted)' }}>
                 ACTIVE TITLES
               </p>
               <div className="flex items-baseline gap-2">
-                <p className="text-4xl font-extrabold" style={{ color: '#f0f0f5' }}>
+                <p className="text-4xl font-extrabold" style={{ color: 'var(--color-text-primary)' }}>
                   <AnimatedCount value={kpis.activeTitles} />
                 </p>
                 <BookOpen size={18} style={{ color: '#8b5cf6' }} />
               </div>
-              <p className="text-xs mt-1" style={{ color: '#44445a' }}>
+              <p className="text-xs mt-1" style={{ color: 'var(--color-text-subtle)' }}>
                 Unique titles with sales
               </p>
             </motion.div>
@@ -814,16 +796,16 @@ export function Dashboard() {
               }}
             >
               <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none shimmer-bg" />
-              <p className="text-xs font-medium tracking-wide mb-3" style={{ color: '#55556a' }}>
+              <p className="text-xs font-medium tracking-wide mb-3" style={{ color: 'var(--color-text-muted)' }}>
                 ACTIVE PLATFORMS
               </p>
               <div className="flex items-baseline gap-2">
-                <p className="text-4xl font-extrabold" style={{ color: '#f0f0f5' }}>
+                <p className="text-4xl font-extrabold" style={{ color: 'var(--color-text-primary)' }}>
                   <AnimatedCount value={kpis.activePlatforms} />
                 </p>
                 <Monitor size={18} style={{ color: '#f59e0b' }} />
               </div>
-              <p className="text-xs mt-1" style={{ color: '#44445a' }}>
+              <p className="text-xs mt-1" style={{ color: 'var(--color-text-subtle)' }}>
                 Distribution channels
               </p>
             </motion.div>
@@ -840,7 +822,7 @@ export function Dashboard() {
             style={GLASS_CARD}
           >
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-              <h2 className="text-lg font-semibold pb-1" style={{ color: '#d0d0e0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <h2 className="text-lg font-semibold pb-1" style={{ color: 'var(--color-text-heading)', borderBottom: '1px solid var(--color-table-border)' }}>
                 Sales Trend
               </h2>
               <GranularityToggle value={granularity} onChange={setGranularity} />
@@ -865,24 +847,24 @@ export function Dashboard() {
                   </linearGradient>
                   {/* Subtle grid pattern */}
                   <pattern id="gridPattern" width="40" height="40" patternUnits="userSpaceOnUse">
-                    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.02)" strokeWidth="0.5" />
+                    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="var(--color-glass)" strokeWidth="0.5" />
                   </pattern>
                 </defs>
                 <rect width="100%" height="100%" fill="url(#gridPattern)" />
                 <CartesianGrid
                   strokeDasharray="3 3"
-                  stroke="rgba(255,255,255,0.04)"
+                  stroke="var(--color-chart-grid)"
                   vertical={false}
                 />
                 <XAxis
                   dataKey="label"
-                  tick={{ fill: '#55556a', fontSize: 11 }}
-                  axisLine={{ stroke: 'rgba(255,255,255,0.06)' }}
+                  tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }}
+                  axisLine={{ stroke: 'var(--color-glass-border)' }}
                   tickLine={false}
                   interval="preserveStartEnd"
                 />
                 <YAxis
-                  tick={{ fill: '#55556a', fontSize: 11 }}
+                  tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }}
                   axisLine={false}
                   tickLine={false}
                   tickFormatter={formatYenShort}
@@ -913,7 +895,7 @@ export function Dashboard() {
           >
             {/* Donut Chart */}
             <div className="rounded-2xl p-6" style={GLASS_CARD}>
-              <h2 className="text-lg font-semibold mb-4 pb-1" style={{ color: '#d0d0e0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <h2 className="text-lg font-semibold mb-4 pb-1" style={{ color: 'var(--color-text-heading)', borderBottom: '1px solid var(--color-table-border)' }}>
                 Platform Share
               </h2>
               <ResponsiveContainer width="100%" height={320}>
@@ -936,10 +918,10 @@ export function Dashboard() {
                     ))}
                   </Pie>
                   {/* Center text showing total */}
-                  <text x="50%" y="46%" textAnchor="middle" dominantBaseline="central" fill="#55556a" fontSize={11} fontWeight={500}>
+                  <text x="50%" y="46%" textAnchor="middle" dominantBaseline="central" fill="var(--color-text-muted)" fontSize={11} fontWeight={500}>
                     Total
                   </text>
-                  <text x="50%" y="55%" textAnchor="middle" dominantBaseline="central" fill="#f0f0f5" fontSize={16} fontWeight={700}>
+                  <text x="50%" y="55%" textAnchor="middle" dominantBaseline="central" fill="var(--color-text-primary)" fontSize={16} fontWeight={700}>
                     {formatYen(platformShares.reduce((s, p) => s + p.value, 0))}
                   </text>
                   <ReTooltip
@@ -952,7 +934,7 @@ export function Dashboard() {
 
             {/* Horizontal Bar Chart */}
             <div className="rounded-2xl p-6" style={GLASS_CARD}>
-              <h2 className="text-lg font-semibold mb-4 pb-1" style={{ color: '#d0d0e0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <h2 className="text-lg font-semibold mb-4 pb-1" style={{ color: 'var(--color-text-heading)', borderBottom: '1px solid var(--color-table-border)' }}>
                 Platform Ranking
               </h2>
               <ResponsiveContainer width="100%" height={320}>
@@ -963,12 +945,12 @@ export function Dashboard() {
                 >
                   <CartesianGrid
                     strokeDasharray="3 3"
-                    stroke="rgba(255,255,255,0.04)"
+                    stroke="var(--color-chart-grid)"
                     horizontal={false}
                   />
                   <XAxis
                     type="number"
-                    tick={{ fill: '#55556a', fontSize: 11 }}
+                    tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }}
                     axisLine={false}
                     tickLine={false}
                     tickFormatter={formatYenShort}
@@ -977,7 +959,7 @@ export function Dashboard() {
                     type="category"
                     dataKey="name"
                     width={90}
-                    tick={{ fill: '#a0a0b8', fontSize: 11 }}
+                    tick={{ fill: 'var(--color-tooltip-label)', fontSize: 11 }}
                     axisLine={false}
                     tickLine={false}
                     tickFormatter={(name: string) =>
@@ -1016,16 +998,16 @@ export function Dashboard() {
             className="rounded-2xl p-6 overflow-x-auto"
             style={GLASS_CARD}
           >
-            <h2 className="text-lg font-semibold mb-4 pb-2" style={{ color: '#d0d0e0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <h2 className="text-lg font-semibold mb-4 pb-2" style={{ color: 'var(--color-text-heading)', borderBottom: '1px solid var(--color-table-border)' }}>
               Top 10 Titles
             </h2>
-            <table className="w-full text-sm" style={{ color: '#c0c0d0' }}>
+            <table className="w-full text-sm" style={{ color: 'var(--color-text-table)' }}>
               <thead>
                 <tr
                   className="text-left text-xs font-semibold tracking-wider"
                   style={{
-                    color: '#55556a',
-                    borderBottom: '1px solid rgba(255,255,255,0.06)',
+                    color: 'var(--color-text-muted)',
+                    borderBottom: '1px solid var(--color-table-border)',
                   }}
                 >
                   <th className="py-3 pr-3 w-10">#</th>
@@ -1044,15 +1026,15 @@ export function Dashboard() {
                     transition={{ delay: 0.05 * idx, duration: 0.3 }}
                     className="transition-colors duration-150"
                     style={{
-                      borderBottom: '1px solid rgba(255,255,255,0.03)',
-                      background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)',
+                      borderBottom: '1px solid var(--color-table-border-subtle)',
+                      background: idx % 2 === 0 ? 'transparent' : 'var(--color-table-row-alt)',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+                      e.currentTarget.style.background = 'var(--color-table-row-hover)';
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.background =
-                        idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)';
+                        idx % 2 === 0 ? 'transparent' : 'var(--color-table-row-alt)';
                     }}
                   >
                     <td className="py-3 pr-3">
@@ -1062,7 +1044,7 @@ export function Dashboard() {
                           background:
                             idx < 3
                               ? 'linear-gradient(135deg, #3b82f6, #8b5cf6)'
-                              : 'rgba(255,255,255,0.06)',
+                              : 'var(--color-glass-border)',
                           color: idx < 3 ? '#fff' : '#777',
                         }}
                       >
@@ -1073,12 +1055,12 @@ export function Dashboard() {
                       <div>
                         <p
                           className="font-semibold text-sm leading-tight"
-                          style={{ color: '#e0e0f0' }}
+                          style={{ color: 'var(--color-tooltip-value)' }}
                         >
                           {title.titleJP}
                         </p>
                         {title.titleKR && (
-                          <p className="text-xs mt-0.5" style={{ color: '#55556a' }}>
+                          <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
                             {title.titleKR}
                           </p>
                         )}

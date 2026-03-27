@@ -8,7 +8,7 @@ import {
   Rocket, Search, X, ChevronDown, ChevronUp, Check, BarChart3,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { getPlatformColor } from '@/utils/platformConfig';
+import { PlatformBadge } from '@/components/PlatformBadge';
 import { format, parseISO, addDays } from 'date-fns';
 
 // ============================================================
@@ -49,10 +49,10 @@ interface SelectedTitle {
 // ============================================================
 
 const GLASS_CARD = {
-  background: 'rgba(255, 255, 255, 0.03)',
+  background: 'var(--color-glass)',
   backdropFilter: 'blur(12px)',
   WebkitBackdropFilter: 'blur(12px)',
-  border: '1px solid rgba(255, 255, 255, 0.06)',
+  border: '1px solid var(--color-glass-border)',
   borderRadius: '16px',
 } as const;
 
@@ -71,14 +71,14 @@ const cardVariants = {
 
 const darkTooltipStyle = {
   contentStyle: {
-    backgroundColor: 'rgba(15, 15, 25, 0.95)',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'var(--color-tooltip-bg)',
+    border: '1px solid var(--color-tooltip-border)',
     borderRadius: '12px',
     boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
     padding: '12px 16px',
   },
-  labelStyle: { color: '#a0a0b8', fontWeight: 600, fontSize: '12px', marginBottom: '4px' },
-  itemStyle: { color: '#e0e0f0', fontWeight: 700, fontSize: '13px' },
+  labelStyle: { color: 'var(--color-tooltip-label)', fontWeight: 600, fontSize: '12px', marginBottom: '4px' },
+  itemStyle: { color: 'var(--color-tooltip-value)', fontWeight: 700, fontSize: '13px' },
 };
 
 const CHART_COLORS = [
@@ -348,8 +348,8 @@ export function InitialSales() {
           <Rocket size={22} className="text-white" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-[#f0f0f5]">초동매출 비교</h1>
-          <p className="text-sm text-[#8888a0]">런칭일 기준 4주간 매출 비교 분석</p>
+          <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">초동매출 비교</h1>
+          <p className="text-sm text-[var(--color-text-secondary)]">런칭일 기준 4주간 매출 비교 분석</p>
         </div>
       </motion.div>
 
@@ -357,16 +357,16 @@ export function InitialSales() {
       <motion.div variants={cardVariants} className="rounded-2xl p-5" style={GLASS_CARD}>
         <div className="flex flex-col md:flex-row gap-3">
           <div className="relative flex-1">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#55556a]" />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
             <input
               type="text"
               placeholder="작품 검색 (JP/KR)..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/5 border border-white/8 text-[#f0f0f5] text-sm focus:outline-none focus:border-indigo-500/50 placeholder:text-[#55556a]"
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--color-glass)] border border-[var(--color-input-border)] text-[var(--color-text-primary)] text-sm focus:outline-none focus:border-indigo-500/50 placeholder:text-[var(--color-text-muted)]"
             />
             {search && (
-              <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#55556a] hover:text-white">
+              <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">
                 <X size={14} />
               </button>
             )}
@@ -374,7 +374,7 @@ export function InitialSales() {
           <select
             value={channelFilter}
             onChange={(e) => setChannelFilter(e.target.value)}
-            className="px-4 py-2.5 rounded-xl bg-white/5 border border-white/8 text-[#f0f0f5] text-sm focus:outline-none"
+            className="px-4 py-2.5 rounded-xl bg-[var(--color-glass)] border border-[var(--color-input-border)] text-[var(--color-text-primary)] text-sm focus:outline-none"
           >
             <option value="">전체 플랫폼</option>
             {channels.map((c) => (
@@ -383,7 +383,7 @@ export function InitialSales() {
           </select>
         </div>
 
-        <div className="mt-3 flex items-center gap-3 text-xs text-[#8888a0]">
+        <div className="mt-3 flex items-center gap-3 text-xs text-[var(--color-text-secondary)]">
           <span>{filteredTitles.length}개 작품</span>
           <span>|</span>
           <span className="text-indigo-400">{checkedTitles.size}/10 선택됨</span>
@@ -404,24 +404,24 @@ export function InitialSales() {
         <div style={{ height: '300px', overflow: 'auto', borderRadius: '16px' }}>
           <table className="w-full text-sm table-striped">
             <thead className="sticky top-0 z-10">
-              <tr className="text-[#8888a0] text-xs" style={{ background: 'rgba(15, 15, 25, 0.95)' }}>
+              <tr className="text-[var(--color-text-secondary)] text-xs" style={{ background: 'var(--color-tooltip-bg)' }}>
                 <th className="px-4 py-3 text-left w-10"></th>
                 <th className="px-4 py-3 text-left">작품</th>
                 <th className="px-4 py-3 text-left">플랫폼</th>
                 <th
-                  className="px-4 py-3 text-right cursor-pointer select-none hover:text-white"
+                  className="px-4 py-3 text-right cursor-pointer select-none hover:text-[var(--color-text-primary)]"
                   onClick={() => handleSort('firstDate')}
                 >
                   런칭일 <SortIcon col="firstDate" />
                 </th>
                 <th
-                  className="px-4 py-3 text-right cursor-pointer select-none hover:text-white"
+                  className="px-4 py-3 text-right cursor-pointer select-none hover:text-[var(--color-text-primary)]"
                   onClick={() => handleSort('totalSales')}
                 >
                   총 매출 <SortIcon col="totalSales" />
                 </th>
                 <th
-                  className="px-4 py-3 text-right cursor-pointer select-none hover:text-white"
+                  className="px-4 py-3 text-right cursor-pointer select-none hover:text-[var(--color-text-primary)]"
                   onClick={() => handleSort('dayCount')}
                 >
                   데이터일수 <SortIcon col="dayCount" />
@@ -434,8 +434,8 @@ export function InitialSales() {
                 return (
                   <tr
                     key={t.title_jp}
-                    className={`border-t border-white/4 cursor-pointer transition-colors ${
-                      checked ? 'bg-indigo-500/10' : 'hover:bg-white/3'
+                    className={`border-t border-[var(--color-glass-border)] cursor-pointer transition-colors ${
+                      checked ? 'bg-indigo-500/10' : 'hover:bg-[var(--color-glass)]'
                     }`}
                     onClick={() => toggleTitle(t.title_jp)}
                   >
@@ -443,45 +443,36 @@ export function InitialSales() {
                       <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
                         checked
                           ? 'bg-indigo-500 border-indigo-500'
-                          : 'border-white/20 hover:border-white/40'
+                          : 'border-[var(--color-glass-border)] hover:border-[var(--color-glass-border)]0'
                       }`}>
                         {checked && <Check size={12} className="text-white" />}
                       </div>
                     </td>
                     <td className="px-4 py-2.5">
-                      <div className="text-[#f0f0f5] font-medium text-xs">
+                      <div className="text-[var(--color-text-primary)] font-medium text-xs">
                         {t.title_jp.length > 30 ? t.title_jp.slice(0, 30) + '…' : t.title_jp}
                       </div>
                       {t.title_kr && (
-                        <div className="text-[#8888a0] text-[11px]">{t.title_kr}</div>
+                        <div className="text-[var(--color-text-secondary)] text-[11px]">{t.title_kr}</div>
                       )}
                     </td>
                     <td className="px-4 py-2.5">
                       <div className="flex flex-wrap gap-1">
                         {t.channels.slice(0, 3).map((ch) => (
-                          <span
-                            key={ch}
-                            className="px-1.5 py-0.5 rounded text-[10px] font-medium"
-                            style={{
-                              backgroundColor: getPlatformColor(ch) + '22',
-                              color: getPlatformColor(ch),
-                            }}
-                          >
-                            {ch.length > 8 ? ch.slice(0, 8) + '…' : ch}
-                          </span>
+                          <PlatformBadge key={ch} name={ch} showName={false} size="sm" />
                         ))}
                         {t.channels.length > 3 && (
-                          <span className="text-[10px] text-[#55556a]">+{t.channels.length - 3}</span>
+                          <span className="text-[10px] text-[var(--color-text-muted)]">+{t.channels.length - 3}</span>
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-2.5 text-right text-[#8888a0] text-xs">
+                    <td className="px-4 py-2.5 text-right text-[var(--color-text-secondary)] text-xs">
                       {format(parseISO(t.firstDate), 'yyyy/MM/dd')}
                     </td>
-                    <td className="px-4 py-2.5 text-right text-[#f0f0f5] text-xs font-medium">
+                    <td className="px-4 py-2.5 text-right text-[var(--color-text-primary)] text-xs font-medium">
                       {formatYen(t.totalSales)}
                     </td>
-                    <td className="px-4 py-2.5 text-right text-[#8888a0] text-xs">
+                    <td className="px-4 py-2.5 text-right text-[var(--color-text-secondary)] text-xs">
                       {t.dayCount}일
                     </td>
                   </tr>
@@ -491,7 +482,7 @@ export function InitialSales() {
           </table>
         </div>
         {filteredTitles.length > 15 && (
-          <div className="px-4 py-2 text-[11px] text-[#55556a] text-center border-t border-white/4">
+          <div className="px-4 py-2 text-[11px] text-[var(--color-text-muted)] text-center border-t border-[var(--color-glass-border)]">
             상위 15개 표시 중 (총 {filteredTitles.length}개) — 검색으로 필터링하세요
           </div>
         )}
@@ -500,7 +491,7 @@ export function InitialSales() {
       {/* Loading curves */}
       {loadingCurves && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-center py-8">
-          <div className="flex items-center gap-3 text-[#8888a0]">
+          <div className="flex items-center gap-3 text-[var(--color-text-secondary)]">
             <div className="w-5 h-5 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
             데이터 로딩 중...
           </div>
@@ -518,7 +509,7 @@ export function InitialSales() {
           >
             {/* Controls */}
             <div className="flex items-center gap-3 flex-wrap">
-              <div className="flex rounded-xl overflow-hidden border border-white/8">
+              <div className="flex rounded-xl overflow-hidden border border-[var(--color-input-border)]">
                 {(['daily', 'weekly'] as const).map((mode) => (
                   <button
                     key={mode}
@@ -526,14 +517,14 @@ export function InitialSales() {
                     className={`px-4 py-2 text-xs font-medium transition-colors ${
                       viewMode === mode
                         ? 'bg-indigo-500 text-white'
-                        : 'bg-white/5 text-[#8888a0] hover:text-white'
+                        : 'bg-[var(--color-glass)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
                     }`}
                   >
                     {mode === 'daily' ? 'Daily' : 'Weekly'}
                   </button>
                 ))}
               </div>
-              <div className="flex rounded-xl overflow-hidden border border-white/8">
+              <div className="flex rounded-xl overflow-hidden border border-[var(--color-input-border)]">
                 {(['area', 'line'] as const).map((type) => (
                   <button
                     key={type}
@@ -541,7 +532,7 @@ export function InitialSales() {
                     className={`px-4 py-2 text-xs font-medium transition-colors ${
                       chartType === type
                         ? 'bg-purple-500 text-white'
-                        : 'bg-white/5 text-[#8888a0] hover:text-white'
+                        : 'bg-[var(--color-glass)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
                     }`}
                   >
                     {type === 'area' ? 'Area' : 'Line'}
@@ -564,7 +555,7 @@ export function InitialSales() {
 
             {/* Daily/Weekly Sales Chart */}
             <div className="rounded-2xl p-6" style={GLASS_CARD}>
-              <h3 className="text-lg font-semibold text-[#f0f0f5] mb-4">
+              <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
                 {viewMode === 'daily' ? '일별 매출 비교 (런칭일 기준 D1~D28)' : '주별 매출 비교 (W1~W4)'}
               </h3>
               <div style={{ width: '100%', overflowX: 'auto' }}>
@@ -578,11 +569,11 @@ export function InitialSales() {
                           </linearGradient>
                         ))}
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                      <XAxis dataKey="label" tick={{ fill: '#55556a', fontSize: 11 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fill: '#55556a', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatYenShort} width={60} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
+                      <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatYenShort} width={60} />
                       <ReTooltip {...darkTooltipStyle} formatter={(v: unknown) => [formatYen(Number(v ?? 0)), '']} />
-                      <Legend wrapperStyle={{ fontSize: 11, color: '#8888a0' }} />
+                      <Legend wrapperStyle={{ fontSize: 11, color: 'var(--color-text-secondary)' }} />
                       {selectedData.map((sel, i) => {
                         const key = sel.title_kr || sel.title_jp.slice(0, 12);
                         return (
@@ -599,11 +590,11 @@ export function InitialSales() {
                     </AreaChart>
                   ) : (
                     <LineChart data={chartData} width={600} height={350}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                      <XAxis dataKey="label" tick={{ fill: '#55556a', fontSize: 11 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fill: '#55556a', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatYenShort} width={60} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
+                      <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatYenShort} width={60} />
                       <ReTooltip {...darkTooltipStyle} formatter={(v: unknown) => [formatYen(Number(v ?? 0)), '']} />
-                      <Legend wrapperStyle={{ fontSize: 11, color: '#8888a0' }} />
+                      <Legend wrapperStyle={{ fontSize: 11, color: 'var(--color-text-secondary)' }} />
                       {selectedData.map((sel) => {
                         const key = sel.title_kr || sel.title_jp.slice(0, 12);
                         return (
@@ -625,7 +616,7 @@ export function InitialSales() {
 
             {/* Cumulative Chart */}
             <div className="rounded-2xl p-6" style={GLASS_CARD}>
-              <h3 className="text-lg font-semibold text-[#f0f0f5] mb-4">누적 매출 비교 (D1~D28)</h3>
+              <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">누적 매출 비교 (D1~D28)</h3>
               <div style={{ width: '100%', overflowX: 'auto' }}>
                   <AreaChart data={cumulativeData} width={600} height={320}>
                     <defs>
@@ -636,11 +627,11 @@ export function InitialSales() {
                         </linearGradient>
                       ))}
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                    <XAxis dataKey="label" tick={{ fill: '#55556a', fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: '#55556a', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatYenShort} width={60} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
+                    <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatYenShort} width={60} />
                     <ReTooltip {...darkTooltipStyle} formatter={(v: unknown) => [formatYen(Number(v ?? 0)), '']} />
-                    <Legend wrapperStyle={{ fontSize: 11, color: '#8888a0' }} />
+                    <Legend wrapperStyle={{ fontSize: 11, color: 'var(--color-text-secondary)' }} />
                     {selectedData.map((sel, i) => {
                       const key = sel.title_kr || sel.title_jp.slice(0, 12);
                       return (
@@ -660,11 +651,11 @@ export function InitialSales() {
 
             {/* Summary Table */}
             <div className="rounded-2xl p-6" style={GLASS_CARD}>
-              <h3 className="text-lg font-semibold text-[#f0f0f5] mb-4">4주 매출 요약</h3>
+              <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">4주 매출 요약</h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm table-striped">
                   <thead>
-                    <tr className="text-[#8888a0] text-xs border-b border-white/6">
+                    <tr className="text-[var(--color-text-secondary)] text-xs border-b border-[var(--color-table-border)]">
                       <th className="px-3 py-2 text-left">작품</th>
                       <th className="px-3 py-2 text-right">D1</th>
                       <th className="px-3 py-2 text-right">D3</th>
@@ -678,26 +669,26 @@ export function InitialSales() {
                   </thead>
                   <tbody>
                     {selectedData.map((sel) => (
-                      <tr key={sel.title_jp} className="border-t border-white/4 hover:bg-white/3">
+                      <tr key={sel.title_jp} className="border-t border-[var(--color-glass-border)] hover:bg-[var(--color-glass)]">
                         <td className="px-3 py-2.5">
                           <div className="flex items-center gap-2">
                             <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: sel.color }} />
-                            <span className="text-[#f0f0f5] font-medium text-xs">
+                            <span className="text-[var(--color-text-primary)] font-medium text-xs">
                               {displayTitle(sel.title_jp, sel.title_kr)}
                             </span>
                           </div>
                         </td>
-                        <td className="px-3 py-2.5 text-right text-xs text-[#f0f0f5]">
+                        <td className="px-3 py-2.5 text-right text-xs text-[var(--color-text-primary)]">
                           {formatYen(sel.dailyData[0]?.sales ?? 0)}
                         </td>
-                        <td className="px-3 py-2.5 text-right text-xs text-[#f0f0f5]">
+                        <td className="px-3 py-2.5 text-right text-xs text-[var(--color-text-primary)]">
                           {formatYen(sel.dailyData.slice(0, 3).reduce((s, d) => s + d.sales, 0))}
                         </td>
-                        <td className="px-3 py-2.5 text-right text-xs text-[#f0f0f5]">
+                        <td className="px-3 py-2.5 text-right text-xs text-[var(--color-text-primary)]">
                           {formatYen(sel.dailyData.slice(0, 7).reduce((s, d) => s + d.sales, 0))}
                         </td>
                         {sel.weeklyData.map((w) => (
-                          <td key={w.week} className="px-3 py-2.5 text-right text-xs text-[#f0f0f5]">
+                          <td key={w.week} className="px-3 py-2.5 text-right text-xs text-[var(--color-text-primary)]">
                             {formatYen(w.sales)}
                           </td>
                         ))}

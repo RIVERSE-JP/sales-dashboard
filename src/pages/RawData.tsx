@@ -7,7 +7,8 @@ import {
 import { fetchDailySalesPage, fetchAllDailySales } from '@/lib/supabase';
 import { generateDailyRawExcel } from '@/utils/dailyRawExporter';
 import type { DailySale } from '@/types';
-import { getPlatformColor, getPlatformBrand, PLATFORM_BRANDS } from '@/utils/platformConfig';
+import { getPlatformBrand } from '@/utils/platformConfig';
+import { PlatformBadge } from '@/components/PlatformBadge';
 import { supabase } from '@/lib/supabase';
 
 // ============================================================
@@ -15,10 +16,10 @@ import { supabase } from '@/lib/supabase';
 // ============================================================
 
 const GLASS_CARD = {
-  background: 'rgba(255, 255, 255, 0.03)',
+  background: 'var(--color-glass)',
   backdropFilter: 'blur(12px)',
   WebkitBackdropFilter: 'blur(12px)',
-  border: '1px solid rgba(255, 255, 255, 0.06)',
+  border: '1px solid var(--color-glass-border)',
   borderRadius: '16px',
 } as const;
 
@@ -170,8 +171,8 @@ export function RawData() {
           <Database size={20} color="white" />
         </div>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold" style={{ color: '#f0f0f5' }}>Raw Data</h1>
-          <p className="text-sm" style={{ color: '#55556a' }}>売上データ閲覧・エクスポート</p>
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>Raw Data</h1>
+          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>売上データ閲覧・エクスポート</p>
         </div>
         <motion.button
           whileHover={{ scale: 1.04 }}
@@ -195,9 +196,9 @@ export function RawData() {
             onClick={() => setShowFilters(!showFilters)}
             className="flex items-center gap-2 w-full text-left cursor-pointer"
           >
-            <Filter size={16} color="#8888a0" />
-            <span className="text-sm font-medium" style={{ color: '#8888a0' }}>フィルター</span>
-            {showFilters ? <ChevronUp size={14} color="#8888a0" /> : <ChevronDown size={14} color="#8888a0" />}
+            <Filter size={16} color="var(--color-text-secondary)" />
+            <span className="text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>フィルター</span>
+            {showFilters ? <ChevronUp size={14} color="var(--color-text-secondary)" /> : <ChevronDown size={14} color="var(--color-text-secondary)" />}
           </button>
 
           {showFilters && (
@@ -208,28 +209,28 @@ export function RawData() {
             >
               {/* Title search */}
               <div>
-                <label className="text-xs font-medium block mb-1.5" style={{ color: '#8888a0' }}>タイトル検索</label>
-                <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                  <Search size={14} color="#55556a" />
+                <label className="text-xs font-medium block mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>タイトル検索</label>
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ background: 'var(--color-input-bg)', border: '1px solid var(--color-input-border)' }}>
+                  <Search size={14} color="var(--color-text-muted)" />
                   <input
                     type="text"
                     value={titleSearch}
                     onChange={(e) => setTitleSearch(e.target.value)}
                     placeholder="タイトル名..."
                     className="flex-1 bg-transparent outline-none text-sm"
-                    style={{ color: '#f0f0f5' }}
+                    style={{ color: 'var(--color-text-primary)' }}
                   />
                 </div>
               </div>
 
               {/* Platform */}
               <div>
-                <label className="text-xs font-medium block mb-1.5" style={{ color: '#8888a0' }}>プラットフォーム</label>
+                <label className="text-xs font-medium block mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>プラットフォーム</label>
                 <select
                   value={platformFilter}
                   onChange={(e) => setPlatformFilter(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl text-sm outline-none cursor-pointer"
-                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#f0f0f5' }}
+                  style={{ background: 'var(--color-input-bg)', border: '1px solid var(--color-input-border)', color: 'var(--color-text-primary)' }}
                 >
                   <option value="">すべて</option>
                   {platformNames.map((p) => (
@@ -240,25 +241,25 @@ export function RawData() {
 
               {/* Start date */}
               <div>
-                <label className="text-xs font-medium block mb-1.5" style={{ color: '#8888a0' }}>開始日</label>
+                <label className="text-xs font-medium block mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>開始日</label>
                 <input
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl text-sm outline-none cursor-pointer"
-                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#f0f0f5', colorScheme: 'dark' }}
+                  style={{ background: 'var(--color-input-bg)', border: '1px solid var(--color-input-border)', color: 'var(--color-text-primary)', colorScheme: 'dark' }}
                 />
               </div>
 
               {/* End date */}
               <div>
-                <label className="text-xs font-medium block mb-1.5" style={{ color: '#8888a0' }}>終了日</label>
+                <label className="text-xs font-medium block mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>終了日</label>
                 <input
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl text-sm outline-none cursor-pointer"
-                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#f0f0f5', colorScheme: 'dark' }}
+                  style={{ background: 'var(--color-input-bg)', border: '1px solid var(--color-input-border)', color: 'var(--color-text-primary)', colorScheme: 'dark' }}
                 />
               </div>
             </motion.div>
@@ -266,7 +267,7 @@ export function RawData() {
         </motion.div>
 
         {/* Summary bar */}
-        <motion.div variants={cardVariants} className="flex flex-wrap items-center justify-between gap-2 text-xs" style={{ color: '#8888a0' }}>
+        <motion.div variants={cardVariants} className="flex flex-wrap items-center justify-between gap-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
           <span>{totalCount.toLocaleString()} 件 {dateRange && `| ${dateRange}`}</span>
           <span>Page {page + 1} / {Math.max(totalPages, 1)}</span>
         </motion.div>
@@ -278,7 +279,7 @@ export function RawData() {
           <motion.div variants={cardVariants} className="rounded-2xl p-4 overflow-x-auto" style={GLASS_CARD}>
             <table className="w-full text-sm min-w-[700px] table-striped">
               <thead>
-                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <tr style={{ borderBottom: '1px solid var(--color-table-border)' }}>
                   {[
                     { key: 'sale_date', label: '日付', align: 'left' as const },
                     { key: 'title_jp', label: 'タイトル(JP)', align: 'left' as const },
@@ -290,7 +291,7 @@ export function RawData() {
                     <th
                       key={col.key}
                       className={`py-3 px-2 font-medium cursor-pointer select-none text-${col.align}`}
-                      style={{ color: '#8888a0' }}
+                      style={{ color: 'var(--color-text-secondary)' }}
                       onClick={() => handleSort(col.key)}
                     >
                       <span className="inline-flex items-center gap-1">
@@ -302,25 +303,19 @@ export function RawData() {
               </thead>
               <tbody>
                 {rows.map((row) => {
-                  const pfColor = getPlatformColor(row.channel);
                   return (
-                    <tr key={row.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }} className="hover:bg-white/[0.02] transition-colors">
-                      <td className="py-3 px-2 font-mono text-xs" style={{ color: '#8888a0' }}>{row.sale_date}</td>
+                    <tr key={row.id} style={{ borderBottom: '1px solid var(--color-table-border-subtle)' }} className="hover:bg-[var(--color-glass)] transition-colors">
+                      <td className="py-3 px-2 font-mono text-xs" style={{ color: 'var(--color-text-secondary)' }}>{row.sale_date}</td>
                       <td className="py-3 px-2">
-                        <p className="font-medium truncate max-w-[200px]" style={{ color: '#f0f0f5' }}>{row.title_jp}</p>
+                        <p className="font-medium truncate max-w-[200px]" style={{ color: 'var(--color-text-primary)' }}>{row.title_jp}</p>
                       </td>
                       <td className="py-3 px-2">
-                        <p className="text-xs truncate max-w-[180px]" style={{ color: '#55556a' }}>{row.title_kr ?? '-'}</p>
+                        <p className="text-xs truncate max-w-[180px]" style={{ color: 'var(--color-text-muted)' }}>{row.title_kr ?? '-'}</p>
                       </td>
                       <td className="py-3 px-2">
-                        <span
-                          className="text-[10px] px-2 py-0.5 rounded-full font-semibold"
-                          style={{ background: `${pfColor}20`, color: pfColor }}
-                        >
-                          {PLATFORM_BRANDS[row.channel]?.icon ?? row.channel.charAt(0)}
-                        </span>
+                        <PlatformBadge name={row.channel} showName={false} size="sm" />
                       </td>
-                      <td className="py-3 px-2 text-right font-mono font-semibold" style={{ color: '#f0f0f5' }}>
+                      <td className="py-3 px-2 text-right font-mono font-semibold" style={{ color: 'var(--color-text-primary)' }}>
                         {formatYen(row.sales_amount)}
                       </td>
                       <td className="py-3 px-2 text-center">
@@ -346,7 +341,7 @@ export function RawData() {
             </table>
 
             {rows.length === 0 && (
-              <p className="text-center py-12" style={{ color: '#55556a' }}>データがありません</p>
+              <p className="text-center py-12" style={{ color: 'var(--color-text-muted)' }}>データがありません</p>
             )}
           </motion.div>
         )}
@@ -365,7 +360,7 @@ export function RawData() {
                 opacity: page === 0 ? 0.3 : 1,
               }}
             >
-              <ChevronLeft size={16} color="#8888a0" />
+              <ChevronLeft size={16} color="var(--color-text-secondary)" />
             </motion.button>
 
             {/* Page number buttons */}
@@ -380,9 +375,9 @@ export function RawData() {
                   onClick={() => setPage(p)}
                   className="w-9 h-9 rounded-xl text-xs font-semibold cursor-pointer transition-all"
                   style={{
-                    background: p === page ? 'rgba(99, 102, 241, 0.2)' : 'rgba(255,255,255,0.03)',
-                    color: p === page ? '#a5b4fc' : '#55556a',
-                    border: p === page ? '1px solid rgba(99, 102, 241, 0.3)' : '1px solid rgba(255,255,255,0.06)',
+                    background: p === page ? 'rgba(99, 102, 241, 0.2)' : 'var(--color-glass)',
+                    color: p === page ? '#a5b4fc' : 'var(--color-text-muted)',
+                    border: p === page ? '1px solid rgba(99, 102, 241, 0.3)' : '1px solid var(--color-glass-border)',
                   }}
                 >
                   {p + 1}
@@ -401,7 +396,7 @@ export function RawData() {
                 opacity: page >= totalPages - 1 ? 0.3 : 1,
               }}
             >
-              <ChevronRight size={16} color="#8888a0" />
+              <ChevronRight size={16} color="var(--color-text-secondary)" />
             </motion.button>
           </motion.div>
         )}

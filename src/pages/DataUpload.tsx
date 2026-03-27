@@ -10,10 +10,10 @@ import ExcelJS from 'exceljs';
 // ============================================================
 
 const GLASS_CARD = {
-  background: 'rgba(255, 255, 255, 0.03)',
+  background: 'var(--color-glass)',
   backdropFilter: 'blur(12px)',
   WebkitBackdropFilter: 'blur(12px)',
-  border: '1px solid rgba(255, 255, 255, 0.06)',
+  border: '1px solid var(--color-glass-border)',
   borderRadius: '16px',
 } as const;
 
@@ -312,8 +312,8 @@ export function DataUpload() {
           <Upload size={20} color="white" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: '#f0f0f5' }}>Data Upload</h1>
-          <p className="text-sm" style={{ color: '#55556a' }}>Excelファイルからデータをアップロード</p>
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>Data Upload</h1>
+          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>Excelファイルからデータをアップロード</p>
         </div>
       </div>
 
@@ -336,10 +336,10 @@ export function DataUpload() {
                   ...GLASS_CARD,
                   border: dragOver
                     ? '2px dashed rgba(129, 140, 248, 0.6)'
-                    : '2px dashed rgba(255, 255, 255, 0.1)',
+                    : '2px dashed var(--color-glass-border)',
                   background: dragOver
                     ? 'rgba(99, 102, 241, 0.06)'
-                    : 'rgba(255, 255, 255, 0.03)',
+                    : 'var(--color-glass)',
                   minHeight: 240,
                 }}
               >
@@ -352,10 +352,10 @@ export function DataUpload() {
                 >
                   <FileSpreadsheet size={32} color="#818cf8" />
                 </motion.div>
-                <p className="text-sm font-semibold mb-1" style={{ color: '#f0f0f5' }}>
+                <p className="text-sm font-semibold mb-1" style={{ color: 'var(--color-text-primary)' }}>
                   Excelファイルをドラッグ＆ドロップ
                 </p>
-                <p className="text-xs" style={{ color: '#55556a' }}>
+                <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
                   Weekly Report (.xlsx) / 速報値 (.xlsx) に対応
                 </p>
                 <input
@@ -378,8 +378,8 @@ export function DataUpload() {
                 style={{ ...GLASS_CARD, minHeight: 240 }}
               >
                 <Loader2 size={40} color="#818cf8" className="animate-spin mb-4" />
-                <p className="text-sm font-semibold" style={{ color: '#f0f0f5' }}>解析中...</p>
-                <p className="text-xs mt-1" style={{ color: '#55556a' }}>{fileName}</p>
+                <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>解析中...</p>
+                <p className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>{fileName}</p>
               </motion.div>
             )}
 
@@ -394,8 +394,8 @@ export function DataUpload() {
               >
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h2 className="text-lg font-semibold" style={{ color: '#f0f0f5' }}>プレビュー</h2>
-                    <p className="text-xs mt-0.5" style={{ color: '#55556a' }}>
+                    <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>プレビュー</h2>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
                       {fileName} | {parsedRows.length.toLocaleString()} 行 |
                       タイプ: {fileType === 'weekly_report' ? 'Weekly Report' : '速報値'}
                     </p>
@@ -406,7 +406,7 @@ export function DataUpload() {
                       whileTap={{ scale: 0.96 }}
                       onClick={reset}
                       className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium cursor-pointer"
-                      style={{ background: 'rgba(255,255,255,0.04)', color: '#8888a0', border: '1px solid rgba(255,255,255,0.08)' }}
+                      style={{ background: 'var(--color-input-bg)', color: 'var(--color-text-secondary)', border: '1px solid var(--color-input-border)' }}
                     >
                       <Trash2 size={14} />
                       キャンセル
@@ -426,25 +426,25 @@ export function DataUpload() {
                 </div>
 
                 {/* Preview table */}
-                <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
+                <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid var(--color-table-border)' }}>
                   <table className="w-full text-xs min-w-[600px]">
                     <thead>
-                      <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                        <th className="py-2.5 px-3 text-left font-medium" style={{ color: '#8888a0' }}>#</th>
-                        <th className="py-2.5 px-3 text-left font-medium" style={{ color: '#8888a0' }}>Title(JP)</th>
-                        <th className="py-2.5 px-3 text-left font-medium" style={{ color: '#8888a0' }}>Channel</th>
-                        <th className="py-2.5 px-3 text-left font-medium" style={{ color: '#8888a0' }}>Date</th>
-                        <th className="py-2.5 px-3 text-right font-medium" style={{ color: '#8888a0' }}>Sales</th>
+                      <tr style={{ background: 'var(--color-glass)', borderBottom: '1px solid var(--color-table-border)' }}>
+                        <th className="py-2.5 px-3 text-left font-medium" style={{ color: 'var(--color-text-secondary)' }}>#</th>
+                        <th className="py-2.5 px-3 text-left font-medium" style={{ color: 'var(--color-text-secondary)' }}>Title(JP)</th>
+                        <th className="py-2.5 px-3 text-left font-medium" style={{ color: 'var(--color-text-secondary)' }}>Channel</th>
+                        <th className="py-2.5 px-3 text-left font-medium" style={{ color: 'var(--color-text-secondary)' }}>Date</th>
+                        <th className="py-2.5 px-3 text-right font-medium" style={{ color: 'var(--color-text-secondary)' }}>Sales</th>
                       </tr>
                     </thead>
                     <tbody>
                       {parsedRows.slice(0, 10).map((row, idx) => (
-                        <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-                          <td className="py-2.5 px-3" style={{ color: '#55556a' }}>{idx + 1}</td>
-                          <td className="py-2.5 px-3 truncate max-w-[200px]" style={{ color: '#f0f0f5' }}>{row.title_jp}</td>
-                          <td className="py-2.5 px-3" style={{ color: '#8888a0' }}>{row.channel}</td>
-                          <td className="py-2.5 px-3 font-mono" style={{ color: '#8888a0' }}>{row.sale_date}</td>
-                          <td className="py-2.5 px-3 text-right font-mono font-semibold" style={{ color: '#f0f0f5' }}>
+                        <tr key={idx} style={{ borderBottom: '1px solid var(--color-table-border-subtle)' }}>
+                          <td className="py-2.5 px-3" style={{ color: 'var(--color-text-muted)' }}>{idx + 1}</td>
+                          <td className="py-2.5 px-3 truncate max-w-[200px]" style={{ color: 'var(--color-text-primary)' }}>{row.title_jp}</td>
+                          <td className="py-2.5 px-3" style={{ color: 'var(--color-text-secondary)' }}>{row.channel}</td>
+                          <td className="py-2.5 px-3 font-mono" style={{ color: 'var(--color-text-secondary)' }}>{row.sale_date}</td>
+                          <td className="py-2.5 px-3 text-right font-mono font-semibold" style={{ color: 'var(--color-text-primary)' }}>
                             ¥{row.sales_amount.toLocaleString()}
                           </td>
                         </tr>
@@ -452,7 +452,7 @@ export function DataUpload() {
                     </tbody>
                   </table>
                   {parsedRows.length > 10 && (
-                    <div className="py-2 text-center text-xs" style={{ color: '#55556a', background: 'rgba(255,255,255,0.02)' }}>
+                    <div className="py-2 text-center text-xs" style={{ color: 'var(--color-text-muted)', background: 'var(--color-glass)' }}>
                       ... 他 {(parsedRows.length - 10).toLocaleString()} 行
                     </div>
                   )}
@@ -470,8 +470,8 @@ export function DataUpload() {
                 style={{ ...GLASS_CARD, minHeight: 240 }}
               >
                 <Loader2 size={40} color="#818cf8" className="animate-spin mb-4" />
-                <p className="text-sm font-semibold mb-2" style={{ color: '#f0f0f5' }}>アップロード中...</p>
-                <div className="w-48 h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                <p className="text-sm font-semibold mb-2" style={{ color: 'var(--color-text-primary)' }}>アップロード中...</p>
+                <div className="w-48 h-2 rounded-full overflow-hidden" style={{ background: 'var(--color-glass-border)' }}>
                   <motion.div
                     className="h-full rounded-full"
                     style={{ background: 'linear-gradient(90deg, #6366f1, #818cf8)' }}
@@ -480,7 +480,7 @@ export function DataUpload() {
                     transition={{ duration: 0.3 }}
                   />
                 </div>
-                <p className="text-xs mt-2" style={{ color: '#55556a' }}>{uploadProgress}%</p>
+                <p className="text-xs mt-2" style={{ color: 'var(--color-text-muted)' }}>{uploadProgress}%</p>
               </motion.div>
             )}
 
@@ -500,15 +500,15 @@ export function DataUpload() {
                 >
                   <CheckCircle size={48} color="#22c55e" />
                 </motion.div>
-                <p className="text-lg font-bold mt-4 mb-2" style={{ color: '#f0f0f5' }}>アップロード完了</p>
+                <p className="text-lg font-bold mt-4 mb-2" style={{ color: 'var(--color-text-primary)' }}>アップロード完了</p>
                 <div className="flex gap-6 mb-4">
                   <div className="text-center">
                     <p className="text-2xl font-bold" style={{ color: '#22c55e' }}>{uploadResult.inserted}</p>
-                    <p className="text-xs" style={{ color: '#8888a0' }}>新規追加</p>
+                    <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>新規追加</p>
                   </div>
                   <div className="text-center">
                     <p className="text-2xl font-bold" style={{ color: '#818cf8' }}>{uploadResult.updated}</p>
-                    <p className="text-xs" style={{ color: '#8888a0' }}>更新</p>
+                    <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>更新</p>
                   </div>
                 </div>
                 <motion.button
@@ -517,9 +517,9 @@ export function DataUpload() {
                   onClick={reset}
                   className="px-6 py-2.5 rounded-xl text-sm font-semibold cursor-pointer"
                   style={{
-                    background: 'rgba(255,255,255,0.06)',
-                    color: '#f0f0f5',
-                    border: '1px solid rgba(255,255,255,0.1)',
+                    background: 'var(--color-glass-border)',
+                    color: 'var(--color-text-primary)',
+                    border: '1px solid var(--color-glass-border)',
                   }}
                 >
                   新規アップロード
@@ -537,17 +537,17 @@ export function DataUpload() {
                 style={{ ...GLASS_CARD, minHeight: 240 }}
               >
                 <AlertCircle size={48} color="#ef4444" />
-                <p className="text-lg font-bold mt-4 mb-2" style={{ color: '#f0f0f5' }}>エラー</p>
-                <p className="text-sm text-center max-w-md" style={{ color: '#8888a0' }}>{errorMessage}</p>
+                <p className="text-lg font-bold mt-4 mb-2" style={{ color: 'var(--color-text-primary)' }}>エラー</p>
+                <p className="text-sm text-center max-w-md" style={{ color: 'var(--color-text-secondary)' }}>{errorMessage}</p>
                 <motion.button
                   whileHover={{ scale: 1.04 }}
                   whileTap={{ scale: 0.96 }}
                   onClick={reset}
                   className="mt-4 px-6 py-2.5 rounded-xl text-sm font-semibold cursor-pointer"
                   style={{
-                    background: 'rgba(255,255,255,0.06)',
-                    color: '#f0f0f5',
-                    border: '1px solid rgba(255,255,255,0.1)',
+                    background: 'var(--color-glass-border)',
+                    color: 'var(--color-text-primary)',
+                    border: '1px solid var(--color-glass-border)',
                   }}
                 >
                   やり直す
@@ -560,26 +560,26 @@ export function DataUpload() {
         {/* Upload history */}
         <motion.div variants={cardVariants} className="rounded-2xl p-6" style={GLASS_CARD}>
           <div className="flex items-center gap-2 mb-4">
-            <Clock size={16} color="#8888a0" />
-            <h2 className="text-lg font-semibold" style={{ color: '#f0f0f5' }}>アップロード履歴</h2>
+            <Clock size={16} color="var(--color-text-secondary)" />
+            <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>アップロード履歴</h2>
           </div>
 
           {uploadLogs.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                    <th className="py-2.5 px-2 text-left font-medium" style={{ color: '#8888a0' }}>日時</th>
-                    <th className="py-2.5 px-2 text-left font-medium" style={{ color: '#8888a0' }}>タイプ</th>
-                    <th className="py-2.5 px-2 text-left font-medium" style={{ color: '#8888a0' }}>ファイル</th>
-                    <th className="py-2.5 px-2 text-right font-medium" style={{ color: '#8888a0' }}>行数</th>
-                    <th className="py-2.5 px-2 text-center font-medium" style={{ color: '#8888a0' }}>ステータス</th>
+                  <tr style={{ borderBottom: '1px solid var(--color-table-border)' }}>
+                    <th className="py-2.5 px-2 text-left font-medium" style={{ color: 'var(--color-text-secondary)' }}>日時</th>
+                    <th className="py-2.5 px-2 text-left font-medium" style={{ color: 'var(--color-text-secondary)' }}>タイプ</th>
+                    <th className="py-2.5 px-2 text-left font-medium" style={{ color: 'var(--color-text-secondary)' }}>ファイル</th>
+                    <th className="py-2.5 px-2 text-right font-medium" style={{ color: 'var(--color-text-secondary)' }}>行数</th>
+                    <th className="py-2.5 px-2 text-center font-medium" style={{ color: 'var(--color-text-secondary)' }}>ステータス</th>
                   </tr>
                 </thead>
                 <tbody>
                   {uploadLogs.map((log) => (
-                    <tr key={log.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-                      <td className="py-2.5 px-2 font-mono text-xs" style={{ color: '#8888a0' }}>
+                    <tr key={log.id} style={{ borderBottom: '1px solid var(--color-table-border-subtle)' }}>
+                      <td className="py-2.5 px-2 font-mono text-xs" style={{ color: 'var(--color-text-secondary)' }}>
                         {new Date(log.created_at).toLocaleString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </td>
                       <td className="py-2.5 px-2">
@@ -593,10 +593,10 @@ export function DataUpload() {
                           {log.upload_type === 'weekly_report' ? 'WR' : '速報'}
                         </span>
                       </td>
-                      <td className="py-2.5 px-2 text-xs truncate max-w-[200px]" style={{ color: '#f0f0f5' }}>
+                      <td className="py-2.5 px-2 text-xs truncate max-w-[200px]" style={{ color: 'var(--color-text-primary)' }}>
                         {log.source_file ?? '-'}
                       </td>
-                      <td className="py-2.5 px-2 text-right font-mono text-xs" style={{ color: '#f0f0f5' }}>
+                      <td className="py-2.5 px-2 text-right font-mono text-xs" style={{ color: 'var(--color-text-primary)' }}>
                         {log.row_count.toLocaleString()}
                       </td>
                       <td className="py-2.5 px-2 text-center">
@@ -616,7 +616,7 @@ export function DataUpload() {
               </table>
             </div>
           ) : (
-            <p className="text-center py-6 text-sm" style={{ color: '#55556a' }}>
+            <p className="text-center py-6 text-sm" style={{ color: 'var(--color-text-muted)' }}>
               アップロード履歴がありません
             </p>
           )}

@@ -15,10 +15,10 @@ import { startOfWeek, format, parseISO } from 'date-fns';
 // ============================================================
 
 const GLASS_CARD = {
-  background: 'rgba(255, 255, 255, 0.03)',
+  background: 'var(--color-glass)',
   backdropFilter: 'blur(12px)',
   WebkitBackdropFilter: 'blur(12px)',
-  border: '1px solid rgba(255, 255, 255, 0.06)',
+  border: '1px solid var(--color-glass-border)',
   borderRadius: '16px',
 } as const;
 
@@ -37,14 +37,14 @@ const cardVariants = {
 
 const darkTooltipStyle = {
   contentStyle: {
-    backgroundColor: 'rgba(15, 15, 25, 0.95)',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'var(--color-tooltip-bg)',
+    border: '1px solid var(--color-tooltip-border)',
     borderRadius: '12px',
     boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
     padding: '12px 16px',
   },
-  labelStyle: { color: '#a0a0b8', fontWeight: 600, fontSize: '12px', marginBottom: '4px' },
-  itemStyle: { color: '#e0e0f0', fontWeight: 700, fontSize: '13px' },
+  labelStyle: { color: 'var(--color-tooltip-label)', fontWeight: 600, fontSize: '12px', marginBottom: '4px' },
+  itemStyle: { color: 'var(--color-tooltip-value)', fontWeight: 700, fontSize: '13px' },
 };
 
 // ============================================================
@@ -107,7 +107,7 @@ function ChartSkeleton({ height = 360 }: { height?: number }) {
       <div className="h-4 w-40 rounded skeleton-shimmer mb-6" />
       <div className="flex items-end gap-1" style={{ height: height - 100 }}>
         {Array.from({ length: 20 }).map((_, i) => (
-          <div key={i} className="flex-1 rounded-t bg-white/[0.03]" style={{ height: `${30 + Math.random() * 60}%` }} />
+          <div key={i} className="flex-1 rounded-t bg-[var(--color-glass)]" style={{ height: `${30 + Math.random() * 60}%` }} />
         ))}
       </div>
     </div>
@@ -259,8 +259,8 @@ export function PlatformAnalysis() {
           <Monitor size={20} color="white" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: '#f0f0f5' }}>Platform Analysis</h1>
-          <p className="text-sm" style={{ color: '#55556a' }}>プラットフォーム別売上分析</p>
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>Platform Analysis</h1>
+          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>プラットフォーム別売上分析</p>
         </div>
       </div>
 
@@ -274,15 +274,15 @@ export function PlatformAnalysis() {
           {/* Platform selector + compare toggle */}
           <motion.div variants={cardVariants} className="rounded-2xl p-4" style={GLASS_CARD}>
             <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-medium" style={{ color: '#8888a0' }}>
+              <p className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
                 {compareMode ? 'プラットフォームを複数選択して比較' : 'プラットフォームを選択'}
               </p>
               <button
                 onClick={() => { setCompareMode(!compareMode); setComparePlatforms(selectedPlatform ? [selectedPlatform] : []); }}
                 className="text-xs px-3 py-1.5 rounded-lg cursor-pointer transition-all"
                 style={{
-                  background: compareMode ? 'rgba(99, 102, 241, 0.2)' : 'rgba(255,255,255,0.04)',
-                  color: compareMode ? '#a5b4fc' : '#8888a0',
+                  background: compareMode ? 'rgba(99, 102, 241, 0.2)' : 'var(--color-input-bg)',
+                  color: compareMode ? '#a5b4fc' : 'var(--color-text-secondary)',
                   border: compareMode ? '1px solid rgba(99, 102, 241, 0.3)' : '1px solid transparent',
                 }}
               >
@@ -302,9 +302,9 @@ export function PlatformAnalysis() {
                     onClick={() => compareMode ? toggleComparePlatform(pf) : setSelectedPlatform(pf)}
                     className="px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer"
                     style={{
-                      background: isSelected ? `${brand.color}25` : 'rgba(255,255,255,0.03)',
-                      color: isSelected ? brand.color : '#8888a0',
-                      border: isSelected ? `1px solid ${brand.color}40` : '1px solid rgba(255,255,255,0.06)',
+                      background: isSelected ? `${brand.color}25` : 'var(--color-glass)',
+                      color: isSelected ? brand.color : 'var(--color-text-secondary)',
+                      border: isSelected ? `1px solid ${brand.color}40` : '1px solid var(--color-glass-border)',
                     }}
                   >
                     {brand.icon !== '?' && <span className="mr-1">{brand.icon}</span>}
@@ -326,9 +326,9 @@ export function PlatformAnalysis() {
                 <motion.div key={idx} variants={cardVariants} className="rounded-2xl p-6" style={GLASS_CARD}>
                   <div className="flex items-center gap-2 mb-2">
                     {kpi.icon && <span style={{ color: getPlatformColor(selectedPlatform) }}>{kpi.icon}</span>}
-                    <p className="text-xs font-medium" style={{ color: '#8888a0' }}>{kpi.label}</p>
+                    <p className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>{kpi.label}</p>
                   </div>
-                  <p className="text-2xl font-bold" style={{ color: '#f0f0f5' }}>{kpi.value}</p>
+                  <p className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>{kpi.value}</p>
                 </motion.div>
               ))}
             </div>
@@ -337,10 +337,10 @@ export function PlatformAnalysis() {
           {/* Granularity selector + trend chart */}
           <motion.div variants={cardVariants} className="rounded-2xl p-6" style={GLASS_CARD}>
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold" style={{ color: '#f0f0f5' }}>
+              <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
                 {compareMode ? 'プラットフォーム比較' : `${selectedPlatform ?? ''} 売上推移`}
               </h2>
-              <div className="flex gap-1 p-1 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)' }}>
+              <div className="flex gap-1 p-1 rounded-xl" style={{ background: 'var(--color-input-bg)' }}>
                 {(['daily', 'weekly', 'monthly'] as TimeGranularity[]).map((g) => (
                   <button
                     key={g}
@@ -348,7 +348,7 @@ export function PlatformAnalysis() {
                     className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer"
                     style={{
                       background: granularity === g ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
-                      color: granularity === g ? '#a5b4fc' : '#55556a',
+                      color: granularity === g ? '#a5b4fc' : 'var(--color-text-muted)',
                       border: granularity === g ? '1px solid rgba(99, 102, 241, 0.3)' : '1px solid transparent',
                     }}
                   >
@@ -368,11 +368,11 @@ export function PlatformAnalysis() {
                       </linearGradient>
                     ))}
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                  <XAxis dataKey="label" tick={{ fill: '#55556a', fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: '#55556a', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatYenShort} width={60} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
+                  <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatYenShort} width={60} />
                   <ReTooltip {...darkTooltipStyle} formatter={(v: unknown, name: unknown) => [formatYen(Number(v ?? 0)), String(name)]} />
-                  {compareMode && <Legend wrapperStyle={{ fontSize: 12, color: '#8888a0' }} />}
+                  {compareMode && <Legend wrapperStyle={{ fontSize: 12, color: 'var(--color-text-secondary)' }} />}
                   {chartPlatforms.map((pf) => (
                     <Area
                       key={pf}
@@ -387,25 +387,25 @@ export function PlatformAnalysis() {
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
-              <p className="text-center py-12" style={{ color: '#55556a' }}>プラットフォームを選択してください</p>
+              <p className="text-center py-12" style={{ color: 'var(--color-text-muted)' }}>プラットフォームを選択してください</p>
             )}
           </motion.div>
 
           {/* Top titles on this platform (single mode only) */}
           {!compareMode && selectedPlatform && topTitles.length > 0 && (
             <motion.div variants={cardVariants} className="rounded-2xl p-6" style={GLASS_CARD}>
-              <h2 className="text-base font-semibold mb-6" style={{ color: '#f0f0f5' }}>
+              <h2 className="text-base font-semibold mb-6" style={{ color: 'var(--color-text-primary)' }}>
                 Top タイトル — {getPlatformBrand(selectedPlatform).nameJP || selectedPlatform}
               </h2>
 
               <ResponsiveContainer width="100%" height={Math.max(200, topTitles.slice(0, 10).length * 40)}>
                 <BarChart data={topTitles.slice(0, 10)} layout="vertical" margin={{ left: 120 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" horizontal={false} />
-                  <XAxis type="number" tick={{ fill: '#55556a', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatYenShort} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" horizontal={false} />
+                  <XAxis type="number" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatYenShort} />
                   <YAxis
                     type="category"
                     dataKey="titleJP"
-                    tick={{ fill: '#8888a0', fontSize: 11 }}
+                    tick={{ fill: 'var(--color-text-secondary)', fontSize: 11 }}
                     axisLine={false}
                     tickLine={false}
                     width={120}
@@ -420,23 +420,23 @@ export function PlatformAnalysis() {
               <div className="mt-6 overflow-x-auto">
                 <table className="w-full text-sm table-striped">
                   <thead>
-                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                      <th className="text-left py-3 px-2 font-medium" style={{ color: '#8888a0' }}>#</th>
-                      <th className="text-left py-3 px-2 font-medium" style={{ color: '#8888a0' }}>タイトル</th>
-                      <th className="text-right py-3 px-2 font-medium" style={{ color: '#8888a0' }}>売上</th>
+                    <tr style={{ borderBottom: '1px solid var(--color-table-border)' }}>
+                      <th className="text-left py-3 px-2 font-medium" style={{ color: 'var(--color-text-secondary)' }}>#</th>
+                      <th className="text-left py-3 px-2 font-medium" style={{ color: 'var(--color-text-secondary)' }}>タイトル</th>
+                      <th className="text-right py-3 px-2 font-medium" style={{ color: 'var(--color-text-secondary)' }}>売上</th>
                     </tr>
                   </thead>
                   <tbody>
                     {topTitles.map((t, idx) => (
-                      <tr key={t.titleJP} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-                        <td className="py-3 px-2 font-bold" style={{ color: idx < 3 ? '#a5b4fc' : '#55556a' }}>
+                      <tr key={t.titleJP} style={{ borderBottom: '1px solid var(--color-table-border-subtle)' }}>
+                        <td className="py-3 px-2 font-bold" style={{ color: idx < 3 ? '#a5b4fc' : 'var(--color-text-muted)' }}>
                           {idx + 1}
                         </td>
                         <td className="py-3 px-2">
-                          <p className="font-medium truncate max-w-[300px]" style={{ color: '#f0f0f5' }}>{t.titleJP}</p>
-                          {t.titleKR && <p className="text-xs truncate max-w-[300px]" style={{ color: '#55556a' }}>{t.titleKR}</p>}
+                          <p className="font-medium truncate max-w-[300px]" style={{ color: 'var(--color-text-primary)' }}>{t.titleJP}</p>
+                          {t.titleKR && <p className="text-xs truncate max-w-[300px]" style={{ color: 'var(--color-text-muted)' }}>{t.titleKR}</p>}
                         </td>
-                        <td className="py-3 px-2 text-right font-bold" style={{ color: '#f0f0f5' }}>
+                        <td className="py-3 px-2 text-right font-bold" style={{ color: 'var(--color-text-primary)' }}>
                           {formatYen(t.totalSales)}
                         </td>
                       </tr>
