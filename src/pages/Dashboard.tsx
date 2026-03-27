@@ -12,7 +12,7 @@ import { supabase } from '@/lib/supabase';
 import type { Platform, TimeGranularity } from '@/types';
 import { getPlatformColor, PLATFORM_BRANDS } from '@/utils/platformConfig';
 import {
-  startOfWeek, format, parseISO,
+  startOfWeek, format, parseISO, subDays,
 } from 'date-fns';
 
 // ============================================================
@@ -535,20 +535,26 @@ function GranularityToggle({
 export function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [salesRows, setSalesRows] = useState<SalesRow[]>([]);
+  const [cumulativeTotal, setCumulativeTotal] = useState(0);
   const [platforms, setPlatforms] = useState<Platform[]>([]);
   const [granularity, setGranularity] = useState<TimeGranularity>('monthly');
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch all data
+  // Fetch data: recent 90 days for charts/KPIs, paginated totals for cumulative
   const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [salesRes, platformRes] = await Promise.all([
+      const ninetyDaysAgo = format(subDays(new Date(), 90), 'yyyy-MM-dd');
+
+      // Parallel: recent 90-day data (for charts/KPIs) + platform list
+      const [recentRes, platformRes] = await Promise.all([
         supabase
           .from('daily_sales_v2')
           .select('sale_date, sales_amount, channel, title_jp, title_kr')
-          .order('sale_date', { ascending: true }),
+          .gte('sale_date', ninetyDaysAgo)
+          .order('sale_date', { ascending: true })
+          .limit(15000),
         supabase
           .from('platforms')
           .select('*')
@@ -556,31 +562,50 @@ export function Dashboard() {
           .order('sort_order'),
       ]);
 
-      if (salesRes.error) throw salesRes.error;
+      if (recentRes.error) throw recentRes.error;
       if (platformRes.error) throw platformRes.error;
 
-      // Supabase returns max 1000 rows by default; paginate for larger datasets
-      let allSales = (salesRes.data ?? []) as SalesRow[];
+      let recentSales = (recentRes.data ?? []) as SalesRow[];
 
-      // If we got exactly 1000 rows, there might be more
-      if (allSales.length === 1000) {
-        let from = 1000;
-        const batchSize = 1000;
+      // If we hit the limit, paginate for remaining recent data
+      if (recentSales.length >= 15000) {
+        let from = 15000;
         while (true) {
           const { data: batch } = await supabase
             .from('daily_sales_v2')
             .select('sale_date, sales_amount, channel, title_jp, title_kr')
+            .gte('sale_date', ninetyDaysAgo)
             .order('sale_date', { ascending: true })
-            .range(from, from + batchSize - 1);
+            .range(from, from + 5000 - 1);
           if (!batch || batch.length === 0) break;
-          allSales = allSales.concat(batch as SalesRow[]);
-          if (batch.length < batchSize) break;
-          from += batchSize;
+          recentSales = recentSales.concat(batch as SalesRow[]);
+          if (batch.length < 5000) break;
+          from += 5000;
         }
       }
 
-      setSalesRows(allSales);
+      setSalesRows(recentSales);
       setPlatforms((platformRes.data ?? []) as Platform[]);
+
+      // Cumulative total: paginate but only fetch sales_amount column (tiny payload)
+      // Do this after setting salesRows so the UI renders immediately with recent data
+      setLoading(false);
+
+      let cumTotal = 0;
+      let from = 0;
+      const batchSize = 5000;
+      while (true) {
+        const { data: batch } = await supabase
+          .from('daily_sales_v2')
+          .select('sales_amount')
+          .range(from, from + batchSize - 1);
+        if (!batch || batch.length === 0) break;
+        for (const row of batch) cumTotal += row.sales_amount;
+        if (batch.length < batchSize) break;
+        from += batchSize;
+      }
+      setCumulativeTotal(cumTotal);
+      return; // skip the finally setLoading(false) since we already did it
     } catch (err: unknown) {
       console.error('Dashboard data load error:', err);
       setError(err instanceof Error ? err.message : 'Failed to load data');
@@ -594,7 +619,11 @@ export function Dashboard() {
   }, [loadData]);
 
   // Memoized computed data
-  const kpis = useMemo(() => computeKPIs(salesRows, platforms), [salesRows, platforms]);
+  const kpis = useMemo(() => {
+    const base = computeKPIs(salesRows, platforms);
+    // Use cumulative total from all-data query when available; fall back to recent-only sum
+    return { ...base, totalSales: cumulativeTotal > 0 ? cumulativeTotal : base.totalSales };
+  }, [salesRows, platforms, cumulativeTotal]);
   const timeSeries = useMemo(() => aggregateByGranularity(salesRows, granularity), [salesRows, granularity]);
   const platformShares = useMemo(() => computePlatformShares(salesRows), [salesRows]);
   const topTitles = useMemo(() => computeTopTitles(salesRows, 10), [salesRows]);

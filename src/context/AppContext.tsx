@@ -23,7 +23,7 @@ const AppContext = createContext<AppContextType | null>(null);
 export function AppProvider({ children }: { children: ReactNode }) {
   const [lang, setLang] = useState<Language>('ko');
   const [currency, setCurrency] = useState<Currency>('JPY');
-  const [theme, setTheme] = useState<Theme>('dark');
+  const [theme, setTheme] = useState<Theme>('light');
 
   const t = (ko: string, ja: string) => (lang === 'ko' ? ko : ja);
 
