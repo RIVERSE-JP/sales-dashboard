@@ -272,13 +272,13 @@ export async function fetchTitleMaster() {
   if (cached) return cached;
   const { data, error } = await supabase
     .from('titles')
-    .select('title_jp, title_kr, management_type, distribution_company, content_format');
+    .select('title_jp, title_kr, management_type, content_format, production_companies(name)');
   if (error) { console.error('fetchTitleMaster error:', error.message); return []; }
   const result = (data ?? []).map((r: Record<string, unknown>) => ({
     title_jp: r.title_jp as string,
     title_kr: r.title_kr as string | null,
     genre: r.management_type as string | null,
-    company: r.distribution_company as string | null,
+    company: (r.production_companies as { name: string } | null)?.name ?? null,
     format: r.content_format as string,
   }));
   setCache('title_master', result);
