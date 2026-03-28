@@ -1,10 +1,12 @@
+'use client';
+
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   Database, Search, Download, ChevronLeft, ChevronRight,
   ChevronDown, ChevronUp, Loader2, Filter,
 } from 'lucide-react';
-import { supabase, fetchDailySalesPage, fetchAllDailySales } from '@/lib/supabase';
+import { fetchDailySalesPage, fetchAllDailySales } from '@/lib/supabase';
 import { generateDailyRawExcel } from '@/utils/dailyRawExporter';
 import type { DailySale } from '@/types';
 import { getPlatformBrand } from '@/utils/platformConfig';
@@ -66,7 +68,7 @@ function TableSkeleton() {
 
 const PAGE_SIZE = 50;
 
-export function RawData() {
+export default function DataPage() {
   const { formatCurrency, t, theme } = useApp();
 
   const [loading, setLoading] = useState(true);
@@ -90,15 +92,12 @@ export function RawData() {
   const [platformNames, setPlatformNames] = useState<string[]>([]);
 
   useEffect(() => {
-    supabase
-      .from('daily_sales_v2')
-      .select('channel')
-      .then(({ data }) => {
-        if (data) {
-          const unique = [...new Set((data as Array<{ channel: string }>).map((r) => r.channel))].sort();
-          setPlatformNames(unique);
-        }
-      });
+    fetch('/api/sales/platforms')
+      .then((res) => res.json())
+      .then((data: string[]) => {
+        if (data) setPlatformNames(data);
+      })
+      .catch((err) => console.error('Failed to load platforms:', err));
   }, []);
 
   const loadPage = useCallback(async () => {

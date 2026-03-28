@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
@@ -10,10 +12,6 @@ import { getPlatformColor } from '@/utils/platformConfig';
 import { PlatformBadge } from '@/components/PlatformBadge';
 import { useApp } from '@/context/AppContext';
 import type { TitleSummaryRow, TitleDetailData } from '@/types';
-
-// ============================================================
-// Shared styles & animation variants
-// ============================================================
 
 const GLASS_CARD = {
   background: 'var(--color-glass)',
@@ -30,10 +28,7 @@ const containerVariants = {
 
 const cardVariants = {
   hidden: { opacity: 0, y: 12 },
-  show: {
-    opacity: 1, y: 0,
-    transition: { duration: 0.2 },
-  },
+  show: { opacity: 1, y: 0, transition: { duration: 0.2 } },
 };
 
 const darkTooltipStyle = {
@@ -47,10 +42,6 @@ const darkTooltipStyle = {
   labelStyle: { color: 'var(--color-tooltip-label)', fontWeight: 600, fontSize: '12px', marginBottom: '6px' },
   itemStyle: { color: 'var(--color-tooltip-value)', fontWeight: 700, fontSize: '14px' },
 };
-
-// ============================================================
-// Loading Skeletons
-// ============================================================
 
 function ListSkeleton() {
   return (
@@ -84,11 +75,7 @@ function ChartSkeleton({ height = 360 }: { height?: number }) {
   );
 }
 
-// ============================================================
-// Main Component
-// ============================================================
-
-export function TitleAnalysis() {
+export default function TitleAnalysisPage() {
   const { formatCurrency, t } = useApp();
 
   const [loading, setLoading] = useState(true);
@@ -104,7 +91,6 @@ export function TitleAnalysis() {
     return value.toLocaleString();
   };
 
-  // Fetch title list via RPC
   useEffect(() => {
     async function load() {
       setLoading(true);
@@ -127,7 +113,6 @@ export function TitleAnalysis() {
     load();
   }, []);
 
-  // Fetch detail when a title is selected
   const loadTitleDetail = useCallback(async (titleJP: string) => {
     setDetailLoading(true);
     setSelectedTitle(titleJP);
@@ -141,7 +126,6 @@ export function TitleAnalysis() {
     setDetailLoading(false);
   }, []);
 
-  // Filtered title list
   const filteredTitles = useMemo(() => {
     if (!searchQuery.trim()) return titles;
     const q = searchQuery.toLowerCase();
@@ -150,16 +134,12 @@ export function TitleAnalysis() {
     );
   }, [titles, searchQuery]);
 
-  // Selected title info from the list
   const selectedTitleInfo = useMemo(
     () => titles.find((t) => t.title_jp === selectedTitle),
     [titles, selectedTitle]
   );
 
-  // ============================================================
   // Detail view
-  // ============================================================
-
   if (selectedTitle) {
     const monthlyTrend = detailData?.monthly_trend ?? [];
     const platformBreakdown = (detailData?.platform_breakdown ?? []).map((p) => ({
@@ -167,24 +147,17 @@ export function TitleAnalysis() {
       color: getPlatformColor(p.channel),
     }));
     const dailyRecent = (detailData?.daily_recent ?? []).map((d) => ({
-      label: d.date.slice(5), // MM-DD
+      label: d.date.slice(5),
       sales: d.sales,
     }));
 
-    // Compute period comparison from monthly trend
     const trendLen = monthlyTrend.length;
     const recentMonth = trendLen > 0 ? monthlyTrend[trendLen - 1].sales : 0;
     const prevMonth = trendLen > 1 ? monthlyTrend[trendLen - 2].sales : 0;
     const periodChange = prevMonth > 0 ? ((recentMonth - prevMonth) / prevMonth) * 100 : 0;
 
     return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.4 }}
-        style={{ minHeight: '100vh' }}
-      >
-        {/* Back button + title */}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }} style={{ minHeight: '100vh' }}>
         <div className="flex items-center gap-3 mb-8">
           <motion.button
             whileHover={{ scale: 1.05 }}
@@ -221,7 +194,6 @@ export function TitleAnalysis() {
           </div>
         ) : (
           <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-6">
-            {/* KPI cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[
                 { label: t('누적 매출', '累計売上'), value: formatCurrency(detailData?.total_sales ?? selectedTitleInfo?.total_sales ?? 0) },
@@ -239,7 +211,6 @@ export function TitleAnalysis() {
               ))}
             </div>
 
-            {/* Monthly trend area chart */}
             {monthlyTrend.length > 0 && (
               <motion.div variants={cardVariants} className="rounded-2xl p-6" style={GLASS_CARD}>
                 <h2 className="text-lg font-semibold mb-6" style={{ color: 'var(--color-text-primary)' }}>
@@ -263,7 +234,6 @@ export function TitleAnalysis() {
               </motion.div>
             )}
 
-            {/* Platform breakdown bar chart */}
             {platformBreakdown.length > 0 && (
               <motion.div variants={cardVariants} className="rounded-2xl p-6" style={GLASS_CARD}>
                 <h2 className="text-base font-semibold mb-6" style={{ color: 'var(--color-text-primary)' }}>
@@ -285,7 +255,6 @@ export function TitleAnalysis() {
               </motion.div>
             )}
 
-            {/* Recent daily chart */}
             {dailyRecent.length > 0 && (
               <motion.div variants={cardVariants} className="rounded-2xl p-6" style={GLASS_CARD}>
                 <h2 className="text-base font-semibold mb-6" style={{ color: 'var(--color-text-primary)' }}>
@@ -309,7 +278,6 @@ export function TitleAnalysis() {
               </motion.div>
             )}
 
-            {/* Period comparison */}
             {prevMonth > 0 && (
               <motion.div variants={cardVariants} className="rounded-2xl p-6" style={GLASS_CARD}>
                 <h2 className="text-base font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
@@ -339,17 +307,13 @@ export function TitleAnalysis() {
     );
   }
 
-  // ============================================================
   // List view
-  // ============================================================
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
     >
-      {/* Header */}
       <div className="flex items-center gap-3 mb-8">
         <div className="w-11 h-11 rounded-xl flex items-center justify-center page-icon-glow">
           <BookOpen size={20} color="white" />
@@ -364,14 +328,7 @@ export function TitleAnalysis() {
         </div>
       </div>
 
-      {/* Search bar */}
-      <motion.div
-        variants={cardVariants}
-        initial="hidden"
-        animate="show"
-        className="rounded-2xl p-4 mb-6"
-        style={GLASS_CARD}
-      >
+      <motion.div variants={cardVariants} initial="hidden" animate="show" className="rounded-2xl p-4 mb-6" style={GLASS_CARD}>
         <div className="flex items-center gap-3">
           <Search size={18} color="var(--color-text-muted)" />
           <input
@@ -390,12 +347,10 @@ export function TitleAnalysis() {
         </div>
       </motion.div>
 
-      {/* Results count */}
       <p className="text-xs mb-4" style={{ color: 'var(--color-text-muted)' }}>
         {filteredTitles.length} {t('개 작품', 'タイトル')} {searchQuery && `("${searchQuery}")`}
       </p>
 
-      {/* Title list */}
       {loading ? (
         <ListSkeleton />
       ) : (

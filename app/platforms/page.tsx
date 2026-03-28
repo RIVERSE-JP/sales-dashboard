@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
@@ -9,10 +11,6 @@ import { fetchPlatformSummary, fetchPlatformDetail } from '@/lib/supabase';
 import { getPlatformColor, getPlatformBrand, getPlatformLogo } from '@/utils/platformConfig';
 import { useApp } from '@/context/AppContext';
 import type { PlatformSummaryRow, PlatformDetailData } from '@/types';
-
-// ============================================================
-// Shared styles & animation variants
-// ============================================================
 
 const GLASS_CARD = {
   background: 'var(--color-glass)',
@@ -29,10 +27,7 @@ const containerVariants = {
 
 const cardVariants = {
   hidden: { opacity: 0, y: 12 },
-  show: {
-    opacity: 1, y: 0,
-    transition: { duration: 0.2 },
-  },
+  show: { opacity: 1, y: 0, transition: { duration: 0.2 } },
 };
 
 const darkTooltipStyle = {
@@ -46,10 +41,6 @@ const darkTooltipStyle = {
   labelStyle: { color: 'var(--color-tooltip-label)', fontWeight: 600, fontSize: '12px', marginBottom: '6px' },
   itemStyle: { color: 'var(--color-tooltip-value)', fontWeight: 700, fontSize: '14px' },
 };
-
-// ============================================================
-// Loading Skeletons
-// ============================================================
 
 function KPISkeleton() {
   return (
@@ -78,11 +69,7 @@ function ChartSkeleton({ height = 360 }: { height?: number }) {
   );
 }
 
-// ============================================================
-// Main Component
-// ============================================================
-
-export function PlatformAnalysis() {
+export default function PlatformAnalysisPage() {
   const { formatCurrency, t } = useApp();
 
   const [loading, setLoading] = useState(true);
@@ -91,7 +78,6 @@ export function PlatformAnalysis() {
   const [detailData, setDetailData] = useState<PlatformDetailData | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
-  // Compare mode
   const [compareMode, setCompareMode] = useState(false);
   const [comparePlatforms, setComparePlatforms] = useState<string[]>([]);
   const [compareDetails, setCompareDetails] = useState<Map<string, PlatformDetailData>>(new Map());
@@ -103,7 +89,6 @@ export function PlatformAnalysis() {
     return value.toLocaleString();
   };
 
-  // Load platform summary via RPC
   useEffect(() => {
     async function load() {
       setLoading(true);
@@ -111,9 +96,7 @@ export function PlatformAnalysis() {
         const data = await fetchPlatformSummary();
         const rows = data ?? [];
         setPlatformSummary(rows);
-        if (rows.length > 0) {
-          setSelectedPlatform(rows[0].channel);
-        }
+        if (rows.length > 0) setSelectedPlatform(rows[0].channel);
       } catch (err) {
         console.error('Failed to load platform summary:', err);
       }
@@ -122,7 +105,6 @@ export function PlatformAnalysis() {
     load();
   }, []);
 
-  // Load detail for selected platform
   const loadPlatformDetail = useCallback(async (channel: string) => {
     setDetailLoading(true);
     try {
@@ -135,15 +117,10 @@ export function PlatformAnalysis() {
     setDetailLoading(false);
   }, []);
 
-  // When selected platform changes (single mode), load its detail
   useEffect(() => {
-    if (selectedPlatform && !compareMode) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      loadPlatformDetail(selectedPlatform);
-    }
+    if (selectedPlatform && !compareMode) loadPlatformDetail(selectedPlatform); // eslint-disable-line react-hooks/set-state-in-effect
   }, [selectedPlatform, compareMode, loadPlatformDetail]);
 
-  // Load comparison details when comparePlatforms changes
   useEffect(() => {
     if (!compareMode || comparePlatforms.length === 0) return;
     let cancelled = false;
@@ -167,22 +144,15 @@ export function PlatformAnalysis() {
     return () => { cancelled = true; };
   }, [compareMode, comparePlatforms]);
 
-  const platformNames = useMemo(() =>
-    platformSummary.map((p) => p.channel),
-    [platformSummary]
-  );
+  const platformNames = useMemo(() => platformSummary.map((p) => p.channel), [platformSummary]);
 
-  // Build compare chart data from compare details
   const compareChartData = useMemo(() => {
     if (comparePlatforms.length === 0 || compareDetails.size === 0) return [];
-
-    // Get all unique months
     const monthSet = new Set<string>();
     for (const detail of compareDetails.values()) {
       for (const t of detail.monthly_trend ?? []) monthSet.add(t.month);
     }
     const months = Array.from(monthSet).sort();
-
     return months.map((month) => {
       const point: Record<string, string | number> = { label: month };
       for (const [ch, detail] of compareDetails) {
@@ -199,7 +169,6 @@ export function PlatformAnalysis() {
     );
   };
 
-  // KPIs from summary row
   const selectedSummary = useMemo(
     () => platformSummary.find((p) => p.channel === selectedPlatform),
     [platformSummary, selectedPlatform]
@@ -211,7 +180,6 @@ export function PlatformAnalysis() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
     >
-      {/* Header */}
       <div className="flex items-center gap-3 mb-8">
         <div className="w-11 h-11 rounded-xl flex items-center justify-center page-icon-glow">
           <Monitor size={20} color="white" />
@@ -227,13 +195,9 @@ export function PlatformAnalysis() {
       </div>
 
       {loading ? (
-        <div className="space-y-6">
-          <KPISkeleton />
-          <ChartSkeleton />
-        </div>
+        <div className="space-y-6"><KPISkeleton /><ChartSkeleton /></div>
       ) : (
         <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-6">
-          {/* Platform selector + compare toggle */}
           <motion.div variants={cardVariants} className="rounded-2xl p-4" style={GLASS_CARD}>
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
@@ -280,11 +244,7 @@ export function PlatformAnalysis() {
                   >
                     {logo ? (
                       <div className="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center">
-                        <img
-                          src={logo}
-                          alt={brand.nameJP || pf}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        />
+                        <img src={logo} alt={brand.nameJP || pf} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       </div>
                     ) : (
                       <span className="text-lg font-bold" style={{ color: brand.color }}>{brand.icon}</span>
@@ -303,26 +263,13 @@ export function PlatformAnalysis() {
             </div>
           </motion.div>
 
-          {/* KPI cards (single mode only) */}
           {!compareMode && selectedPlatform && (
             detailLoading ? <KPISkeleton /> : (
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {[
-                  {
-                    label: t('누적 매출', '累計売上'),
-                    value: formatCurrency(detailData?.total_sales ?? selectedSummary?.total_sales ?? 0),
-                    icon: <TrendingUp size={16} />,
-                  },
-                  {
-                    label: t('작품 수', 'タイトル数'),
-                    value: String(detailData?.title_count ?? selectedSummary?.title_count ?? 0),
-                    icon: null,
-                  },
-                  {
-                    label: t('일평균 매출', '日平均売上'),
-                    value: formatCurrency(detailData?.daily_avg ?? selectedSummary?.avg_daily ?? 0),
-                    icon: null,
-                  },
+                  { label: t('누적 매출', '累計売上'), value: formatCurrency(detailData?.total_sales ?? selectedSummary?.total_sales ?? 0), icon: <TrendingUp size={16} /> },
+                  { label: t('작품 수', 'タイトル数'), value: String(detailData?.title_count ?? selectedSummary?.title_count ?? 0), icon: null },
+                  { label: t('일평균 매출', '日平均売上'), value: formatCurrency(detailData?.daily_avg ?? selectedSummary?.avg_daily ?? 0), icon: null },
                 ].map((kpi, idx) => (
                   <motion.div key={idx} variants={cardVariants} className="rounded-2xl p-6" style={GLASS_CARD}>
                     <div className="flex items-center gap-2 mb-2">
@@ -336,7 +283,6 @@ export function PlatformAnalysis() {
             )
           )}
 
-          {/* Trend chart */}
           <motion.div variants={cardVariants} className="rounded-2xl p-6" style={GLASS_CARD}>
             <h2 className="text-lg font-semibold mb-6" style={{ color: 'var(--color-text-primary)' }}>
               {compareMode
@@ -345,7 +291,6 @@ export function PlatformAnalysis() {
             </h2>
 
             {compareMode ? (
-              // Compare mode: overlay trends from multiple platforms
               compareLoading ? (
                 <div className="flex justify-center py-12">
                   <div className="w-5 h-5 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
@@ -385,7 +330,6 @@ export function PlatformAnalysis() {
                 </p>
               )
             ) : (
-              // Single mode: show trend from detail data
               detailLoading ? (
                 <div className="flex justify-center py-12">
                   <div className="w-5 h-5 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
@@ -403,13 +347,7 @@ export function PlatformAnalysis() {
                     <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={60} />
                     <ReTooltip {...darkTooltipStyle} formatter={(v: unknown) => [formatCurrency(Number(v ?? 0)), t('매출', '売上')]} />
-                    <Area
-                      type="monotone"
-                      dataKey="sales"
-                      stroke={getPlatformColor(selectedPlatform ?? '')}
-                      strokeWidth={2}
-                      fill="url(#pfSingleGrad)"
-                    />
+                    <Area type="monotone" dataKey="sales" stroke={getPlatformColor(selectedPlatform ?? '')} strokeWidth={2} fill="url(#pfSingleGrad)" />
                   </AreaChart>
                 </ResponsiveContainer>
               ) : (
@@ -420,7 +358,6 @@ export function PlatformAnalysis() {
             )}
           </motion.div>
 
-          {/* Top titles on this platform (single mode only) */}
           {!compareMode && selectedPlatform && !detailLoading && (detailData?.top_titles ?? []).length > 0 && (
             <motion.div variants={cardVariants} className="rounded-2xl p-6" style={GLASS_CARD}>
               <h2 className="text-base font-semibold mb-6" style={{ color: 'var(--color-text-primary)' }}>
@@ -445,7 +382,6 @@ export function PlatformAnalysis() {
                 </BarChart>
               </ResponsiveContainer>
 
-              {/* Table below chart */}
               <div className="mt-6 overflow-x-auto">
                 <table className="w-full text-sm table-striped">
                   <thead>

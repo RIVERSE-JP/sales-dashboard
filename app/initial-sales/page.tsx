@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -28,13 +30,13 @@ interface TitleSummary {
 }
 
 interface DayPoint {
-  day: number;       // Day 1..28
+  day: number;
   date: string;
   sales: number;
 }
 
 interface WeekPoint {
-  week: number;      // Week 1..4
+  week: number;
   sales: number;
 }
 
@@ -71,10 +73,7 @@ const containerVariants = {
 
 const cardVariants = {
   hidden: { opacity: 0, y: 12 },
-  show: {
-    opacity: 1, y: 0,
-    transition: { duration: 0.2 },
-  },
+  show: { opacity: 1, y: 0, transition: { duration: 0.2 } },
 };
 
 const darkTooltipStyle = {
@@ -110,10 +109,6 @@ function displayTitle(jp: string, kr: string | null): string {
   return jp.length > 25 ? jp.slice(0, 25) + '…' : jp;
 }
 
-// ============================================================
-// Loading Skeleton
-// ============================================================
-
 function Skeleton() {
   return (
     <div className="space-y-4">
@@ -135,7 +130,7 @@ function Skeleton() {
 // Main Component
 // ============================================================
 
-export function InitialSales() {
+export default function InitialSalesPage() {
   const { formatCurrency, t } = useApp();
 
   const [loading, setLoading] = useState(true);
@@ -152,7 +147,6 @@ export function InitialSales() {
   const [viewMode, setViewMode] = useState<'daily' | 'weekly'>('daily');
   const [chartType, setChartType] = useState<'line' | 'area'>('area');
 
-  // ---- Load title list via RPC + title master for genre/company ----
   useEffect(() => {
     async function loadTitles() {
       setLoading(true);
@@ -167,7 +161,6 @@ export function InitialSales() {
         return;
       }
 
-      // Build lookup from title master
       const masterMap = new Map<string, { genre: string | null; company: string | null }>();
       for (const m of masterData) {
         masterMap.set(m.title_jp, { genre: m.genre, company: m.company });
@@ -193,7 +186,6 @@ export function InitialSales() {
     loadTitles();
   }, []);
 
-  // ---- Filter options ----
   const channels = useMemo(() => {
     const set = new Set<string>();
     for (const t of titles) t.channels.forEach((c) => set.add(c));
@@ -214,53 +206,27 @@ export function InitialSales() {
 
   const filteredTitles = useMemo(() => {
     let list = titles;
-
-    // Text search
     if (search) {
       const q = search.toLowerCase();
-      list = list.filter(
-        (t) =>
-          t.title_jp.toLowerCase().includes(q) ||
-          (t.title_kr && t.title_kr.toLowerCase().includes(q))
-      );
+      list = list.filter((t) => t.title_jp.toLowerCase().includes(q) || (t.title_kr && t.title_kr.toLowerCase().includes(q)));
     }
-
-    // Platform filter
-    if (channelFilter) {
-      list = list.filter((t) => t.channels.includes(channelFilter));
-    }
-
-    // Genre filter
-    if (genreFilter) {
-      list = list.filter((t) => t.genre === genreFilter);
-    }
-
-    // Company filter
-    if (companyFilter) {
-      list = list.filter((t) => t.company === companyFilter);
-    }
-
-    // Sort
+    if (channelFilter) list = list.filter((t) => t.channels.includes(channelFilter));
+    if (genreFilter) list = list.filter((t) => t.genre === genreFilter);
+    if (companyFilter) list = list.filter((t) => t.company === companyFilter);
     list = [...list].sort((a, b) => {
       let va: number | string, vb: number | string;
-      if (sortKey === 'firstDate') {
-        va = a.firstDate; vb = b.firstDate;
-      } else if (sortKey === 'channelCount') {
-        va = a.channels.length; vb = b.channels.length;
-      } else {
-        va = a[sortKey]; vb = b[sortKey];
-      }
+      if (sortKey === 'firstDate') { va = a.firstDate; vb = b.firstDate; }
+      else if (sortKey === 'channelCount') { va = a.channels.length; vb = b.channels.length; }
+      else { va = a[sortKey]; vb = b[sortKey]; }
       if (va < vb) return sortAsc ? -1 : 1;
       if (va > vb) return sortAsc ? 1 : -1;
       return 0;
     });
-
     return list;
   }, [titles, search, channelFilter, genreFilter, companyFilter, sortKey, sortAsc]);
 
   const activeFilterCount = [channelFilter, genreFilter, companyFilter].filter(Boolean).length;
 
-  // ---- Toggle title selection ----
   const toggleTitle = useCallback((titleJP: string) => {
     setCheckedTitles((prev) => {
       const next = new Set(prev);
@@ -270,75 +236,47 @@ export function InitialSales() {
     });
   }, []);
 
-  // ---- Load 28-day curves for selected titles (parallel) ----
   const loadCurves = useCallback(async () => {
     if (checkedTitles.size === 0) return;
     setLoadingCurves(true);
-
     const titleList = Array.from(checkedTitles);
     const promises = titleList.map(async (titleJP, idx) => {
       const { data } = await supabase.rpc('get_title_daily_sales', { p_title_jp: titleJP });
-
       if (!data || data.length === 0) return null;
-
       const rows = data as TitleDailySalesRow[];
       const titleInfo = titles.find((t) => t.title_jp === titleJP);
       const firstDate = parseISO(rows[0].sale_date);
-
-      // Build dateMap from RPC result
       const dateMap = new Map<string, number>();
-      for (const row of rows) {
-        dateMap.set(row.sale_date, row.daily_total);
-      }
-
-      // Build daily data (Day 1..28)
+      for (const row of rows) dateMap.set(row.sale_date, row.daily_total);
       const dailyData: DayPoint[] = [];
       for (let d = 0; d < 28; d++) {
         const date = addDays(firstDate, d);
         const dateStr = format(date, 'yyyy-MM-dd');
-        dailyData.push({
-          day: d + 1,
-          date: dateStr,
-          sales: dateMap.get(dateStr) ?? 0,
-        });
+        dailyData.push({ day: d + 1, date: dateStr, sales: dateMap.get(dateStr) ?? 0 });
       }
-
-      // Build weekly data (Week 1..4)
       const weeklyData: WeekPoint[] = [];
       for (let w = 0; w < 4; w++) {
         let weekTotal = 0;
-        for (let d = w * 7; d < (w + 1) * 7; d++) {
-          weekTotal += dailyData[d]?.sales ?? 0;
-        }
+        for (let d = w * 7; d < (w + 1) * 7; d++) weekTotal += dailyData[d]?.sales ?? 0;
         weeklyData.push({ week: w + 1, sales: weekTotal });
       }
-
       const total28d = dailyData.reduce((s, p) => s + p.sales, 0);
-
       return {
         title_jp: titleJP,
         title_kr: titleInfo?.title_kr ?? null,
         color: CHART_COLORS[idx % CHART_COLORS.length],
-        dailyData,
-        weeklyData,
-        total28d,
+        dailyData, weeklyData, total28d,
       } as SelectedTitle;
     });
-
     const settled = await Promise.allSettled(promises);
     const results: SelectedTitle[] = [];
-    for (const r of settled) {
-      if (r.status === 'fulfilled' && r.value) results.push(r.value);
-    }
-
+    for (const r of settled) { if (r.status === 'fulfilled' && r.value) results.push(r.value); }
     setSelectedData(results);
     setLoadingCurves(false);
   }, [checkedTitles, titles]);
 
-  // ---- Build chart data ----
   const chartData = useMemo(() => {
     if (selectedData.length === 0) return [];
-
     if (viewMode === 'daily') {
       return Array.from({ length: 28 }, (_, i) => {
         const point: Record<string, string | number> = { label: `D${i + 1}` };
@@ -360,10 +298,8 @@ export function InitialSales() {
     }
   }, [selectedData, viewMode]);
 
-  // ---- Cumulative chart data ----
   const cumulativeData = useMemo(() => {
     if (selectedData.length === 0) return [];
-
     return Array.from({ length: 28 }, (_, i) => {
       const point: Record<string, string | number> = { label: `D${i + 1}` };
       for (const sel of selectedData) {
@@ -376,7 +312,6 @@ export function InitialSales() {
     });
   }, [selectedData]);
 
-  // ---- Sort handler ----
   function handleSort(key: typeof sortKey) {
     if (sortKey === key) setSortAsc(!sortAsc);
     else { setSortKey(key); setSortAsc(false); }
@@ -384,10 +319,6 @@ export function InitialSales() {
 
   const renderSortIcon = (col: typeof sortKey) =>
     sortKey === col ? (sortAsc ? <ChevronUp size={14} className="inline" /> : <ChevronDown size={14} className="inline" />) : null;
-
-  // ============================================================
-  // Render
-  // ============================================================
 
   if (loading) return <Skeleton />;
 
@@ -406,7 +337,6 @@ export function InitialSales() {
 
       {/* Search & Filters */}
       <motion.div variants={cardVariants} className="rounded-2xl p-5" style={GLASS_CARD}>
-        {/* Search */}
         <div className="relative">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
           <input
@@ -423,69 +353,40 @@ export function InitialSales() {
           )}
         </div>
 
-        {/* Filters - always visible */}
         <div className="mt-4 pt-4 grid grid-cols-1 sm:grid-cols-3 gap-3" style={{ borderTop: '1px solid var(--color-glass-border)' }}>
-          {/* Platform */}
           <div>
             <label className="block text-[10px] font-medium mb-1 tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
               {t('플랫폼', 'プラットフォーム')}
             </label>
-            <select
-              value={channelFilter}
-              onChange={(e) => setChannelFilter(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg text-xs bg-[var(--color-input-bg)] border border-[var(--color-input-border)] text-[var(--color-text-primary)] focus:outline-none"
-            >
+            <select value={channelFilter} onChange={(e) => setChannelFilter(e.target.value)} className="w-full px-3 py-2 rounded-lg text-xs bg-[var(--color-input-bg)] border border-[var(--color-input-border)] text-[var(--color-text-primary)] focus:outline-none">
               <option value="">{t('전체', 'すべて')}</option>
-              {channels.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
+              {channels.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
-
-          {/* Genre */}
           <div>
             <label className="block text-[10px] font-medium mb-1 tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
               {t('장르', 'ジャンル')}
             </label>
-            <select
-              value={genreFilter}
-              onChange={(e) => setGenreFilter(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg text-xs bg-[var(--color-input-bg)] border border-[var(--color-input-border)] text-[var(--color-text-primary)] focus:outline-none"
-            >
+            <select value={genreFilter} onChange={(e) => setGenreFilter(e.target.value)} className="w-full px-3 py-2 rounded-lg text-xs bg-[var(--color-input-bg)] border border-[var(--color-input-border)] text-[var(--color-text-primary)] focus:outline-none">
               <option value="">{t('전체', 'すべて')}</option>
-              {genres.map((g) => (
-                <option key={g} value={g}>{g}</option>
-              ))}
+              {genres.map((g) => <option key={g} value={g}>{g}</option>)}
             </select>
           </div>
-
-          {/* Production Company */}
           <div>
             <label className="block text-[10px] font-medium mb-1 tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
               {t('제작회사', '制作会社')}
             </label>
-            <select
-              value={companyFilter}
-              onChange={(e) => setCompanyFilter(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg text-xs bg-[var(--color-input-bg)] border border-[var(--color-input-border)] text-[var(--color-text-primary)] focus:outline-none"
-            >
+            <select value={companyFilter} onChange={(e) => setCompanyFilter(e.target.value)} className="w-full px-3 py-2 rounded-lg text-xs bg-[var(--color-input-bg)] border border-[var(--color-input-border)] text-[var(--color-text-primary)] focus:outline-none">
               <option value="">{t('전체', 'すべて')}</option>
-              {companies.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
+              {companies.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
         </div>
 
-        {/* Clear filters */}
         {activeFilterCount > 0 && (
           <div className="mt-3 flex justify-end">
             <button
-              onClick={() => {
-                setChannelFilter('');
-                setGenreFilter('');
-                setCompanyFilter('');
-              }}
+              onClick={() => { setChannelFilter(''); setGenreFilter(''); setCompanyFilter(''); }}
               className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
               style={{ background: 'rgba(239, 68, 68, 0.08)', color: '#ef4444', border: '1px solid var(--color-input-border)' }}
             >
@@ -494,14 +395,11 @@ export function InitialSales() {
           </div>
         )}
 
-        {/* Result summary + Compare button */}
         <div className="mt-3 flex items-center gap-3 text-xs text-[var(--color-text-secondary)]">
           <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>{filteredTitles.length}</span>
           <span>{t('개 작품', 'タイトル')}</span>
           {activeFilterCount > 0 && (
-            <span style={{ color: 'var(--color-text-muted)' }}>
-              ({activeFilterCount}{t('개 필터 적용', 'フィルター適用')})
-            </span>
+            <span style={{ color: 'var(--color-text-muted)' }}>({activeFilterCount}{t('개 필터 적용', 'フィルター適用')})</span>
           )}
           <span>|</span>
           <span style={{ color: '#1A2B5E', fontWeight: 600 }}>{checkedTitles.size}/10 {t('선택됨', '選択中')}</span>
@@ -527,22 +425,13 @@ export function InitialSales() {
                 <th className="px-4 py-3 text-left w-10"></th>
                 <th className="px-4 py-3 text-left">작품</th>
                 <th className="px-4 py-3 text-left">플랫폼</th>
-                <th
-                  className="px-4 py-3 text-right cursor-pointer select-none hover:text-[var(--color-text-primary)]"
-                  onClick={() => handleSort('firstDate')}
-                >
+                <th className="px-4 py-3 text-right cursor-pointer select-none hover:text-[var(--color-text-primary)]" onClick={() => handleSort('firstDate')}>
                   런칭일 {renderSortIcon('firstDate')}
                 </th>
-                <th
-                  className="px-4 py-3 text-right cursor-pointer select-none hover:text-[var(--color-text-primary)]"
-                  onClick={() => handleSort('totalSales')}
-                >
+                <th className="px-4 py-3 text-right cursor-pointer select-none hover:text-[var(--color-text-primary)]" onClick={() => handleSort('totalSales')}>
                   총 매출 {renderSortIcon('totalSales')}
                 </th>
-                <th
-                  className="px-4 py-3 text-right cursor-pointer select-none hover:text-[var(--color-text-primary)]"
-                  onClick={() => handleSort('dayCount')}
-                >
+                <th className="px-4 py-3 text-right cursor-pointer select-none hover:text-[var(--color-text-primary)]" onClick={() => handleSort('dayCount')}>
                   데이터일수 {renderSortIcon('dayCount')}
                 </th>
               </tr>
@@ -553,17 +442,11 @@ export function InitialSales() {
                 return (
                   <tr
                     key={t.title_jp}
-                    className={`border-t border-[var(--color-glass-border)] cursor-pointer transition-colors ${
-                      checked ? 'bg-indigo-500/10' : 'hover:bg-[var(--color-glass)]'
-                    }`}
+                    className={`border-t border-[var(--color-glass-border)] cursor-pointer transition-colors ${checked ? 'bg-indigo-500/10' : 'hover:bg-[var(--color-glass)]'}`}
                     onClick={() => toggleTitle(t.title_jp)}
                   >
                     <td className="px-4 py-2.5">
-                      <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
-                        checked
-                          ? 'bg-indigo-500 border-indigo-500'
-                          : 'border-[var(--color-glass-border)] hover:border-[var(--color-glass-border)]0'
-                      }`}>
+                      <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${checked ? 'bg-indigo-500 border-indigo-500' : 'border-[var(--color-glass-border)] hover:border-[var(--color-glass-border)]0'}`}>
                         {checked && <Check size={12} className="text-white" />}
                       </div>
                     </td>
@@ -571,18 +454,12 @@ export function InitialSales() {
                       <div className="text-[var(--color-text-primary)] font-medium text-xs truncate" title={t.title_jp}>
                         {t.title_jp.length > 30 ? t.title_jp.slice(0, 30) + '…' : t.title_jp}
                       </div>
-                      {t.title_kr && (
-                        <div className="text-[var(--color-text-secondary)] text-[11px] truncate" title={t.title_kr}>{t.title_kr}</div>
-                      )}
+                      {t.title_kr && <div className="text-[var(--color-text-secondary)] text-[11px] truncate" title={t.title_kr}>{t.title_kr}</div>}
                     </td>
                     <td className="px-4 py-2.5">
                       <div className="flex flex-wrap gap-1">
-                        {t.channels.slice(0, 3).map((ch) => (
-                          <PlatformBadge key={ch} name={ch} showName={false} size="sm" />
-                        ))}
-                        {t.channels.length > 3 && (
-                          <span className="text-[10px] text-[var(--color-text-muted)]">+{t.channels.length - 3}</span>
-                        )}
+                        {t.channels.slice(0, 3).map((ch) => <PlatformBadge key={ch} name={ch} showName={false} size="sm" />)}
+                        {t.channels.length > 3 && <span className="text-[10px] text-[var(--color-text-muted)]">+{t.channels.length - 3}</span>}
                       </div>
                     </td>
                     <td className="px-4 py-2.5 text-right text-[var(--color-text-secondary)] text-xs">
@@ -607,7 +484,6 @@ export function InitialSales() {
         )}
       </motion.div>
 
-      {/* Loading curves */}
       {loadingCurves && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-center py-8">
           <div className="flex items-center gap-3 text-[var(--color-text-secondary)]">
@@ -617,54 +493,27 @@ export function InitialSales() {
         </motion.div>
       )}
 
-      {/* Comparison Charts */}
       <AnimatePresence>
         {selectedData.length > 0 && !loadingCurves && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="space-y-6"
-          >
-            {/* Controls */}
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-6">
             <div className="flex items-center gap-3 flex-wrap">
               <div className="flex rounded-xl overflow-hidden border border-[var(--color-input-border)]">
                 {(['daily', 'weekly'] as const).map((mode) => (
-                  <button
-                    key={mode}
-                    onClick={() => setViewMode(mode)}
-                    className={`px-4 py-2 text-xs font-medium transition-colors ${
-                      viewMode === mode
-                        ? 'bg-indigo-500 text-white'
-                        : 'bg-[var(--color-glass)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
-                    }`}
-                  >
+                  <button key={mode} onClick={() => setViewMode(mode)} className={`px-4 py-2 text-xs font-medium transition-colors ${viewMode === mode ? 'bg-indigo-500 text-white' : 'bg-[var(--color-glass)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}`}>
                     {mode === 'daily' ? 'Daily' : 'Weekly'}
                   </button>
                 ))}
               </div>
               <div className="flex rounded-xl overflow-hidden border border-[var(--color-input-border)]">
                 {(['area', 'line'] as const).map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => setChartType(type)}
-                    className={`px-4 py-2 text-xs font-medium transition-colors ${
-                      chartType === type
-                        ? 'bg-purple-500 text-white'
-                        : 'bg-[var(--color-glass)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
-                    }`}
-                  >
+                  <button key={type} onClick={() => setChartType(type)} className={`px-4 py-2 text-xs font-medium transition-colors ${chartType === type ? 'bg-purple-500 text-white' : 'bg-[var(--color-glass)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}`}>
                     {type === 'area' ? 'Area' : 'Line'}
                   </button>
                 ))}
               </div>
               <div className="ml-auto flex gap-2 flex-wrap">
                 {selectedData.map((sel) => (
-                  <span
-                    key={sel.title_jp}
-                    className="px-2 py-1 rounded-lg text-[11px] font-medium flex items-center gap-1"
-                    style={{ backgroundColor: sel.color + '22', color: sel.color }}
-                  >
+                  <span key={sel.title_jp} className="px-2 py-1 rounded-lg text-[11px] font-medium flex items-center gap-1" style={{ backgroundColor: sel.color + '22', color: sel.color }}>
                     <span className="w-2 h-2 rounded-full" style={{ backgroundColor: sel.color }} />
                     {sel.title_kr || sel.title_jp.slice(0, 10)}
                   </span>
@@ -672,7 +521,6 @@ export function InitialSales() {
               </div>
             </div>
 
-            {/* Daily/Weekly Sales Chart */}
             <div className="rounded-2xl p-6" style={GLASS_CARD}>
               <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
                 {viewMode === 'daily' ? '일별 매출 비교 (런칭일 기준 D1~D28)' : '주별 매출 비교 (W1~W4)'}
@@ -695,16 +543,7 @@ export function InitialSales() {
                     <Legend wrapperStyle={{ fontSize: 11, color: 'var(--color-text-secondary)' }} />
                     {selectedData.map((sel, i) => {
                       const key = sel.title_kr || sel.title_jp.slice(0, 12);
-                      return (
-                        <Area
-                          key={key}
-                          type="monotone"
-                          dataKey={key}
-                          stroke={sel.color}
-                          strokeWidth={2}
-                          fill={`url(#grad-${i})`}
-                        />
-                      );
+                      return <Area key={key} type="monotone" dataKey={key} stroke={sel.color} strokeWidth={2} fill={`url(#grad-${i})`} />;
                     })}
                   </AreaChart>
                 </ResponsiveContainer>
@@ -718,24 +557,13 @@ export function InitialSales() {
                     <Legend wrapperStyle={{ fontSize: 11, color: 'var(--color-text-secondary)' }} />
                     {selectedData.map((sel) => {
                       const key = sel.title_kr || sel.title_jp.slice(0, 12);
-                      return (
-                        <Line
-                          key={key}
-                          type="monotone"
-                          dataKey={key}
-                          stroke={sel.color}
-                          strokeWidth={2.5}
-                          dot={{ r: 3, fill: sel.color }}
-                          activeDot={{ r: 5, stroke: sel.color, strokeWidth: 2, fill: '#0a0a0f' }}
-                        />
-                      );
+                      return <Line key={key} type="monotone" dataKey={key} stroke={sel.color} strokeWidth={2.5} dot={{ r: 3, fill: sel.color }} activeDot={{ r: 5, stroke: sel.color, strokeWidth: 2, fill: '#0a0a0f' }} />;
                     })}
                   </LineChart>
                 </ResponsiveContainer>
               )}
             </div>
 
-            {/* Cumulative Chart */}
             <div className="rounded-2xl p-6" style={GLASS_CARD}>
               <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">누적 매출 비교 (D1~D28)</h3>
               <ResponsiveContainer width="100%" height={320}>
@@ -755,22 +583,12 @@ export function InitialSales() {
                   <Legend wrapperStyle={{ fontSize: 11, color: 'var(--color-text-secondary)' }} />
                   {selectedData.map((sel, i) => {
                     const key = sel.title_kr || sel.title_jp.slice(0, 12);
-                    return (
-                      <Area
-                        key={key}
-                        type="monotone"
-                        dataKey={key}
-                        stroke={sel.color}
-                        strokeWidth={2}
-                        fill={`url(#cumGrad-${i})`}
-                      />
-                    );
+                    return <Area key={key} type="monotone" dataKey={key} stroke={sel.color} strokeWidth={2} fill={`url(#cumGrad-${i})`} />;
                   })}
                 </AreaChart>
               </ResponsiveContainer>
             </div>
 
-            {/* Summary Table */}
             <div className="rounded-2xl p-6" style={GLASS_CARD}>
               <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">4주 매출 요약</h3>
               <div className="overflow-x-auto">

@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect, useCallback } from 'react';
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import {
@@ -230,7 +232,7 @@ function AreaChartTooltip({ active, payload, label, fmtCurrency }: {
 // Main Dashboard Component
 // ============================================================
 
-export function Dashboard() {
+export default function DashboardPage() {
   const { formatCurrency, t } = useApp();
 
   const [loading, setLoading] = useState(true);
@@ -253,7 +255,6 @@ export function Dashboard() {
     setLoading(true);
     setError(null);
     try {
-      // All 4 RPCs in parallel — max wait = slowest RPC (~2.3s)
       const [kpiResult, trendResult, platformResult, titleResult] = await Promise.allSettled([
         fetchDashboardKPIs(),
         fetchMonthlyTrend(),
@@ -265,7 +266,7 @@ export function Dashboard() {
       if (trendResult.status === 'fulfilled') setMonthlyTrend(trendResult.value ?? []);
       if (platformResult.status === 'fulfilled') setPlatformSummary(platformResult.value ?? []);
       if (titleResult.status === 'fulfilled') setTopTitles(titleResult.value ?? []);
-      setGrowthAlerts([]); // TODO: fix get_growth_alerts RPC type mismatch
+      setGrowthAlerts([]);
       setLoading(false);
     } catch (err: unknown) {
       console.error('Dashboard data load error:', err);
@@ -274,13 +275,12 @@ export function Dashboard() {
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void loadData();
+    void loadData(); // eslint-disable-line react-hooks/set-state-in-effect
   }, [loadData]);
 
   // Prepare chart data
   const trendChartData = monthlyTrend.map((r) => ({
-    label: r.month.length >= 7 ? r.month.slice(2) : r.month, // e.g. "24-01"
+    label: r.month.length >= 7 ? r.month.slice(2) : r.month,
     sales: r.total_sales,
   }));
 
@@ -296,12 +296,7 @@ export function Dashboard() {
     color: getPlatformColor(r.channel),
   }));
 
-  // Declining titles (growth_pct < -30)
   const decliningTitles = growthAlerts.filter((a) => a.growth_pct < -30);
-
-  // ============================================================
-  // Render
-  // ============================================================
 
   if (error) {
     return (
@@ -359,16 +354,13 @@ export function Dashboard() {
       ) : (
         <div className="space-y-6">
 
-          {/* ============================================================ */}
-          {/* SECTION 1: KPI Summary Cards                                  */}
-          {/* ============================================================ */}
+          {/* KPI Summary Cards */}
           <motion.div
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
             variants={containerVariants}
             initial="hidden"
             animate="show"
           >
-            {/* Total Cumulative Sales */}
             <motion.div
               variants={cardVariants}
               whileHover={{ y: -4, scale: 1.02, transition: { duration: 0.25 } }}
@@ -388,7 +380,6 @@ export function Dashboard() {
               </p>
             </motion.div>
 
-            {/* This Month Sales */}
             <motion.div
               variants={cardVariants}
               whileHover={{ y: -4, scale: 1.02, transition: { duration: 0.25 } }}
@@ -415,7 +406,6 @@ export function Dashboard() {
               </div>
             </motion.div>
 
-            {/* MoM Change Rate */}
             <motion.div
               variants={cardVariants}
               whileHover={{ y: -4, scale: 1.02, transition: { duration: 0.25 } }}
@@ -435,7 +425,6 @@ export function Dashboard() {
               </p>
             </motion.div>
 
-            {/* Active Titles */}
             <motion.div
               variants={cardVariants}
               whileHover={{ y: -4, scale: 1.02, transition: { duration: 0.25 } }}
@@ -456,9 +445,7 @@ export function Dashboard() {
             </motion.div>
           </motion.div>
 
-          {/* ============================================================ */}
-          {/* SECTION 2: Monthly Sales Trend (AreaChart)                     */}
-          {/* ============================================================ */}
+          {/* Monthly Sales Trend */}
           <motion.div
             variants={cardVariants}
             initial="hidden"
@@ -503,11 +490,8 @@ export function Dashboard() {
             </ResponsiveContainer>
           </motion.div>
 
-          {/* ============================================================ */}
-          {/* SECTION 3: Platform Share (Pie) + Platform Ranking (Bar)       */}
-          {/* ============================================================ */}
+          {/* Platform Share + Ranking */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Platform Pie Chart */}
             <motion.div
               variants={cardVariants}
               initial="hidden"
@@ -544,7 +528,6 @@ export function Dashboard() {
               </ResponsiveContainer>
             </motion.div>
 
-            {/* Platform Ranking Bar Chart */}
             <motion.div
               variants={cardVariants}
               initial="hidden"
@@ -588,9 +571,7 @@ export function Dashboard() {
             </motion.div>
           </div>
 
-          {/* ============================================================ */}
-          {/* SECTION 4: Issue Briefing (Growth Alerts)                      */}
-          {/* ============================================================ */}
+          {/* Issue Briefing */}
           {decliningTitles.length > 0 && (
             <motion.div
               variants={cardVariants}
@@ -641,9 +622,7 @@ export function Dashboard() {
             </motion.div>
           )}
 
-          {/* ============================================================ */}
-          {/* SECTION 5: Top Titles Table                                    */}
-          {/* ============================================================ */}
+          {/* Top Titles Table */}
           <motion.div
             variants={cardVariants}
             initial="hidden"
