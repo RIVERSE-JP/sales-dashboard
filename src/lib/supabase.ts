@@ -229,3 +229,87 @@ export async function fetchTitleDailySales(titleJP: string) {
   const params = new URLSearchParams({ title_jp: titleJP });
   return apiFetch<Array<{ sale_date: string; daily_total: number }>>(`/api/sales/title-daily-sales?${params}`);
 }
+
+// ============================================================
+// Genres
+// ============================================================
+
+export async function fetchGenres(): Promise<Array<{ id: number; name: string }>> {
+  try {
+    return await apiFetch<Array<{ id: number; name: string }>>('/api/sales/genres');
+  } catch (e) {
+    console.error('fetchGenres error:', e);
+    return [];
+  }
+}
+
+// ============================================================
+// Analysis API functions
+// ============================================================
+
+function buildDateParams(startDate?: string, endDate?: string): string {
+  const params = new URLSearchParams();
+  if (startDate) params.set('startDate', startDate);
+  if (endDate) params.set('endDate', endDate);
+  const qs = params.toString();
+  return qs ? `?${qs}` : '';
+}
+
+export async function fetchGenreSummary(startDate?: string, endDate?: string) {
+  return apiFetch<Array<{ genre_code: string; genre_kr: string; total_sales: number; title_count: number; avg_daily: number }>>(
+    `/api/analysis/genre-summary${buildDateParams(startDate, endDate)}`
+  );
+}
+
+export async function fetchCompanySummary(startDate?: string, endDate?: string) {
+  return apiFetch<Array<{ company_name: string; total_sales: number; title_count: number; avg_daily: number }>>(
+    `/api/analysis/company-summary${buildDateParams(startDate, endDate)}`
+  );
+}
+
+export async function fetchFormatSummary(startDate?: string, endDate?: string) {
+  return apiFetch<Array<{ content_format: string; total_sales: number; title_count: number }>>(
+    `/api/analysis/format-summary${buildDateParams(startDate, endDate)}`
+  );
+}
+
+export async function fetchDailyTrend(startDate?: string, endDate?: string) {
+  return apiFetch<Array<{ day: string; total_sales: number }>>(
+    `/api/analysis/daily-trend${buildDateParams(startDate, endDate)}`
+  );
+}
+
+export async function fetchWeeklyTrend(startDate?: string, endDate?: string) {
+  return apiFetch<Array<{ week: string; total_sales: number }>>(
+    `/api/analysis/weekly-trend${buildDateParams(startDate, endDate)}`
+  );
+}
+
+export async function fetchPlatformGenreMatrix(startDate?: string, endDate?: string) {
+  return apiFetch<Array<{ channel: string; genre_kr: string; total_sales: number }>>(
+    `/api/analysis/platform-genre-matrix${buildDateParams(startDate, endDate)}`
+  );
+}
+
+export async function fetchPeriodKpis(startDate: string, endDate: string) {
+  const params = new URLSearchParams({ startDate, endDate });
+  return apiFetch<{ total_sales: number; active_titles: number; active_platforms: number }>(
+    `/api/analysis/period-kpis?${params}`
+  );
+}
+
+export async function fetchTitleRankings(currentStart: string, currentEnd: string, prevStart: string, prevEnd: string, limit?: number) {
+  const params = new URLSearchParams({ currentStart, currentEnd, prevStart, prevEnd });
+  if (limit) params.set('limit', String(limit));
+  return apiFetch<Array<{ title_jp: string; title_kr: string; channels: string[]; current_sales: number; prev_sales: number; rank_change: number }>>(
+    `/api/analysis/title-rankings?${params}`
+  );
+}
+
+export async function fetchPlatformHealth(channel: string, months?: number) {
+  const params = new URLSearchParams({ channel });
+  if (months) params.set('months', String(months));
+  return apiFetch<{ monthly_health: Array<{ month: string; total_sales: number; active_titles: number; daily_avg: number }> }>(
+    `/api/analysis/platform-health?${params}`
+  );
+}

@@ -109,3 +109,104 @@ export interface UploadLog {
   status: string;
   created_at: string;
 }
+
+// ============================================================
+// Analysis types (Genre / Company / Format / Trend / Ranking)
+// ============================================================
+
+// 장르별 매출 요약
+export interface GenreSalesRow {
+  genre_code: string;
+  genre_kr: string;
+  total_sales: number;
+  title_count: number;
+  avg_daily: number;
+}
+
+// 제작사별 매출 요약
+export interface CompanySalesRow {
+  company_name: string;
+  total_sales: number;
+  title_count: number;
+  avg_daily: number;
+}
+
+// 콘텐츠 포맷별 매출
+export interface FormatSalesRow {
+  content_format: string;
+  total_sales: number;
+  title_count: number;
+}
+
+// 일별 매출 추이
+export interface DailyTrendRow {
+  day: string;
+  total_sales: number;
+}
+
+// 주별 매출 추이
+export interface WeeklyTrendRow {
+  week: string;
+  total_sales: number;
+}
+
+// 플랫폼×장르 매트릭스
+export interface PlatformGenreMatrixRow {
+  channel: string;
+  genre_kr: string;
+  total_sales: number;
+}
+
+// 기간별 KPI
+export interface PeriodKPIData {
+  total_sales: number;
+  active_titles: number;
+  active_platforms: number;
+}
+
+// 작품 랭킹 (순위 변동 포함)
+export interface TitleRankingRow {
+  title_jp: string;
+  title_kr: string | null;
+  channels: string[];
+  current_sales: number;
+  prev_sales: number;
+  rank_change: number;
+}
+
+// 플랫폼 건강도
+export interface PlatformHealthMonth {
+  month: string;
+  total_sales: number;
+  active_titles: number;
+  daily_avg: number;
+}
+
+export interface PlatformHealthData {
+  monthly_health: PlatformHealthMonth[];
+}
+
+// 작품 마스터 (확장)
+export interface TitleMasterRow {
+  id: string;
+  title_jp: string;
+  title_kr: string | null;
+  content_format: string;
+  genre_id: number | null;
+  genre_name?: string;
+  production_company_id: number | null;
+  company_name?: string;
+  serial_status: string | null;
+  latest_episode_count: number | null;
+  service_launch_date: string | null;
+  is_active: boolean;
+}
+
+// 날짜 범위
+export interface DateRange {
+  startDate: string;
+  endDate: string;
+}
+
+// 기간 프리셋
+export type DatePreset = 'thisMonth' | 'lastMonth' | 'thisQuarter' | 'thisYear' | 'last7days' | 'last30days' | 'last90days' | 'all';

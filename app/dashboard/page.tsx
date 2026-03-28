@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip,
@@ -8,16 +8,31 @@ import {
   BarChart, Bar,
 } from 'recharts';
 import {
-  LayoutDashboard, TrendingUp, TrendingDown, BookOpen, AlertTriangle,
+  LayoutDashboard, TrendingUp, TrendingDown, BookOpen, Calendar,
+  Clock,
 } from 'lucide-react';
 import {
   fetchDashboardKPIs, fetchMonthlyTrend, fetchPlatformSummary,
-  fetchTopTitles,
+  fetchTopTitles, fetchGrowthAlerts,
+  fetchPeriodKpis, fetchGenreSummary, fetchCompanySummary,
+  fetchFormatSummary, fetchDailyTrend, fetchWeeklyTrend,
 } from '@/lib/supabase';
 import { getPlatformColor, PLATFORM_BRANDS } from '@/utils/platformConfig';
 import { PlatformBadge } from '@/components/PlatformBadge';
 import { useApp } from '@/context/AppContext';
+import { useRouter } from 'next/navigation';
 import type { KPIData, MonthlyTrendRow, PlatformSummaryRow, TopTitleRow, GrowthAlertRow } from '@/types';
+
+import DateRangePicker from '@/components/dashboard/DateRangePicker';
+import GenreChart from '@/components/dashboard/GenreChart';
+import CompanyRanking from '@/components/dashboard/CompanyRanking';
+import FormatChart from '@/components/dashboard/FormatChart';
+import GrowthAlertsPanel from '@/components/dashboard/GrowthAlerts';
+import SalesGoal from '@/components/dashboard/SalesGoal';
+import {
+  GLASS_CARD, GLASS_CARD_HOVER, containerVariants, cardVariants,
+  darkTooltipStyle, formatShort,
+} from '@/components/dashboard/shared';
 
 // ============================================================
 // AnimatedNumber component
@@ -49,61 +64,6 @@ function AnimatedCount({ value }: { value: number }) {
 
   return <motion.span>{display}</motion.span>;
 }
-
-// ============================================================
-// Shared styles & animation variants
-// ============================================================
-
-const GLASS_CARD = {
-  background: 'var(--color-glass)',
-  backdropFilter: 'blur(12px)',
-  WebkitBackdropFilter: 'blur(12px)',
-  border: '1px solid var(--color-glass-border)',
-  borderRadius: '16px',
-} as const;
-
-const GLASS_CARD_HOVER = {
-  background: 'var(--color-glass-hover)',
-  border: '1px solid var(--color-glass-hover-border)',
-} as const;
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.03 } },
-};
-
-const cardVariants = {
-  hidden: { opacity: 0, y: 12 },
-  show: {
-    opacity: 1, y: 0,
-    transition: { duration: 0.2 },
-  },
-};
-
-// ============================================================
-// Dark theme Recharts tooltip
-// ============================================================
-
-const darkTooltipStyle = {
-  contentStyle: {
-    backgroundColor: 'var(--color-tooltip-bg)',
-    border: '1px solid var(--color-tooltip-border)',
-    borderRadius: '12px',
-    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.35)',
-    padding: '14px 18px',
-  },
-  labelStyle: {
-    color: 'var(--color-tooltip-label)',
-    fontWeight: 600,
-    fontSize: '12px',
-    marginBottom: '6px',
-  },
-  itemStyle: {
-    color: 'var(--color-tooltip-value)',
-    fontWeight: 700,
-    fontSize: '14px',
-  },
-};
 
 // ============================================================
 // Loading skeleton components
@@ -229,60 +189,188 @@ function AreaChartTooltip({ active, payload, label, fmtCurrency }: {
 }
 
 // ============================================================
+// Date helpers
+// ============================================================
+
+function getThisMonthRange(): { start: string; end: string } {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  return {
+    start: `${y}-${String(m + 1).padStart(2, '0')}-01`,
+    end: now.toISOString().slice(0, 10),
+  };
+}
+
+function getYoYRange(start: string, end: string): { start: string; end: string } {
+  if (!start || !end) return { start: '', end: '' };
+  const s = new Date(start);
+  const e = new Date(end);
+  s.setFullYear(s.getFullYear() - 1);
+  e.setFullYear(e.getFullYear() - 1);
+  return { start: s.toISOString().slice(0, 10), end: e.toISOString().slice(0, 10) };
+}
+
+// ============================================================
+// Trend mode type
+// ============================================================
+
+type TrendMode = 'daily' | 'weekly' | 'monthly';
+
+// ============================================================
 // Main Dashboard Component
 // ============================================================
 
 export default function DashboardPage() {
   const { formatCurrency, t } = useApp();
+  const router = useRouter();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // RPC data
+  // A1: Date range
+  const defaultRange = useMemo(() => getThisMonthRange(), []);
+  const [startDate, setStartDate] = useState(defaultRange.start);
+  const [endDate, setEndDate] = useState(defaultRange.end);
+
+  // A9: Trend mode
+  const [trendMode, setTrendMode] = useState<TrendMode>('monthly');
+
+  // A10: Sales goal (localStorage)
+  const [salesGoal, setSalesGoal] = useState(0);
+  useEffect(() => {
+    const saved = localStorage.getItem('dashboard_sales_goal');
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reading localStorage on mount is intentional
+    if (saved) setSalesGoal(parseInt(saved, 10));
+  }, []);
+  const handleGoalChange = (v: number) => {
+    setSalesGoal(v);
+    localStorage.setItem('dashboard_sales_goal', String(v));
+  };
+
+  // Core data
   const [kpis, setKpis] = useState<KPIData | null>(null);
   const [monthlyTrend, setMonthlyTrend] = useState<MonthlyTrendRow[]>([]);
   const [platformSummary, setPlatformSummary] = useState<PlatformSummaryRow[]>([]);
   const [topTitles, setTopTitles] = useState<TopTitleRow[]>([]);
   const [growthAlerts, setGrowthAlerts] = useState<GrowthAlertRow[]>([]);
 
-  const formatShort = (value: number): string => {
-    if (value >= 100_000_000) return `${(value / 100_000_000).toFixed(1)}`;
-    if (value >= 10_000) return `${(value / 10_000).toFixed(0)}`;
-    return value.toLocaleString();
-  };
+  // A2: YoY data
+  const [yoyKpis, setYoyKpis] = useState<{ total_sales: number } | null>(null);
+
+  // A3: Genre
+  const [genreSummary, setGenreSummary] = useState<Array<{ genre_code: string; genre_kr: string; total_sales: number; title_count: number }>>([]);
+
+  // A4: Company
+  const [companySummary, setCompanySummary] = useState<Array<{ company_name: string; total_sales: number; title_count: number }>>([]);
+
+  // A5: Format
+  const [formatSummary, setFormatSummary] = useState<Array<{ content_format: string; total_sales: number; title_count: number }>>([]);
+
+  // A9: Daily/Weekly trend data
+  const [dailyTrend, setDailyTrend] = useState<Array<{ day: string; total_sales: number }>>([]);
+  const [weeklyTrend, setWeeklyTrend] = useState<Array<{ week: string; total_sales: number }>>([]);
+
+  // A8: Data freshness
+  const [lastDataDate, setLastDataDate] = useState<string>('');
+  const [hasPreliminary, setHasPreliminary] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [kpiResult, trendResult, platformResult, titleResult] = await Promise.allSettled([
+      const sd = startDate || undefined;
+      const ed = endDate || undefined;
+
+      // Core data + new analysis data in parallel
+      const [
+        kpiResult, trendResult, platformResult, titleResult, alertResult,
+        genreResult, companyResult, formatResult,
+        dailyResult, weeklyResult,
+      ] = await Promise.allSettled([
         fetchDashboardKPIs(),
         fetchMonthlyTrend(),
         fetchPlatformSummary(),
         fetchTopTitles(20),
+        fetchGrowthAlerts(),
+        fetchGenreSummary(sd, ed).catch(() => []),
+        fetchCompanySummary(sd, ed).catch(() => []),
+        fetchFormatSummary(sd, ed).catch(() => []),
+        fetchDailyTrend(sd, ed).catch(() => []),
+        fetchWeeklyTrend(sd, ed).catch(() => []),
       ]);
 
       if (kpiResult.status === 'fulfilled') setKpis(kpiResult.value);
-      if (trendResult.status === 'fulfilled') setMonthlyTrend(trendResult.value ?? []);
+      if (trendResult.status === 'fulfilled') {
+        const trend = trendResult.value ?? [];
+        setMonthlyTrend(trend);
+        // A8: derive last data date from monthly trend
+        if (trend.length > 0) {
+          setLastDataDate(trend[trend.length - 1].month);
+        }
+      }
       if (platformResult.status === 'fulfilled') setPlatformSummary(platformResult.value ?? []);
       if (titleResult.status === 'fulfilled') setTopTitles(titleResult.value ?? []);
-      setGrowthAlerts([]);
+      if (alertResult.status === 'fulfilled') setGrowthAlerts(alertResult.value ?? []);
+      if (genreResult.status === 'fulfilled') setGenreSummary(genreResult.value ?? []);
+      if (companyResult.status === 'fulfilled') setCompanySummary(companyResult.value ?? []);
+      if (formatResult.status === 'fulfilled') setFormatSummary(formatResult.value ?? []);
+      if (dailyResult.status === 'fulfilled') setDailyTrend(dailyResult.value ?? []);
+      if (weeklyResult.status === 'fulfilled') setWeeklyTrend(weeklyResult.value ?? []);
+
+      // A2: YoY comparison
+      if (startDate && endDate) {
+        const yoy = getYoYRange(startDate, endDate);
+        fetchPeriodKpis(yoy.start, yoy.end)
+          .then((r) => setYoyKpis(r))
+          .catch(() => setYoyKpis(null));
+      }
+
+      // A8: Check preliminary data
+      try {
+        const res = await fetch('/api/sales/paginated?page=1&pageSize=1&sortBy=sale_date&sortDir=desc');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.rows?.[0]) {
+            setLastDataDate(data.rows[0].sale_date);
+            setHasPreliminary(data.rows[0].is_preliminary === true);
+          }
+        }
+      } catch { /* non-critical */ }
+
       setLoading(false);
     } catch (err: unknown) {
       console.error('Dashboard data load error:', err);
       setError(err instanceof Error ? err.message : 'Failed to load data');
+      setLoading(false);
     }
-  }, []);
+  }, [startDate, endDate]);
 
   useEffect(() => {
-    void loadData(); // eslint-disable-line react-hooks/set-state-in-effect
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- async data fetch on mount
+    void loadData();
   }, [loadData]);
 
-  // Prepare chart data
-  const trendChartData = monthlyTrend.map((r) => ({
-    label: r.month.length >= 7 ? r.month.slice(2) : r.month,
-    sales: r.total_sales,
-  }));
+  // ---- Chart data preparation ----
+
+  const trendChartData = useMemo(() => {
+    if (trendMode === 'daily') {
+      return dailyTrend.map((r) => ({
+        label: r.day.length >= 10 ? r.day.slice(5) : r.day,
+        sales: r.total_sales,
+      }));
+    }
+    if (trendMode === 'weekly') {
+      return weeklyTrend.map((r) => ({
+        label: r.week,
+        sales: r.total_sales,
+      }));
+    }
+    return monthlyTrend.map((r) => ({
+      label: r.month.length >= 7 ? r.month.slice(2) : r.month,
+      sales: r.total_sales,
+    }));
+  }, [trendMode, dailyTrend, weeklyTrend, monthlyTrend]);
 
   const pieData = platformSummary.map((r) => ({
     name: r.channel,
@@ -296,7 +384,17 @@ export default function DashboardPage() {
     color: getPlatformColor(r.channel),
   }));
 
-  const decliningTitles = growthAlerts.filter((a) => a.growth_pct < -30);
+  // A2: YoY calculation
+  const yoyChange = useMemo(() => {
+    if (!kpis || !yoyKpis || yoyKpis.total_sales === 0) return null;
+    return ((kpis.this_month_sales - yoyKpis.total_sales) / yoyKpis.total_sales) * 100;
+  }, [kpis, yoyKpis]);
+
+  const trendLabels: Record<TrendMode, string> = {
+    daily: t('일별', '日別'),
+    weekly: t('주별', '週別'),
+    monthly: t('월별', '月別'),
+  };
 
   if (error) {
     return (
@@ -319,12 +417,12 @@ export default function DashboardPage() {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.15 }}
     >
-      {/* ---- Header ---- */}
-      <div className="flex items-center gap-4 mb-8">
+      {/* ---- Header with Data Freshness (A8) ---- */}
+      <div className="flex items-center gap-4 mb-6 flex-wrap">
         <div className="w-11 h-11 rounded-xl flex items-center justify-center page-icon-glow">
           <LayoutDashboard size={22} color="white" />
         </div>
-        <div>
+        <div className="flex-1 min-w-0">
           <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
             {t('대시보드', 'ダッシュボード')}
           </h1>
@@ -332,6 +430,38 @@ export default function DashboardPage() {
             {t('매출 개요 및 주요 지표', '売上概要と主要指標')}
           </p>
         </div>
+        {/* A8: Data freshness */}
+        {lastDataDate && (
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs" style={{
+              background: 'var(--color-surface)',
+              border: '1px solid var(--color-glass-border)',
+              color: 'var(--color-text-secondary)',
+            }}>
+              <Clock size={12} />
+              {t('최종 데이터:', '最終データ:')} {lastDataDate}
+            </div>
+            {hasPreliminary && (
+              <span className="px-2 py-1 rounded-lg text-[11px] font-medium" style={{
+                background: 'rgba(245, 158, 11, 0.15)',
+                color: '#f59e0b',
+                border: '1px solid rgba(245, 158, 11, 0.2)',
+              }}>
+                {t('속보치 포함', '速報値含む')}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ---- A1: Date Range Picker ---- */}
+      <div className="mb-6">
+        <DateRangePicker
+          startDate={startDate}
+          endDate={endDate}
+          onChangeStart={setStartDate}
+          onChangeEnd={setEndDate}
+        />
       </div>
 
       {loading ? (
@@ -354,13 +484,14 @@ export default function DashboardPage() {
       ) : (
         <div className="space-y-6">
 
-          {/* KPI Summary Cards */}
+          {/* ---- KPI Summary Cards (A2: YoY added) ---- */}
           <motion.div
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
             variants={containerVariants}
             initial="hidden"
             animate="show"
           >
+            {/* Total Sales */}
             <motion.div
               variants={cardVariants}
               whileHover={{ y: -4, scale: 1.02, transition: { duration: 0.25 } }}
@@ -380,6 +511,7 @@ export default function DashboardPage() {
               </p>
             </motion.div>
 
+            {/* This Month Sales + MoM + YoY */}
             <motion.div
               variants={cardVariants}
               whileHover={{ y: -4, scale: 1.02, transition: { duration: 0.25 } }}
@@ -394,18 +526,30 @@ export default function DashboardPage() {
               <p className="text-2xl font-bold mb-1" style={{ color: 'var(--color-text-primary)' }}>
                 <AnimatedNumber value={kpis.this_month_sales} formatter={formatCurrency} />
               </p>
-              <div className="flex items-center gap-1">
-                {kpis.mom_change >= 0 ? (
-                  <TrendingUp size={14} color="#22c55e" />
-                ) : (
-                  <TrendingDown size={14} color="#ef4444" />
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-1">
+                  {kpis.mom_change >= 0 ? (
+                    <TrendingUp size={12} color="#22c55e" />
+                  ) : (
+                    <TrendingDown size={12} color="#ef4444" />
+                  )}
+                  <span className="text-[11px] font-semibold" style={{ color: kpis.mom_change >= 0 ? '#22c55e' : '#ef4444' }}>
+                    {kpis.mom_change > 0 ? '+' : ''}{kpis.mom_change.toFixed(1)}% MoM
+                  </span>
+                </div>
+                {/* A2: YoY */}
+                {yoyChange !== null && (
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>|</span>
+                    <span className="text-[11px] font-semibold" style={{ color: yoyChange >= 0 ? '#22c55e' : '#ef4444' }}>
+                      {yoyChange > 0 ? '+' : ''}{yoyChange.toFixed(1)}% YoY
+                    </span>
+                  </div>
                 )}
-                <span className="text-xs font-semibold" style={{ color: kpis.mom_change >= 0 ? '#22c55e' : '#ef4444' }}>
-                  {kpis.mom_change > 0 ? '+' : ''}{kpis.mom_change.toFixed(1)}% {t('전월대비', '前月比')}
-                </span>
               </div>
             </motion.div>
 
+            {/* MoM Growth Rate */}
             <motion.div
               variants={cardVariants}
               whileHover={{ y: -4, scale: 1.02, transition: { duration: 0.25 } }}
@@ -425,6 +569,7 @@ export default function DashboardPage() {
               </p>
             </motion.div>
 
+            {/* Active Titles */}
             <motion.div
               variants={cardVariants}
               whileHover={{ y: -4, scale: 1.02, transition: { duration: 0.25 } }}
@@ -445,7 +590,14 @@ export default function DashboardPage() {
             </motion.div>
           </motion.div>
 
-          {/* Monthly Sales Trend */}
+          {/* ---- A10: Sales Goal ---- */}
+          <SalesGoal
+            currentSales={kpis.this_month_sales}
+            goal={salesGoal}
+            onGoalChange={handleGoalChange}
+          />
+
+          {/* ---- Sales Trend (A9: daily/weekly/monthly toggle) ---- */}
           <motion.div
             variants={cardVariants}
             initial="hidden"
@@ -453,9 +605,27 @@ export default function DashboardPage() {
             className="rounded-2xl p-6"
             style={GLASS_CARD}
           >
-            <h2 className="text-lg font-semibold mb-6" style={{ color: 'var(--color-text-primary)' }}>
-              {t('월별 매출 추이', '月別売上推移')}
-            </h2>
+            <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
+              <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                <Calendar size={16} className="inline mr-2" style={{ verticalAlign: '-2px' }} />
+                {trendLabels[trendMode]} {t('매출 추이', '売上推移')}
+              </h2>
+              <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid var(--color-glass-border)' }}>
+                {(['daily', 'weekly', 'monthly'] as TrendMode[]).map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => setTrendMode(mode)}
+                    className="px-3 py-1.5 text-xs font-medium transition-all"
+                    style={{
+                      background: trendMode === mode ? 'linear-gradient(135deg, #3b82f6, #8b5cf6)' : 'transparent',
+                      color: trendMode === mode ? '#fff' : 'var(--color-text-secondary)',
+                    }}
+                  >
+                    {trendLabels[mode]}
+                  </button>
+                ))}
+              </div>
+            </div>
             <ResponsiveContainer width="100%" height={350}>
               <AreaChart data={trendChartData}>
                 <defs>
@@ -490,7 +660,7 @@ export default function DashboardPage() {
             </ResponsiveContainer>
           </motion.div>
 
-          {/* Platform Share + Ranking */}
+          {/* ---- Platform Share + Ranking (A7: drilldown) ---- */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <motion.div
               variants={cardVariants}
@@ -515,6 +685,8 @@ export default function DashboardPage() {
                     paddingAngle={2}
                     label={renderDonutLabel}
                     labelLine={false}
+                    onClick={(_, idx) => router.push(`/platforms?channel=${encodeURIComponent(pieData[idx].name)}`)}
+                    style={{ cursor: 'pointer' }}
                   >
                     {pieData.map((entry, idx) => (
                       <Cell key={idx} fill={entry.color} fillOpacity={0.85} />
@@ -561,7 +733,13 @@ export default function DashboardPage() {
                     {...darkTooltipStyle}
                     formatter={(v: unknown) => [formatCurrency(Number(v ?? 0)), t('매출', '売上')]}
                   />
-                  <Bar dataKey="sales" radius={[0, 6, 6, 0]} barSize={22}>
+                  <Bar
+                    dataKey="sales"
+                    radius={[0, 6, 6, 0]}
+                    barSize={22}
+                    onClick={(data) => router.push(`/platforms?channel=${encodeURIComponent(String(data.name ?? ''))}`)}
+                    style={{ cursor: 'pointer' }}
+                  >
                     {platformBarData.map((entry, idx) => (
                       <Cell key={idx} fill={entry.color} fillOpacity={0.8} />
                     ))}
@@ -571,58 +749,19 @@ export default function DashboardPage() {
             </motion.div>
           </div>
 
-          {/* Issue Briefing */}
-          {decliningTitles.length > 0 && (
-            <motion.div
-              variants={cardVariants}
-              initial="hidden"
-              animate="show"
-              className="rounded-2xl p-6"
-              style={GLASS_CARD}
-            >
-              <div className="flex items-center gap-2 mb-4">
-                <AlertTriangle size={18} color="#f59e0b" />
-                <h2 className="text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                  {t('주요 이슈 브리핑', '主要イシューブリーフィング')}
-                </h2>
-                <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b' }}>
-                  {decliningTitles.length}{t('건', '件')}
-                </span>
-              </div>
-              <p className="text-xs mb-4" style={{ color: 'var(--color-text-muted)' }}>
-                {t('전월 대비 30% 이상 감소한 작품', '前月比30%以上減少した作品')}
-              </p>
-              <div className="space-y-2">
-                {decliningTitles.slice(0, 10).map((alert) => (
-                  <div
-                    key={alert.title_jp}
-                    className="flex items-center gap-3 p-3 rounded-xl"
-                    style={{ background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.1)' }}
-                  >
-                    <TrendingDown size={16} color="#ef4444" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>
-                        {alert.title_jp}
-                      </p>
-                      {alert.title_kr && (
-                        <p className="text-xs truncate" style={{ color: 'var(--color-text-muted)' }}>{alert.title_kr}</p>
-                      )}
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-sm font-bold" style={{ color: '#ef4444' }}>
-                        {alert.growth_pct.toFixed(1)}%
-                      </p>
-                      <p className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
-                        {formatCurrency(alert.last_month)} → {formatCurrency(alert.this_month)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          )}
+          {/* ---- A3: Genre Chart + A4: Company Ranking ---- */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <GenreChart data={genreSummary} />
+            <CompanyRanking data={companySummary} />
+          </div>
 
-          {/* Top Titles Table */}
+          {/* ---- A5: Format Chart ---- */}
+          <FormatChart data={formatSummary} />
+
+          {/* ---- A6: Growth Alerts ---- */}
+          <GrowthAlertsPanel data={growthAlerts} />
+
+          {/* ---- Top Titles Table (A7: drilldown) ---- */}
           <motion.div
             variants={cardVariants}
             initial="hidden"
@@ -651,7 +790,12 @@ export default function DashboardPage() {
                 </thead>
                 <tbody>
                   {topTitles.slice(0, 10).map((title, idx) => (
-                    <tr key={title.title_jp} style={{ borderBottom: '1px solid var(--color-table-border-subtle)' }}>
+                    <tr
+                      key={title.title_jp}
+                      style={{ borderBottom: '1px solid var(--color-table-border-subtle)' }}
+                      className="cursor-pointer transition-colors hover:brightness-110"
+                      onClick={() => router.push(`/titles?search=${encodeURIComponent(title.title_jp)}`)}
+                    >
                       <td className="py-3 px-2 font-bold" style={{ color: idx < 3 ? '#a5b4fc' : 'var(--color-text-muted)' }}>
                         {idx + 1}
                       </td>

@@ -312,3 +312,324 @@ select:focus-visible,
   background: rgba(239, 68, 68, 0.10); color: #ef4444;
   font-size: 12px; font-weight: 600;
 }
+
+/* ========================================
+   Feature Expansion - New Styles
+   ======================================== */
+
+/* Date Range Picker */
+.date-range-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.date-range-picker input[type="date"] {
+  background: var(--color-glass);
+  border: 1px solid var(--color-glass-border);
+  border-radius: 8px;
+  color: var(--color-text-primary);
+  padding: 6px 12px;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.date-range-picker input[type="date"]:focus {
+  border-color: var(--color-accent-blue);
+}
+
+/* Preset Buttons */
+.preset-btn {
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--color-glass);
+  border: 1px solid var(--color-glass-border);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.preset-btn:hover {
+  background: var(--color-glass-hover);
+  border-color: var(--color-glass-hover-border);
+}
+
+.preset-btn.active {
+  background: var(--color-accent-blue);
+  color: white;
+  border-color: var(--color-accent-blue);
+}
+
+/* Filter Panel */
+.filter-panel {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--color-glass);
+  border: 1px solid var(--color-glass-border);
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+.filter-panel select {
+  background: var(--color-surface);
+  border: 1px solid var(--color-glass-border);
+  border-radius: 8px;
+  color: var(--color-text-primary);
+  padding: 6px 12px;
+  font-size: 13px;
+  outline: none;
+  min-width: 120px;
+}
+
+.filter-panel select:focus {
+  border-color: var(--color-accent-blue);
+}
+
+.filter-reset-btn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  background: transparent;
+  border: 1px solid var(--color-accent-red);
+  color: var(--color-accent-red);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-reset-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* Rank Badge */
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.rank-badge.up {
+  color: var(--color-accent-green);
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.rank-badge.down {
+  color: var(--color-accent-red);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.rank-badge.same {
+  color: var(--color-text-muted);
+  background: var(--color-glass);
+}
+
+/* Metric Card Enhanced */
+.metric-card-clickable {
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.metric-card-clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+/* Granularity Toggle */
+.granularity-toggle {
+  display: inline-flex;
+  background: var(--color-glass);
+  border: 1px solid var(--color-glass-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.granularity-toggle button {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  background: transparent;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.granularity-toggle button.active {
+  background: var(--color-accent-blue);
+  color: white;
+}
+
+.granularity-toggle button:not(:last-child) {
+  border-right: 1px solid var(--color-glass-border);
+}
+
+/* Heatmap Cell */
+.heatmap-cell {
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 500;
+  transition: transform 0.15s;
+}
+
+.heatmap-cell:hover {
+  transform: scale(1.05);
+  z-index: 1;
+}
+
+/* New Badge */
+.badge-new {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(59, 111, 246, 0.15);
+  color: var(--color-accent-blue);
+  letter-spacing: 0.5px;
+}
+
+/* Compare Selector */
+.compare-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.compare-checkbox:hover {
+  background: var(--color-glass-hover);
+}
+
+.compare-checkbox input[type="checkbox"] {
+  accent-color: var(--color-accent-blue);
+}
+
+/* Data Freshness */
+.freshness-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.freshness-badge.preliminary {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--color-accent-amber);
+}
+
+.freshness-badge.confirmed {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--color-accent-green);
+}
+
+/* Pareto Line */
+.pareto-line {
+  stroke-dasharray: 4 4;
+}
+
+/* Goal Gauge */
+.goal-gauge-bg {
+  background: var(--color-glass);
+  border-radius: 8px;
+  height: 8px;
+  overflow: hidden;
+}
+
+.goal-gauge-fill {
+  height: 100%;
+  border-radius: 8px;
+  transition: width 0.6s ease;
+}
+
+/* Section Header */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.section-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+/* Lifecycle Timeline */
+.lifecycle-timeline {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  position: relative;
+  padding: 8px 0;
+}
+
+.lifecycle-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  z-index: 1;
+}
+
+.lifecycle-line {
+  flex: 1;
+  height: 2px;
+  background: var(--color-glass-border);
+}
+
+/* Light theme overrides */
+.theme-light .date-range-picker input[type="date"] {
+  color-scheme: light;
+}
+
+.theme-light .filter-panel select {
+  background: #fff;
+}
+
+.theme-light .preset-btn {
+  background: rgba(26, 43, 94, 0.05);
+  border-color: rgba(26, 43, 94, 0.1);
+}
+
+.theme-light .granularity-toggle {
+  background: rgba(26, 43, 94, 0.05);
+  border-color: rgba(26, 43, 94, 0.1);
+}
+
+/* Responsive */
+@media (max-width: 639px) {
+  .date-range-picker {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-panel {
+    flex-direction: column;
+  }
+
+  .filter-panel select {
+    width: 100%;
+  }
+}

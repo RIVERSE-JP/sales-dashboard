@@ -14,9 +14,9 @@ function getSupabaseServer(): SupabaseClient {
   return _client;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const supabaseServer = new Proxy({} as SupabaseClient, {
   get(_target, prop) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return (getSupabaseServer() as unknown as Record<string | symbol, any>)[prop];
   },
 });
