@@ -274,7 +274,7 @@ export function PlatformAnalysis() {
                 {t('비교 모드', '比較モード')}
               </button>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-4">
               {platformNames.map((pf) => {
                 const brand = getPlatformBrand(pf);
                 const logo = getPlatformLogo(pf);
@@ -282,14 +282,16 @@ export function PlatformAnalysis() {
                 return (
                   <motion.button
                     key={pf}
-                    whileHover={{ scale: 1.08 }}
-                    whileTap={{ scale: 0.92 }}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
                     onClick={() => compareMode ? toggleComparePlatform(pf) : setSelectedPlatform(pf)}
-                    className="w-11 h-11 rounded-xl flex items-center justify-center transition-all cursor-pointer"
+                    className="relative cursor-pointer transition-all"
                     style={{
-                      background: isSelected ? `${brand.color}20` : 'var(--color-glass)',
-                      border: isSelected ? `2px solid ${brand.color}` : '1px solid var(--color-glass-border)',
-                      boxShadow: isSelected ? `0 0 12px ${brand.color}30` : 'none',
+                      background: 'transparent',
+                      border: 'none',
+                      padding: 0,
+                      opacity: isSelected ? 1 : 0.45,
+                      filter: isSelected ? 'none' : 'grayscale(0.3)',
                     }}
                     title={brand.nameJP || pf}
                   >
@@ -297,11 +299,19 @@ export function PlatformAnalysis() {
                       <img
                         src={logo}
                         alt={brand.nameJP || pf}
-                        className="rounded"
-                        style={{ width: 26, height: 26, objectFit: 'contain' }}
+                        className="rounded-lg"
+                        style={{ width: 40, height: 40, objectFit: 'contain' }}
                       />
                     ) : (
-                      <span className="text-xs font-bold" style={{ color: brand.color }}>{brand.icon}</span>
+                      <span className="text-lg font-bold" style={{ color: brand.color }}>{brand.icon}</span>
+                    )}
+                    {isSelected && (
+                      <motion.div
+                        layoutId="platform-indicator"
+                        className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-5 h-[3px] rounded-full"
+                        style={{ background: brand.color }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                      />
                     )}
                   </motion.button>
                 );
