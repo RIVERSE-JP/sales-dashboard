@@ -423,27 +423,27 @@ export default function InitialSalesPage() {
             <thead className="sticky top-0 z-10">
               <tr className="text-[var(--color-text-secondary)] text-xs" style={{ background: 'var(--color-tooltip-bg)' }}>
                 <th className="px-4 py-3 text-left w-10"></th>
-                <th className="px-4 py-3 text-left">작품</th>
-                <th className="px-4 py-3 text-left">플랫폼</th>
+                <th className="px-4 py-3 text-left">{t('작품', 'タイトル')}</th>
+                <th className="px-4 py-3 text-left">{t('플랫폼', 'PF')}</th>
                 <th className="px-4 py-3 text-right cursor-pointer select-none hover:text-[var(--color-text-primary)]" onClick={() => handleSort('firstDate')}>
-                  런칭일 {renderSortIcon('firstDate')}
+                  {t('런칭일', 'ローンチ日')} {renderSortIcon('firstDate')}
                 </th>
                 <th className="px-4 py-3 text-right cursor-pointer select-none hover:text-[var(--color-text-primary)]" onClick={() => handleSort('totalSales')}>
-                  총 매출 {renderSortIcon('totalSales')}
+                  {t('총 매출', '累計売上')} {renderSortIcon('totalSales')}
                 </th>
                 <th className="px-4 py-3 text-right cursor-pointer select-none hover:text-[var(--color-text-primary)]" onClick={() => handleSort('dayCount')}>
-                  데이터일수 {renderSortIcon('dayCount')}
+                  {t('데이터일수', 'データ日数')} {renderSortIcon('dayCount')}
                 </th>
               </tr>
             </thead>
             <tbody>
-              {filteredTitles.slice(0, 30).map((t) => {
-                const checked = checkedTitles.has(t.title_jp);
+              {filteredTitles.slice(0, 30).map((item) => {
+                const checked = checkedTitles.has(item.title_jp);
                 return (
                   <tr
-                    key={t.title_jp}
+                    key={item.title_jp}
                     className={`border-t border-[var(--color-glass-border)] cursor-pointer transition-colors ${checked ? 'bg-indigo-500/10' : 'hover:bg-[var(--color-glass)]'}`}
-                    onClick={() => toggleTitle(t.title_jp)}
+                    onClick={() => toggleTitle(item.title_jp)}
                   >
                     <td className="px-4 py-2.5">
                       <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${checked ? 'bg-indigo-500 border-indigo-500' : 'border-[var(--color-glass-border)] hover:border-[var(--color-glass-border)]0'}`}>
@@ -451,25 +451,25 @@ export default function InitialSalesPage() {
                       </div>
                     </td>
                     <td className="px-4 py-2.5" style={{ maxWidth: '280px' }}>
-                      <div className="text-[var(--color-text-primary)] font-medium text-xs truncate" title={t.title_jp}>
-                        {t.title_jp.length > 30 ? t.title_jp.slice(0, 30) + '…' : t.title_jp}
+                      <div className="text-[var(--color-text-primary)] font-medium text-xs truncate" title={item.title_jp}>
+                        {item.title_jp.length > 30 ? item.title_jp.slice(0, 30) + '…' : item.title_jp}
                       </div>
-                      {t.title_kr && <div className="text-[var(--color-text-secondary)] text-[11px] truncate" title={t.title_kr}>{t.title_kr}</div>}
+                      {item.title_kr && <div className="text-[var(--color-text-secondary)] text-[11px] truncate" title={item.title_kr}>{item.title_kr}</div>}
                     </td>
                     <td className="px-4 py-2.5">
                       <div className="flex flex-wrap gap-1">
-                        {t.channels.slice(0, 3).map((ch) => <PlatformBadge key={ch} name={ch} showName={false} size="sm" />)}
-                        {t.channels.length > 3 && <span className="text-[10px] text-[var(--color-text-muted)]">+{t.channels.length - 3}</span>}
+                        {item.channels.slice(0, 3).map((ch) => <PlatformBadge key={ch} name={ch} showName={false} size="sm" />)}
+                        {item.channels.length > 3 && <span className="text-[10px] text-[var(--color-text-muted)]">+{item.channels.length - 3}</span>}
                       </div>
                     </td>
                     <td className="px-4 py-2.5 text-right text-[var(--color-text-secondary)] text-xs">
-                      {format(parseISO(t.firstDate), 'yyyy/MM/dd')}
+                      {format(parseISO(item.firstDate), 'yyyy/MM/dd')}
                     </td>
                     <td className="px-4 py-2.5 text-right text-[var(--color-text-primary)] text-xs font-medium">
-                      {formatCurrency(t.totalSales)}
+                      {formatCurrency(item.totalSales)}
                     </td>
                     <td className="px-4 py-2.5 text-right text-[var(--color-text-secondary)] text-xs">
-                      {t.dayCount}일
+                      {item.dayCount}{t('일', '日')}
                     </td>
                   </tr>
                 );
@@ -479,7 +479,7 @@ export default function InitialSalesPage() {
         </div>
         {filteredTitles.length > 30 && (
           <div className="px-4 py-2 text-[11px] text-[var(--color-text-muted)] text-center border-t border-[var(--color-glass-border)]">
-            {t(`상위 30개 표시 중 (총 ${filteredTitles.length}개) — 필터로 좁혀보세요`, `上位30件表示中 (全${filteredTitles.length}件) — フィルターで絞り込み`)}
+            {t(`상위 30개 표시 중 (총 ${filteredTitles.length}개) - 필터로 좁혀보세요`, `上位30件表示中 (全${filteredTitles.length}件) - フィルターで絞り込み`)}
           </div>
         )}
       </motion.div>
@@ -488,7 +488,7 @@ export default function InitialSalesPage() {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-center py-8">
           <div className="flex items-center gap-3 text-[var(--color-text-secondary)]">
             <div className="w-5 h-5 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
-            데이터 로딩 중...
+            {t('데이터 로딩 중...', 'データ読み込み中...')}
           </div>
         </motion.div>
       )}
@@ -500,7 +500,7 @@ export default function InitialSalesPage() {
               <div className="flex rounded-xl overflow-hidden border border-[var(--color-input-border)]">
                 {(['daily', 'weekly'] as const).map((mode) => (
                   <button key={mode} onClick={() => setViewMode(mode)} className={`px-4 py-2 text-xs font-medium transition-colors ${viewMode === mode ? 'bg-indigo-500 text-white' : 'bg-[var(--color-glass)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}`}>
-                    {mode === 'daily' ? 'Daily' : 'Weekly'}
+                    {mode === 'daily' ? t('일별', '日別') : t('주별', '週別')}
                   </button>
                 ))}
               </div>
@@ -523,7 +523,7 @@ export default function InitialSalesPage() {
 
             <div className="rounded-2xl p-6" style={GLASS_CARD}>
               <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
-                {viewMode === 'daily' ? '일별 매출 비교 (런칭일 기준 D1~D28)' : '주별 매출 비교 (W1~W4)'}
+                {viewMode === 'daily' ? t('일별 매출 비교 (런칭일 기준 D1~D28)', '日別売上比較 (ローンチ日基準 D1〜D28)') : t('주별 매출 비교 (W1~W4)', '週別売上比較 (W1〜W4)')}
               </h3>
               {chartType === 'area' ? (
                 <ResponsiveContainer width="100%" height={350}>
@@ -565,7 +565,7 @@ export default function InitialSalesPage() {
             </div>
 
             <div className="rounded-2xl p-6" style={GLASS_CARD}>
-              <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">누적 매출 비교 (D1~D28)</h3>
+              <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">{t('누적 매출 비교 (D1~D28)', '累計売上比較 (D1〜D28)')}</h3>
               <ResponsiveContainer width="100%" height={320}>
                 <AreaChart data={cumulativeData}>
                   <defs>
@@ -590,12 +590,12 @@ export default function InitialSalesPage() {
             </div>
 
             <div className="rounded-2xl p-6" style={GLASS_CARD}>
-              <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">4주 매출 요약</h3>
+              <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">{t('4주 매출 요약', '4週間売上サマリー')}</h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm table-striped">
                   <thead>
                     <tr className="text-[var(--color-text-secondary)] text-xs border-b border-[var(--color-table-border)]">
-                      <th className="px-3 py-2 text-left">작품</th>
+                      <th className="px-3 py-2 text-left">{t('작품', 'タイトル')}</th>
                       <th className="px-3 py-2 text-right">D1</th>
                       <th className="px-3 py-2 text-right">D3</th>
                       <th className="px-3 py-2 text-right">D7</th>
@@ -603,7 +603,7 @@ export default function InitialSalesPage() {
                       <th className="px-3 py-2 text-right">W2</th>
                       <th className="px-3 py-2 text-right">W3</th>
                       <th className="px-3 py-2 text-right">W4</th>
-                      <th className="px-3 py-2 text-right font-semibold">28일 합계</th>
+                      <th className="px-3 py-2 text-right font-semibold">{t('28일 합계', '28日合計')}</th>
                     </tr>
                   </thead>
                   <tbody>

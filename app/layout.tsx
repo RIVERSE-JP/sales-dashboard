@@ -415,9 +415,9 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
                   className="text-xs font-medium"
                   style={{ color: 'var(--color-text-secondary)' }}
                 >
-                  {now.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric', weekday: 'short' })}
+                  {now.toLocaleDateString(lang === 'ko' ? 'ko-KR' : 'ja-JP', { month: 'short', day: 'numeric', weekday: 'short' })}
                   {' '}
-                  {now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
+                  {now.toLocaleTimeString(lang === 'ko' ? 'ko-KR' : 'ja-JP', { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
 

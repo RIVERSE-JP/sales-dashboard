@@ -198,7 +198,7 @@ export default function DataPage() {
             className="flex items-center gap-2 w-full text-left cursor-pointer"
           >
             <Filter size={16} color="var(--color-text-secondary)" />
-            <span className="text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>フィルター</span>
+            <span className="text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>{t('필터', 'フィルター')}</span>
             {showFilters ? <ChevronUp size={14} color="var(--color-text-secondary)" /> : <ChevronDown size={14} color="var(--color-text-secondary)" />}
           </button>
 
@@ -210,14 +210,14 @@ export default function DataPage() {
             >
               {/* Title search */}
               <div>
-                <label className="text-xs font-medium block mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>タイトル検索</label>
+                <label className="text-xs font-medium block mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>{t('작품 검색', 'タイトル検索')}</label>
                 <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ background: 'var(--color-input-bg)', border: '1px solid var(--color-input-border)' }}>
                   <Search size={14} color="var(--color-text-muted)" />
                   <input
                     type="text"
                     value={titleSearch}
                     onChange={(e) => setTitleSearch(e.target.value)}
-                    placeholder="タイトル名..."
+                    placeholder={t('작품명...', 'タイトル名...')}
                     className="flex-1 bg-transparent outline-none text-sm"
                     style={{ color: 'var(--color-text-primary)' }}
                   />
@@ -226,14 +226,14 @@ export default function DataPage() {
 
               {/* Platform */}
               <div>
-                <label className="text-xs font-medium block mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>プラットフォーム</label>
+                <label className="text-xs font-medium block mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>{t('플랫폼', 'プラットフォーム')}</label>
                 <select
                   value={platformFilter}
                   onChange={(e) => setPlatformFilter(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl text-sm outline-none cursor-pointer"
                   style={{ background: 'var(--color-input-bg)', border: '1px solid var(--color-input-border)', color: 'var(--color-text-primary)' }}
                 >
-                  <option value="">すべて</option>
+                  <option value="">{t('전체', 'すべて')}</option>
                   {platformNames.map((p) => (
                     <option key={p} value={p}>{getPlatformBrand(p).nameJP || p}</option>
                   ))}
@@ -242,7 +242,7 @@ export default function DataPage() {
 
               {/* Start date */}
               <div>
-                <label className="text-xs font-medium block mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>開始日</label>
+                <label className="text-xs font-medium block mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>{t('시작일', '開始日')}</label>
                 <input
                   type="date"
                   value={startDate}
@@ -254,7 +254,7 @@ export default function DataPage() {
 
               {/* End date */}
               <div>
-                <label className="text-xs font-medium block mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>終了日</label>
+                <label className="text-xs font-medium block mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>{t('종료일', '終了日')}</label>
                 <input
                   type="date"
                   value={endDate}
@@ -269,7 +269,7 @@ export default function DataPage() {
 
         {/* Summary bar */}
         <motion.div variants={cardVariants} className="flex flex-wrap items-center justify-between gap-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-          <span>{totalCount.toLocaleString()} 件 {dateRange && `| ${dateRange}`}</span>
+          <span>{totalCount.toLocaleString()} {t('건', '件')} {dateRange && `| ${dateRange}`}</span>
           <span>Page {page + 1} / {Math.max(totalPages, 1)}</span>
         </motion.div>
 
@@ -327,11 +327,11 @@ export default function DataPage() {
                             color: row.data_source === 'sokuhochi' ? '#fbbf24' : '#818cf8',
                           }}
                         >
-                          {row.data_source === 'weekly_report' ? 'WR' : row.data_source === 'sokuhochi' ? '速報' : row.data_source}
+                          {row.data_source === 'weekly_report' ? 'WR' : row.data_source === 'sokuhochi' ? t('속보', '速報') : row.data_source}
                         </span>
                         {row.is_preliminary && (
                           <span className="ml-1 text-[10px] px-1 py-0.5 rounded" style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#f87171' }}>
-                            暫定
+                            {t('잠정', '暫定')}
                           </span>
                         )}
                       </td>
@@ -342,7 +342,7 @@ export default function DataPage() {
             </table>
 
             {rows.length === 0 && (
-              <p className="text-center py-12" style={{ color: 'var(--color-text-muted)' }}>データがありません</p>
+              <p className="text-center py-12" style={{ color: 'var(--color-text-muted)' }}>{t('데이터가 없습니다', 'データがありません')}</p>
             )}
           </motion.div>
         )}
