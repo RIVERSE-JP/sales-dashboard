@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Outlet, NavLink, useLocation } from 'react-router-dom';
+import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,
@@ -15,6 +15,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
+import { clearAllCache, prefetchAllData } from '@/lib/supabase';
 
 // ---------------------------------------------------------------------------
 // Navigation config with i18n labels
@@ -71,6 +72,7 @@ function ToggleButton({
 
 export function Layout() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const now = useCurrentTime();
@@ -113,30 +115,42 @@ export function Layout() {
       >
         {/* Logo area */}
         <div className="flex items-center h-16 px-4 shrink-0">
-          <img
-            src="/riverse_logo.png"
-            alt="RIVERSE"
-            className="shrink-0"
-            style={{ height: collapsed ? 26 : 30, width: 'auto', objectFit: 'contain' }}
-          />
-          <AnimatePresence>
-            {!collapsed && (
-              <motion.div
-                initial={{ opacity: 0, x: -8 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -8 }}
-                transition={{ duration: 0.2 }}
-                className="ml-2 overflow-hidden whitespace-nowrap"
-              >
-                <span
-                  className="block text-sm font-bold"
-                  style={{ color: 'var(--color-text-primary)' }}
+          <button
+            onClick={() => {
+              clearAllCache();
+              navigate('/dashboard');
+              prefetchAllData();
+              setMobileOpen(false);
+            }}
+            className="flex items-center gap-0 rounded-lg transition-opacity duration-200 hover:opacity-70 active:opacity-50"
+            style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}
+            title={t('홈으로 (데이터 새로고침)', 'ホームへ (データ更新)')}
+          >
+            <img
+              src="/riverse_logo.png"
+              alt="RIVERSE"
+              className="shrink-0"
+              style={{ height: collapsed ? 26 : 30, width: 'auto', objectFit: 'contain' }}
+            />
+            <AnimatePresence>
+              {!collapsed && (
+                <motion.div
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -8 }}
+                  transition={{ duration: 0.2 }}
+                  className="ml-2 overflow-hidden whitespace-nowrap"
                 >
-                  {t('매출 현황 보드', '売上現況ボード')}
-                </span>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                  <span
+                    className="block text-sm font-bold"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    {t('매출 현황 보드', '売上現況ボード')}
+                  </span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </button>
 
           {/* Mobile close button */}
           <button

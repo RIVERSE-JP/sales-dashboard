@@ -230,6 +230,13 @@ export async function fetchGrowthAlerts() {
 
 let _prefetchStarted = false;
 
+export function clearAllCache() {
+  cache.clear();
+  _platforms = null;
+  _genres = null;
+  _prefetchStarted = false;
+}
+
 export function prefetchAllData() {
   if (_prefetchStarted) return;
   _prefetchStarted = true;
