@@ -29,7 +29,7 @@ interface TitleDetailData {
   channels: string[];
   monthly_trend: Array<{ month: string; sales: number }>;
   platform_breakdown: Array<{ channel: string; sales: number }>;
-  daily_recent: Array<{ sale_date: string; sales: number }>;
+  daily_recent: Array<{ date: string; sales: number }>;
 }
 
 // ============================================================
@@ -188,7 +188,7 @@ export function TitleAnalysis() {
       color: getPlatformColor(p.channel),
     }));
     const dailyRecent = (detailData?.daily_recent ?? []).map((d) => ({
-      label: d.sale_date.slice(5), // MM-DD
+      label: d.date.slice(5), // MM-DD
       sales: d.sales,
     }));
 
