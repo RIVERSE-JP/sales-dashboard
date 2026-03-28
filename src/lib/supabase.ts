@@ -241,6 +241,7 @@ export function prefetchAllData() {
     fetchPlatformSummary(),
     fetchTopTitles(20),
     fetchTitleSummaries(),
+    fetchTitleMaster(),
   ]).then(() => {
     console.log('[prefetch] All core data cached');
   });
@@ -253,6 +254,28 @@ export async function fetchTitleSummaries() {
   if (error) { console.error('RPC error:', error.message); return data ?? null; }
   setCache('title_summaries', data ?? []);
   return data ?? [];
+}
+
+// ============================================================
+// Title master data (genre, company, etc from titles table)
+// ============================================================
+
+export async function fetchTitleMaster() {
+  const cached = getCached<Array<{ title_jp: string; title_kr: string | null; genre: string | null; company: string | null; format: string }>>('title_master');
+  if (cached) return cached;
+  const { data, error } = await supabase
+    .from('titles')
+    .select('title_jp, title_kr, management_type, distribution_company, content_format');
+  if (error) { console.error('fetchTitleMaster error:', error.message); return []; }
+  const result = (data ?? []).map((r: Record<string, unknown>) => ({
+    title_jp: r.title_jp as string,
+    title_kr: r.title_kr as string | null,
+    genre: r.management_type as string | null,
+    company: r.distribution_company as string | null,
+    format: r.content_format as string,
+  }));
+  setCache('title_master', result);
+  return result;
 }
 
 // ============================================================

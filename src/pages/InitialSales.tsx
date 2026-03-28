@@ -5,9 +5,9 @@ import {
   Legend, AreaChart, Area, ResponsiveContainer,
 } from 'recharts';
 import {
-  Rocket, Search, X, ChevronDown, ChevronUp, Check, BarChart3,
+  Rocket, Search, X, Check, BarChart3, ChevronDown, ChevronUp,
 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase, fetchTitleMaster } from '@/lib/supabase';
 import { PlatformBadge } from '@/components/PlatformBadge';
 import { useApp } from '@/context/AppContext';
 import { format, parseISO, addDays } from 'date-fns';
@@ -23,6 +23,8 @@ interface TitleSummary {
   firstDate: string;
   totalSales: number;
   dayCount: number;
+  genre: string | null;
+  company: string | null;
 }
 
 interface DayPoint {
@@ -135,40 +137,50 @@ export function InitialSales() {
   const [titles, setTitles] = useState<TitleSummary[]>([]);
   const [search, setSearch] = useState('');
   const [channelFilter, setChannelFilter] = useState('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
-  const [salesMin, setSalesMin] = useState('');
-  const [pfCountFilter, setPfCountFilter] = useState(''); // '1', '2-3', '4+'
-  const [sortKey, setSortKey] = useState<'totalSales' | 'firstDate' | 'dayCount' | 'channelCount'>('totalSales');
-  const [sortAsc, setSortAsc] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
+  const [genreFilter, setGenreFilter] = useState('');
+  const [companyFilter, setCompanyFilter] = useState('');
+  const [sortKey] = useState<'totalSales' | 'firstDate' | 'dayCount' | 'channelCount'>('totalSales');
+  const [sortAsc] = useState(false);
   const [checkedTitles, setCheckedTitles] = useState<Set<string>>(new Set());
   const [selectedData, setSelectedData] = useState<SelectedTitle[]>([]);
   const [loadingCurves, setLoadingCurves] = useState(false);
   const [viewMode, setViewMode] = useState<'daily' | 'weekly'>('daily');
   const [chartType, setChartType] = useState<'line' | 'area'>('area');
 
-  // ---- Load title list via RPC (server-side aggregation) ----
+  // ---- Load title list via RPC + title master for genre/company ----
   useEffect(() => {
     async function loadTitles() {
       setLoading(true);
-      const { data, error } = await supabase.rpc('get_title_summaries');
+      const [rpcResult, masterData] = await Promise.all([
+        supabase.rpc('get_title_summaries'),
+        fetchTitleMaster(),
+      ]);
 
-      if (error) {
-        console.error('Error loading titles:', JSON.stringify(error));
+      if (rpcResult.error) {
+        console.error('Error loading titles:', JSON.stringify(rpcResult.error));
         setLoading(false);
         return;
       }
-      console.log('Loaded titles:', data?.length);
 
-      const result: TitleSummary[] = (data ?? []).map((row: { title_jp: string; title_kr: string | null; channels: string[]; first_date: string; total_sales: number; day_count: number }) => ({
-        title_jp: row.title_jp,
-        title_kr: row.title_kr,
-        channels: row.channels ?? [],
-        firstDate: row.first_date,
-        totalSales: row.total_sales,
-        dayCount: row.day_count,
-      }));
+      // Build lookup from title master
+      const masterMap = new Map<string, { genre: string | null; company: string | null }>();
+      for (const m of masterData) {
+        masterMap.set(m.title_jp, { genre: m.genre, company: m.company });
+      }
+
+      const result: TitleSummary[] = (rpcResult.data ?? []).map((row: { title_jp: string; title_kr: string | null; channels: string[]; first_date: string; total_sales: number; day_count: number }) => {
+        const master = masterMap.get(row.title_jp);
+        return {
+          title_jp: row.title_jp,
+          title_kr: row.title_kr,
+          channels: row.channels ?? [],
+          firstDate: row.first_date,
+          totalSales: row.total_sales,
+          dayCount: row.day_count,
+          genre: master?.genre ?? null,
+          company: master?.company ?? null,
+        };
+      });
 
       setTitles(result);
       setLoading(false);
@@ -176,20 +188,23 @@ export function InitialSales() {
     loadTitles();
   }, []);
 
-  // ---- Filter & sort titles ----
+  // ---- Filter options ----
   const channels = useMemo(() => {
     const set = new Set<string>();
     for (const t of titles) t.channels.forEach((c) => set.add(c));
     return Array.from(set).sort();
   }, [titles]);
 
-  // Date range options for quick filter
-  const dateRanges = useMemo(() => {
-    const months = new Set<string>();
-    for (const t of titles) {
-      if (t.firstDate) months.add(t.firstDate.slice(0, 7)); // YYYY-MM
-    }
-    return Array.from(months).sort();
+  const genres = useMemo(() => {
+    const set = new Set<string>();
+    for (const t of titles) if (t.genre) set.add(t.genre);
+    return Array.from(set).sort();
+  }, [titles]);
+
+  const companies = useMemo(() => {
+    const set = new Set<string>();
+    for (const t of titles) if (t.company) set.add(t.company);
+    return Array.from(set).sort();
   }, [titles]);
 
   const filteredTitles = useMemo(() => {
@@ -210,27 +225,14 @@ export function InitialSales() {
       list = list.filter((t) => t.channels.includes(channelFilter));
     }
 
-    // Date range filter
-    if (dateFrom) {
-      list = list.filter((t) => t.firstDate >= dateFrom);
-    }
-    if (dateTo) {
-      list = list.filter((t) => t.firstDate <= dateTo + '-31');
+    // Genre filter
+    if (genreFilter) {
+      list = list.filter((t) => t.genre === genreFilter);
     }
 
-    // Sales minimum filter
-    if (salesMin) {
-      const min = Number(salesMin);
-      if (min > 0) list = list.filter((t) => t.totalSales >= min);
-    }
-
-    // Platform count filter
-    if (pfCountFilter === '1') {
-      list = list.filter((t) => t.channels.length === 1);
-    } else if (pfCountFilter === '2-3') {
-      list = list.filter((t) => t.channels.length >= 2 && t.channels.length <= 3);
-    } else if (pfCountFilter === '4+') {
-      list = list.filter((t) => t.channels.length >= 4);
+    // Company filter
+    if (companyFilter) {
+      list = list.filter((t) => t.company === companyFilter);
     }
 
     // Sort
@@ -249,9 +251,9 @@ export function InitialSales() {
     });
 
     return list;
-  }, [titles, search, channelFilter, dateFrom, dateTo, salesMin, pfCountFilter, sortKey, sortAsc]);
+  }, [titles, search, channelFilter, genreFilter, companyFilter, sortKey, sortAsc]);
 
-  const activeFilterCount = [channelFilter, dateFrom, dateTo, salesMin, pfCountFilter].filter(Boolean).length;
+  const activeFilterCount = [channelFilter, genreFilter, companyFilter].filter(Boolean).length;
 
   // ---- Toggle title selection ----
   const toggleTitle = useCallback((titleJP: string) => {
@@ -398,183 +400,91 @@ export function InitialSales() {
 
       {/* Search & Filters */}
       <motion.div variants={cardVariants} className="rounded-2xl p-5" style={GLASS_CARD}>
-        {/* Row 1: Search + Filter toggle + Compare button */}
-        <div className="flex flex-col md:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
-            <input
-              type="text"
-              placeholder={t('작품명 검색 (JP/KR)...', 'タイトル検索 (JP/KR)...')}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--color-input-bg)] border border-[var(--color-input-border)] text-[var(--color-text-primary)] text-sm focus:outline-none focus:border-[#1A2B5E]/50 placeholder:text-[var(--color-text-muted)]"
-            />
-            {search && (
-              <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">
-                <X size={14} />
-              </button>
-            )}
-          </div>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="px-4 py-2.5 rounded-xl text-sm flex items-center gap-2 transition-colors"
-            style={{
-              background: showFilters ? 'var(--color-sidebar-active)' : 'var(--color-input-bg)',
-              border: '1px solid var(--color-input-border)',
-              color: showFilters ? 'var(--color-sidebar-active-text)' : 'var(--color-text-secondary)',
-            }}
-          >
-            {showFilters ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-            {t('필터', 'フィルター')}
-            {activeFilterCount > 0 && (
-              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold text-white" style={{ background: '#1A2B5E' }}>
-                {activeFilterCount}
-              </span>
-            )}
-          </button>
+        {/* Search */}
+        <div className="relative">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
+          <input
+            type="text"
+            placeholder={t('작품명 검색 (JP/KR)...', 'タイトル検索 (JP/KR)...')}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--color-input-bg)] border border-[var(--color-input-border)] text-[var(--color-text-primary)] text-sm focus:outline-none focus:border-[#1A2B5E]/50 placeholder:text-[var(--color-text-muted)]"
+          />
+          {search && (
+            <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">
+              <X size={14} />
+            </button>
+          )}
         </div>
 
-        {/* Row 2: Expandable filter panel */}
-        {showFilters && (
-          <div className="mt-4 pt-4 grid grid-cols-2 md:grid-cols-4 gap-3" style={{ borderTop: '1px solid var(--color-glass-border)' }}>
-            {/* Platform */}
-            <div>
-              <label className="block text-[10px] font-medium mb-1 tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
-                {t('플랫폼', 'プラットフォーム')}
-              </label>
-              <select
-                value={channelFilter}
-                onChange={(e) => setChannelFilter(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg text-xs bg-[var(--color-input-bg)] border border-[var(--color-input-border)] text-[var(--color-text-primary)] focus:outline-none"
-              >
-                <option value="">{t('전체', 'すべて')}</option>
-                {channels.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </div>
+        {/* Filters - always visible */}
+        <div className="mt-4 pt-4 grid grid-cols-1 sm:grid-cols-3 gap-3" style={{ borderTop: '1px solid var(--color-glass-border)' }}>
+          {/* Platform */}
+          <div>
+            <label className="block text-[10px] font-medium mb-1 tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
+              {t('플랫폼', 'プラットフォーム')}
+            </label>
+            <select
+              value={channelFilter}
+              onChange={(e) => setChannelFilter(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg text-xs bg-[var(--color-input-bg)] border border-[var(--color-input-border)] text-[var(--color-text-primary)] focus:outline-none"
+            >
+              <option value="">{t('전체', 'すべて')}</option>
+              {channels.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
 
-            {/* Date From */}
-            <div>
-              <label className="block text-[10px] font-medium mb-1 tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
-                {t('런칭 시작월', '開始月')}
-              </label>
-              <select
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg text-xs bg-[var(--color-input-bg)] border border-[var(--color-input-border)] text-[var(--color-text-primary)] focus:outline-none"
-              >
-                <option value="">{t('전체', 'すべて')}</option>
-                {dateRanges.map((m) => (
-                  <option key={m} value={m}>{m}</option>
-                ))}
-              </select>
-            </div>
+          {/* Genre */}
+          <div>
+            <label className="block text-[10px] font-medium mb-1 tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
+              {t('장르', 'ジャンル')}
+            </label>
+            <select
+              value={genreFilter}
+              onChange={(e) => setGenreFilter(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg text-xs bg-[var(--color-input-bg)] border border-[var(--color-input-border)] text-[var(--color-text-primary)] focus:outline-none"
+            >
+              <option value="">{t('전체', 'すべて')}</option>
+              {genres.map((g) => (
+                <option key={g} value={g}>{g}</option>
+              ))}
+            </select>
+          </div>
 
-            {/* Date To */}
-            <div>
-              <label className="block text-[10px] font-medium mb-1 tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
-                {t('런칭 종료월', '終了月')}
-              </label>
-              <select
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg text-xs bg-[var(--color-input-bg)] border border-[var(--color-input-border)] text-[var(--color-text-primary)] focus:outline-none"
-              >
-                <option value="">{t('전체', 'すべて')}</option>
-                {dateRanges.map((m) => (
-                  <option key={m} value={m}>{m}</option>
-                ))}
-              </select>
-            </div>
+          {/* Production Company */}
+          <div>
+            <label className="block text-[10px] font-medium mb-1 tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
+              {t('제작회사', '制作会社')}
+            </label>
+            <select
+              value={companyFilter}
+              onChange={(e) => setCompanyFilter(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg text-xs bg-[var(--color-input-bg)] border border-[var(--color-input-border)] text-[var(--color-text-primary)] focus:outline-none"
+            >
+              <option value="">{t('전체', 'すべて')}</option>
+              {companies.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+        </div>
 
-            {/* Platform count */}
-            <div>
-              <label className="block text-[10px] font-medium mb-1 tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
-                {t('배포 플랫폼 수', '配信PF数')}
-              </label>
-              <select
-                value={pfCountFilter}
-                onChange={(e) => setPfCountFilter(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg text-xs bg-[var(--color-input-bg)] border border-[var(--color-input-border)] text-[var(--color-text-primary)] focus:outline-none"
-              >
-                <option value="">{t('전체', 'すべて')}</option>
-                <option value="1">{t('단독 (1개)', '単独 (1PF)')}</option>
-                <option value="2-3">{t('2~3개', '2~3PF')}</option>
-                <option value="4+">{t('4개 이상', '4PF以上')}</option>
-              </select>
-            </div>
-
-            {/* Sales minimum */}
-            <div>
-              <label className="block text-[10px] font-medium mb-1 tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
-                {t('최소 매출', '最低売上')}
-              </label>
-              <select
-                value={salesMin}
-                onChange={(e) => setSalesMin(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg text-xs bg-[var(--color-input-bg)] border border-[var(--color-input-border)] text-[var(--color-text-primary)] focus:outline-none"
-              >
-                <option value="">{t('전체', 'すべて')}</option>
-                <option value="100000000">{t('1억엔 이상', '1億円以上')}</option>
-                <option value="50000000">{t('5000만엔 이상', '5000万以上')}</option>
-                <option value="10000000">{t('1000만엔 이상', '1000万以上')}</option>
-                <option value="1000000">{t('100만엔 이상', '100万以上')}</option>
-              </select>
-            </div>
-
-            {/* Sort by */}
-            <div>
-              <label className="block text-[10px] font-medium mb-1 tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
-                {t('정렬 기준', '並び順')}
-              </label>
-              <select
-                value={sortKey}
-                onChange={(e) => setSortKey(e.target.value as typeof sortKey)}
-                className="w-full px-3 py-2 rounded-lg text-xs bg-[var(--color-input-bg)] border border-[var(--color-input-border)] text-[var(--color-text-primary)] focus:outline-none"
-              >
-                <option value="totalSales">{t('총 매출순', '累計売上順')}</option>
-                <option value="firstDate">{t('런칭일순', 'ローンチ日順')}</option>
-                <option value="dayCount">{t('데이터일수순', 'データ日数順')}</option>
-                <option value="channelCount">{t('플랫폼 수순', 'PF数順')}</option>
-              </select>
-            </div>
-
-            {/* Sort direction */}
-            <div>
-              <label className="block text-[10px] font-medium mb-1 tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
-                {t('정렬 방향', '昇降順')}
-              </label>
-              <select
-                value={sortAsc ? 'asc' : 'desc'}
-                onChange={(e) => setSortAsc(e.target.value === 'asc')}
-                className="w-full px-3 py-2 rounded-lg text-xs bg-[var(--color-input-bg)] border border-[var(--color-input-border)] text-[var(--color-text-primary)] focus:outline-none"
-              >
-                <option value="desc">{t('내림차순 ↓', '降順 ↓')}</option>
-                <option value="asc">{t('오름차순 ↑', '昇順 ↑')}</option>
-              </select>
-            </div>
-
-            {/* Clear all filters */}
-            <div className="flex items-end">
-              <button
-                onClick={() => {
-                  setChannelFilter('');
-                  setDateFrom('');
-                  setDateTo('');
-                  setSalesMin('');
-                  setPfCountFilter('');
-                }}
-                className="w-full px-3 py-2 rounded-lg text-xs font-medium transition-colors"
-                style={{
-                  background: activeFilterCount > 0 ? 'rgba(239, 68, 68, 0.08)' : 'var(--color-input-bg)',
-                  color: activeFilterCount > 0 ? '#ef4444' : 'var(--color-text-muted)',
-                  border: '1px solid var(--color-input-border)',
-                }}
-              >
-                {t('필터 초기화', 'フィルターリセット')}
-              </button>
-            </div>
+        {/* Clear filters */}
+        {activeFilterCount > 0 && (
+          <div className="mt-3 flex justify-end">
+            <button
+              onClick={() => {
+                setChannelFilter('');
+                setGenreFilter('');
+                setCompanyFilter('');
+              }}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+              style={{ background: 'rgba(239, 68, 68, 0.08)', color: '#ef4444', border: '1px solid var(--color-input-border)' }}
+            >
+              {t('필터 초기화', 'フィルターリセット')}
+            </button>
           </div>
         )}
 
