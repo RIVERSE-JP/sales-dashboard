@@ -139,8 +139,8 @@ export function InitialSales() {
   const [channelFilter, setChannelFilter] = useState('');
   const [genreFilter, setGenreFilter] = useState('');
   const [companyFilter, setCompanyFilter] = useState('');
-  const [sortKey] = useState<'totalSales' | 'firstDate' | 'dayCount' | 'channelCount'>('totalSales');
-  const [sortAsc] = useState(false);
+  const [sortKey, setSortKey] = useState<'totalSales' | 'firstDate' | 'dayCount' | 'channelCount'>('totalSales');
+  const [sortAsc, setSortAsc] = useState(false);
   const [checkedTitles, setCheckedTitles] = useState<Set<string>>(new Set());
   const [selectedData, setSelectedData] = useState<SelectedTitle[]>([]);
   const [loadingCurves, setLoadingCurves] = useState(false);
