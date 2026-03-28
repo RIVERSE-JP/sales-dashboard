@@ -4,13 +4,12 @@ import {
   Database, Search, Download, ChevronLeft, ChevronRight,
   ChevronDown, ChevronUp, Loader2, Filter,
 } from 'lucide-react';
-import { fetchDailySalesPage, fetchAllDailySales } from '@/lib/supabase';
+import { supabase, fetchDailySalesPage, fetchAllDailySales } from '@/lib/supabase';
 import { generateDailyRawExcel } from '@/utils/dailyRawExporter';
 import type { DailySale } from '@/types';
 import { getPlatformBrand } from '@/utils/platformConfig';
 import { PlatformBadge } from '@/components/PlatformBadge';
 import { useApp } from '@/context/AppContext';
-import { supabase } from '@/lib/supabase';
 
 // ============================================================
 // Shared styles & animation variants
@@ -68,7 +67,7 @@ function TableSkeleton() {
 const PAGE_SIZE = 50;
 
 export function RawData() {
-  const { formatCurrency, t } = useApp();
+  const { formatCurrency, t, theme } = useApp();
 
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<DailySale[]>([]);
@@ -118,11 +117,13 @@ export function RawData() {
   }, [page, platformFilter, titleSearch, startDate, endDate, sortBy, sortDir]);
 
   useEffect(() => {
-    loadPage();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadPage();
   }, [loadPage]);
 
   // Reset to page 0 when filters change
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPage(0);
   }, [platformFilter, titleSearch, startDate, endDate, sortBy, sortDir]);
 
@@ -248,7 +249,7 @@ export function RawData() {
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl text-sm outline-none cursor-pointer"
-                  style={{ background: 'var(--color-input-bg)', border: '1px solid var(--color-input-border)', color: 'var(--color-text-primary)', colorScheme: 'dark' }}
+                  style={{ background: 'var(--color-input-bg)', border: '1px solid var(--color-input-border)', color: 'var(--color-text-primary)', colorScheme: theme === 'light' ? 'light' : 'dark' }}
                 />
               </div>
 
@@ -260,7 +261,7 @@ export function RawData() {
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl text-sm outline-none cursor-pointer"
-                  style={{ background: 'var(--color-input-bg)', border: '1px solid var(--color-input-border)', color: 'var(--color-text-primary)', colorScheme: 'dark' }}
+                  style={{ background: 'var(--color-input-bg)', border: '1px solid var(--color-input-border)', color: 'var(--color-text-primary)', colorScheme: theme === 'light' ? 'light' : 'dark' }}
                 />
               </div>
             </motion.div>
@@ -307,11 +308,11 @@ export function RawData() {
                   return (
                     <tr key={row.id} style={{ borderBottom: '1px solid var(--color-table-border-subtle)' }} className="hover:bg-[var(--color-glass)] transition-colors">
                       <td className="py-3 px-2 font-mono text-xs" style={{ color: 'var(--color-text-secondary)' }}>{row.sale_date}</td>
-                      <td className="py-3 px-2">
-                        <p className="font-medium truncate max-w-[200px]" style={{ color: 'var(--color-text-primary)' }}>{row.title_jp}</p>
+                      <td className="py-3 px-2" style={{ maxWidth: '200px' }}>
+                        <p className="font-medium truncate" title={row.title_jp} style={{ color: 'var(--color-text-primary)' }}>{row.title_jp}</p>
                       </td>
-                      <td className="py-3 px-2">
-                        <p className="text-xs truncate max-w-[180px]" style={{ color: 'var(--color-text-muted)' }}>{row.title_kr ?? '-'}</p>
+                      <td className="py-3 px-2" style={{ maxWidth: '180px' }}>
+                        <p className="text-xs truncate" title={row.title_kr ?? '-'} style={{ color: 'var(--color-text-muted)' }}>{row.title_kr ?? '-'}</p>
                       </td>
                       <td className="py-3 px-2">
                         <PlatformBadge name={row.channel} showName={false} size="sm" />
@@ -374,7 +375,9 @@ export function RawData() {
                 <button
                   key={p}
                   onClick={() => setPage(p)}
-                  className="w-9 h-9 rounded-xl text-xs font-semibold cursor-pointer transition-all"
+                  className="w-9 h-9 rounded-xl text-xs font-semibold cursor-pointer transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue"
+                  aria-label={`Page ${p + 1}`}
+                  aria-current={p === page ? 'page' : undefined}
                   style={{
                     background: p === page ? 'rgba(99, 102, 241, 0.2)' : 'var(--color-glass)',
                     color: p === page ? '#a5b4fc' : 'var(--color-text-muted)',

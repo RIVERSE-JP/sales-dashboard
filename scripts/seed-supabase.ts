@@ -53,7 +53,7 @@ async function seed() {
   const daily = JSON.parse(readFileSync(`${dataDir}/daily_sales.json`, 'utf-8'));
   console.log(`Inserting daily_sales: ${daily.length} rows...`);
   for (let i = 0; i < daily.length; i += BATCH_SIZE) {
-    const batch = daily.slice(i, i + BATCH_SIZE).map((r: any) => ({
+    const batch = daily.slice(i, i + BATCH_SIZE).map((r: Record<string, unknown>) => ({
       title_kr: r.titleKR,
       title_jp: r.titleJP,
       channel: r.channel,
@@ -73,7 +73,7 @@ async function seed() {
   const monthly = JSON.parse(readFileSync(`${dataDir}/monthly_summary.json`, 'utf-8'));
   console.log(`Inserting monthly_summary: ${monthly.length} rows...`);
   const { error: monthlyErr } = await supabase.from('monthly_summary').insert(
-    monthly.map((r: any) => ({
+    monthly.map((r: Record<string, unknown>) => ({
       month: r.month,
       total_sales: r.totalSales,
       platforms: r.platforms,
@@ -86,7 +86,7 @@ async function seed() {
   const titles = JSON.parse(readFileSync(`${dataDir}/title_summary.json`, 'utf-8'));
   console.log(`Inserting title_summary: ${titles.length} rows...`);
   const { error: titleErr } = await supabase.from('title_summary').insert(
-    titles.map((r: any) => ({
+    titles.map((r: Record<string, unknown>) => ({
       title_kr: r.titleKR,
       title_jp: r.titleJP,
       series_name: r.seriesName,
@@ -107,7 +107,7 @@ async function seed() {
   const platforms = JSON.parse(readFileSync(`${dataDir}/platform_summary.json`, 'utf-8'));
   console.log(`Inserting platform_summary: ${platforms.length} rows...`);
   const { error: platErr } = await supabase.from('platform_summary').insert(
-    platforms.map((r: any) => ({
+    platforms.map((r: Record<string, unknown>) => ({
       platform: r.platform,
       total_sales: r.totalSales,
       title_count: r.titleCount,
@@ -122,7 +122,7 @@ async function seed() {
   const master = JSON.parse(readFileSync(`${dataDir}/title_master.json`, 'utf-8'));
   console.log(`Inserting title_master: ${master.length} rows...`);
   const { error: masterErr } = await supabase.from('title_master').insert(
-    master.map((r: any) => ({
+    master.map((r: Record<string, unknown>) => ({
       title_kr: r.titleKR,
       title_jp: r.titleJP,
       series_name: r.seriesName,

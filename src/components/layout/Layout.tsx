@@ -57,13 +57,14 @@ function ToggleButton({
   return (
     <button
       onClick={onClick}
-      className="px-2.5 py-1 text-[11px] font-semibold transition-all duration-200 cursor-pointer"
+      className="px-2.5 py-1 text-[11px] font-semibold transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:ring-offset-1"
       style={{
         background: active ? '#1A2B5E' : 'transparent',
         color: active ? '#ffffff' : 'var(--color-text-muted)',
         borderRadius: '6px',
         border: 'none',
       }}
+      aria-pressed={active}
     >
       {children}
     </button>
@@ -155,13 +156,14 @@ export function Layout() {
           {/* Mobile close button */}
           <button
             onClick={() => setMobileOpen(false)}
-            className="ml-auto md:hidden p-1.5 rounded-lg"
+            className="ml-auto md:hidden p-1.5 rounded-lg hover:bg-[var(--color-glass-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue"
             style={{
               color: 'var(--color-text-muted)',
               background: 'transparent',
               border: 'none',
               cursor: 'pointer',
             }}
+            aria-label="Close menu"
           >
             <X size={18} />
           </button>
@@ -328,7 +330,7 @@ export function Layout() {
         <div className="hidden md:flex px-3 pb-4">
           <button
             onClick={() => setCollapsed((c) => !c)}
-            className="w-full flex items-center justify-center rounded-xl transition-all duration-200"
+            className="w-full flex items-center justify-center rounded-xl transition-all duration-200 hover:bg-[var(--color-glass-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue"
             style={{
               padding: '8px 0',
               color: 'var(--color-text-muted)',
@@ -336,6 +338,7 @@ export function Layout() {
               border: '1px solid var(--color-glass-border)',
               cursor: 'pointer',
             }}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
           </button>
@@ -365,13 +368,14 @@ export function Layout() {
             {/* Mobile hamburger */}
             <button
               onClick={() => setMobileOpen(true)}
-              className="md:hidden p-2 -ml-2 mr-3 rounded-lg"
+              className="md:hidden p-2 -ml-2 mr-3 rounded-lg hover:bg-[var(--color-glass-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue"
               style={{
                 color: 'var(--color-text-secondary)',
                 background: 'transparent',
                 border: 'none',
                 cursor: 'pointer',
               }}
+              aria-label="Open menu"
             >
               <Menu size={20} />
             </button>

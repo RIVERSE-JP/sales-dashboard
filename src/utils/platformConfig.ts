@@ -143,16 +143,3 @@ export function getPlatformLogo(name: string): string {
   return PLATFORM_BRANDS[resolveChannelName(name)]?.logo ?? '';
 }
 
-/** Build a Record<string, string> color map for a set of platform names */
-export function buildPlatformColorMap(platformNames: Iterable<string>): Record<string, string> {
-  const map: Record<string, string> = {};
-  for (const name of platformNames) {
-    map[name] = getPlatformColor(name);
-  }
-  return map;
-}
-
-/** Ordered array of brand colors for chart use (sorted by sales descending) */
-export function getPlatformChartColors(platformNames: string[]): string[] {
-  return platformNames.map(getPlatformColor);
-}

@@ -15,47 +15,7 @@ import {
 import { getPlatformColor, PLATFORM_BRANDS } from '@/utils/platformConfig';
 import { PlatformBadge } from '@/components/PlatformBadge';
 import { useApp } from '@/context/AppContext';
-
-// ============================================================
-// Types for RPC responses
-// ============================================================
-
-interface KPIData {
-  total_sales: number;
-  this_month_sales: number;
-  last_month_sales: number;
-  mom_change: number;
-  active_titles: number;
-  active_platforms: number;
-}
-
-interface MonthlyTrendRow {
-  month: string;
-  total_sales: number;
-}
-
-interface PlatformSummaryRow {
-  channel: string;
-  total_sales: number;
-  title_count: number;
-  avg_daily: number;
-}
-
-interface TopTitleRow {
-  title_jp: string;
-  title_kr: string | null;
-  channels: string[];
-  total_sales: number;
-  day_count: number;
-}
-
-interface GrowthAlertRow {
-  title_jp: string;
-  title_kr: string | null;
-  this_month: number;
-  last_month: number;
-  growth_pct: number;
-}
+import type { KPIData, MonthlyTrendRow, PlatformSummaryRow, TopTitleRow, GrowthAlertRow } from '@/types';
 
 // ============================================================
 // AnimatedNumber component
@@ -127,19 +87,19 @@ const darkTooltipStyle = {
     backgroundColor: 'var(--color-tooltip-bg)',
     border: '1px solid var(--color-tooltip-border)',
     borderRadius: '12px',
-    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
-    padding: '12px 16px',
+    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.35)',
+    padding: '14px 18px',
   },
   labelStyle: {
     color: 'var(--color-tooltip-label)',
     fontWeight: 600,
     fontSize: '12px',
-    marginBottom: '4px',
+    marginBottom: '6px',
   },
   itemStyle: {
     color: 'var(--color-tooltip-value)',
     fontWeight: 700,
-    fontSize: '13px',
+    fontSize: '14px',
   },
 };
 
@@ -167,7 +127,7 @@ function ChartSkeleton({ height = 360 }: { height?: number }) {
       <div className="h-4 w-40 rounded skeleton-shimmer mb-6" />
       <div className="flex items-end gap-1" style={{ height: height - 100 }}>
         {Array.from({ length: 20 }).map((_, i) => (
-          <div key={i} className="flex-1 rounded-t skeleton-shimmer" style={{ height: `${30 + Math.random() * 60}%` }} />
+          <div key={i} className="flex-1 rounded-t skeleton-shimmer" style={{ height: `${30 + ((i * 37 + 13) % 60)}%` }} />
         ))}
       </div>
     </div>
@@ -194,8 +154,17 @@ function TableSkeleton() {
 // Donut chart custom label
 // ============================================================
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function renderDonutLabel(props: any) {
+interface DonutLabelProps {
+  cx?: number;
+  cy?: number;
+  midAngle?: number;
+  innerRadius?: number;
+  outerRadius?: number;
+  percent?: number;
+  name?: string;
+}
+
+function renderDonutLabel(props: DonutLabelProps) {
   const cx = Number(props.cx ?? 0);
   const cy = Number(props.cy ?? 0);
   const midAngle = Number(props.midAngle ?? 0);
@@ -241,14 +210,15 @@ function AreaChartTooltip({ active, payload, label, fmtCurrency }: {
       background: 'var(--color-tooltip-bg)',
       border: '1px solid var(--color-tooltip-border)',
       borderRadius: '12px',
-      padding: '12px 16px',
-      boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+      padding: '14px 18px',
+      boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
       backdropFilter: 'blur(8px)',
+      minWidth: 140,
     }}>
-      <p style={{ color: 'var(--color-text-secondary)', fontSize: 11, marginBottom: 6, fontWeight: 500 }}>{label}</p>
+      <p style={{ color: 'var(--color-tooltip-label)', fontSize: 12, marginBottom: 8, fontWeight: 600, letterSpacing: '0.01em' }}>{label}</p>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'linear-gradient(135deg, #3b82f6, #a78bfa)', boxShadow: '0 0 6px rgba(99, 102, 241, 0.5)' }} />
-        <p style={{ color: 'var(--color-text-primary)', fontSize: 15, fontWeight: 700, margin: 0 }}>
+        <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'linear-gradient(135deg, #3b82f6, #a78bfa)', boxShadow: '0 0 6px rgba(99, 102, 241, 0.5)', flexShrink: 0 }} />
+        <p style={{ color: 'var(--color-tooltip-value)', fontSize: 16, fontWeight: 700, margin: 0, letterSpacing: '-0.01em' }}>
           {fmtCurrency(payload[0].value)}
         </p>
       </div>
@@ -291,10 +261,10 @@ export function Dashboard() {
         fetchTopTitles(20),
       ]);
 
-      if (kpiResult.status === 'fulfilled') setKpis(kpiResult.value as KPIData);
-      if (trendResult.status === 'fulfilled') setMonthlyTrend((trendResult.value as MonthlyTrendRow[]) ?? []);
-      if (platformResult.status === 'fulfilled') setPlatformSummary((platformResult.value as PlatformSummaryRow[]) ?? []);
-      if (titleResult.status === 'fulfilled') setTopTitles((titleResult.value as TopTitleRow[]) ?? []);
+      if (kpiResult.status === 'fulfilled') setKpis(kpiResult.value);
+      if (trendResult.status === 'fulfilled') setMonthlyTrend(trendResult.value ?? []);
+      if (platformResult.status === 'fulfilled') setPlatformSummary(platformResult.value ?? []);
+      if (titleResult.status === 'fulfilled') setTopTitles(titleResult.value ?? []);
       setGrowthAlerts([]); // TODO: fix get_growth_alerts RPC type mismatch
       setLoading(false);
     } catch (err: unknown) {
@@ -304,7 +274,8 @@ export function Dashboard() {
   }, []);
 
   useEffect(() => {
-    loadData();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadData();
   }, [loadData]);
 
   // Prepare chart data
@@ -705,12 +676,12 @@ export function Dashboard() {
                       <td className="py-3 px-2 font-bold" style={{ color: idx < 3 ? '#a5b4fc' : 'var(--color-text-muted)' }}>
                         {idx + 1}
                       </td>
-                      <td className="py-3 px-2">
-                        <p className="font-medium truncate max-w-[250px]" style={{ color: 'var(--color-text-primary)' }}>
+                      <td className="py-3 px-2" style={{ maxWidth: '250px' }}>
+                        <p className="font-medium truncate" title={title.title_jp} style={{ color: 'var(--color-text-primary)' }}>
                           {title.title_jp}
                         </p>
                         {title.title_kr && (
-                          <p className="text-xs truncate max-w-[250px]" style={{ color: 'var(--color-text-muted)' }}>
+                          <p className="text-xs truncate" title={title.title_kr} style={{ color: 'var(--color-text-muted)' }}>
                             {title.title_kr}
                           </p>
                         )}

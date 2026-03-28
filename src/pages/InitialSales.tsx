@@ -47,6 +47,11 @@ interface SelectedTitle {
   total28d: number;
 }
 
+interface TitleDailySalesRow {
+  sale_date: string;
+  daily_total: number;
+}
+
 // ============================================================
 // Constants
 // ============================================================
@@ -77,11 +82,11 @@ const darkTooltipStyle = {
     backgroundColor: 'var(--color-tooltip-bg)',
     border: '1px solid var(--color-tooltip-border)',
     borderRadius: '12px',
-    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
-    padding: '12px 16px',
+    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.35)',
+    padding: '14px 18px',
   },
-  labelStyle: { color: 'var(--color-tooltip-label)', fontWeight: 600, fontSize: '12px', marginBottom: '4px' },
-  itemStyle: { color: 'var(--color-tooltip-value)', fontWeight: 700, fontSize: '13px' },
+  labelStyle: { color: 'var(--color-tooltip-label)', fontWeight: 600, fontSize: '12px', marginBottom: '6px' },
+  itemStyle: { color: 'var(--color-tooltip-value)', fontWeight: 700, fontSize: '14px' },
 };
 
 const CHART_COLORS = [
@@ -276,12 +281,13 @@ export function InitialSales() {
 
       if (!data || data.length === 0) return null;
 
+      const rows = data as TitleDailySalesRow[];
       const titleInfo = titles.find((t) => t.title_jp === titleJP);
-      const firstDate = parseISO((data as Array<{ sale_date: string; daily_total: number }>)[0].sale_date);
+      const firstDate = parseISO(rows[0].sale_date);
 
       // Build dateMap from RPC result
       const dateMap = new Map<string, number>();
-      for (const row of data as Array<{ sale_date: string; daily_total: number }>) {
+      for (const row of rows) {
         dateMap.set(row.sale_date, row.daily_total);
       }
 
@@ -376,8 +382,8 @@ export function InitialSales() {
     else { setSortKey(key); setSortAsc(false); }
   }
 
-  const SortIcon = ({ col }: { col: typeof sortKey }) =>
-    sortKey === col ? (sortAsc ? <ChevronUp size={14} /> : <ChevronDown size={14} />) : null;
+  const renderSortIcon = (col: typeof sortKey) =>
+    sortKey === col ? (sortAsc ? <ChevronUp size={14} className="inline" /> : <ChevronDown size={14} className="inline" />) : null;
 
   // ============================================================
   // Render
@@ -525,19 +531,19 @@ export function InitialSales() {
                   className="px-4 py-3 text-right cursor-pointer select-none hover:text-[var(--color-text-primary)]"
                   onClick={() => handleSort('firstDate')}
                 >
-                  런칭일 <SortIcon col="firstDate" />
+                  런칭일 {renderSortIcon('firstDate')}
                 </th>
                 <th
                   className="px-4 py-3 text-right cursor-pointer select-none hover:text-[var(--color-text-primary)]"
                   onClick={() => handleSort('totalSales')}
                 >
-                  총 매출 <SortIcon col="totalSales" />
+                  총 매출 {renderSortIcon('totalSales')}
                 </th>
                 <th
                   className="px-4 py-3 text-right cursor-pointer select-none hover:text-[var(--color-text-primary)]"
                   onClick={() => handleSort('dayCount')}
                 >
-                  데이터일수 <SortIcon col="dayCount" />
+                  데이터일수 {renderSortIcon('dayCount')}
                 </th>
               </tr>
             </thead>
@@ -561,12 +567,12 @@ export function InitialSales() {
                         {checked && <Check size={12} className="text-white" />}
                       </div>
                     </td>
-                    <td className="px-4 py-2.5">
-                      <div className="text-[var(--color-text-primary)] font-medium text-xs">
+                    <td className="px-4 py-2.5" style={{ maxWidth: '280px' }}>
+                      <div className="text-[var(--color-text-primary)] font-medium text-xs truncate" title={t.title_jp}>
                         {t.title_jp.length > 30 ? t.title_jp.slice(0, 30) + '…' : t.title_jp}
                       </div>
                       {t.title_kr && (
-                        <div className="text-[var(--color-text-secondary)] text-[11px]">{t.title_kr}</div>
+                        <div className="text-[var(--color-text-secondary)] text-[11px] truncate" title={t.title_kr}>{t.title_kr}</div>
                       )}
                     </td>
                     <td className="px-4 py-2.5">

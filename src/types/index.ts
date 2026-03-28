@@ -2,43 +2,6 @@
 // Core domain types for RVJP Sales Dashboard v2
 // ============================================================
 
-export interface Platform {
-  id: number;
-  code: string;
-  name_jp: string;
-  name_kr: string | null;
-  name_en: string | null;
-  color: string | null;
-  is_active: boolean;
-  sort_order: number;
-}
-
-export interface Genre {
-  id: number;
-  code: string;
-  name_jp: string;
-  name_kr: string | null;
-}
-
-export interface Title {
-  id: string;
-  title_jp: string;
-  title_kr: string | null;
-  channel_title_jp: string | null;
-  series_name: string | null;
-  content_format: 'WEBTOON' | 'PAGETOON' | 'NOVEL';
-  content_type: 'WT' | 'EP' | 'EB' | 'UNKNOWN' | null;
-  management_type: string | null;
-  illustrator: string | null;
-  original_author: string | null;
-  genre_id: number | null;
-  serial_status: '\u9023\u8F09\u4E2D' | '\u5B8C\u7D50' | '\u4F11\u8F09\u4E2D' | '\u672A\u9023\u8F09' | null;
-  latest_episode_count: number | null;
-  service_launch_date: string | null;
-  is_active: boolean;
-  sheet_category: string | null;
-}
-
 export interface DailySale {
   id: number;
   title_jp: string;
@@ -66,13 +29,76 @@ export interface InitialSale {
   w9: number; w10: number; w11: number; w12: number;
 }
 
-export type TimeGranularity = 'daily' | 'weekly' | 'monthly';
-export type CurrencyCode = 'JPY' | 'KRW';
+// ============================================================
+// RPC response types (Dashboard / Platform / Title)
+// ============================================================
 
-export interface SalesAggregation {
-  period: string;
+export interface KPIData {
   total_sales: number;
-  platform_breakdown: Record<string, number>;
+  this_month_sales: number;
+  last_month_sales: number;
+  mom_change: number;
+  active_titles: number;
+  active_platforms: number;
+}
+
+export interface MonthlyTrendRow {
+  month: string;
+  total_sales: number;
+}
+
+export interface PlatformSummaryRow {
+  channel: string;
+  total_sales: number;
+  title_count: number;
+  avg_daily: number;
+}
+
+export interface TopTitleRow {
+  title_jp: string;
+  title_kr: string | null;
+  channels: string[];
+  total_sales: number;
+  day_count: number;
+}
+
+export interface GrowthAlertRow {
+  title_jp: string;
+  title_kr: string | null;
+  this_month: number;
+  last_month: number;
+  growth_pct: number;
+}
+
+export interface PlatformDetailData {
+  total_sales: number;
+  title_count: number;
+  daily_avg: number;
+  monthly_trend: Array<{ month: string; sales: number }>;
+  top_titles: Array<{ title_jp: string; title_kr: string | null; total_sales: number }>;
+}
+
+export interface TitleSummaryRow {
+  title_jp: string;
+  title_kr: string | null;
+  channels: string[];
+  first_date: string;
+  total_sales: number;
+  day_count: number;
+}
+
+export interface TitleDetailData {
+  total_sales: number;
+  title_kr: string | null;
+  channels: string[];
+  monthly_trend: Array<{ month: string; sales: number }>;
+  platform_breakdown: Array<{ channel: string; sales: number }>;
+  daily_recent: Array<{ date: string; sales: number }>;
+}
+
+export interface UpsertResult {
+  inserted: number;
+  updated: number;
 }
 
 export interface UploadLog {

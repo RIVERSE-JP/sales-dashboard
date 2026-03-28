@@ -9,28 +9,7 @@ import { fetchTitleSummaries, fetchTitleDetail } from '@/lib/supabase';
 import { getPlatformColor } from '@/utils/platformConfig';
 import { PlatformBadge } from '@/components/PlatformBadge';
 import { useApp } from '@/context/AppContext';
-
-// ============================================================
-// Types for RPC responses
-// ============================================================
-
-interface TitleSummary {
-  title_jp: string;
-  title_kr: string | null;
-  channels: string[];
-  first_date: string;
-  total_sales: number;
-  day_count: number;
-}
-
-interface TitleDetailData {
-  total_sales: number;
-  title_kr: string | null;
-  channels: string[];
-  monthly_trend: Array<{ month: string; sales: number }>;
-  platform_breakdown: Array<{ channel: string; sales: number }>;
-  daily_recent: Array<{ date: string; sales: number }>;
-}
+import type { TitleSummaryRow, TitleDetailData } from '@/types';
 
 // ============================================================
 // Shared styles & animation variants
@@ -62,11 +41,11 @@ const darkTooltipStyle = {
     backgroundColor: 'var(--color-tooltip-bg)',
     border: '1px solid var(--color-tooltip-border)',
     borderRadius: '12px',
-    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
-    padding: '12px 16px',
+    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.35)',
+    padding: '14px 18px',
   },
-  labelStyle: { color: 'var(--color-tooltip-label)', fontWeight: 600, fontSize: '12px', marginBottom: '4px' },
-  itemStyle: { color: 'var(--color-tooltip-value)', fontWeight: 700, fontSize: '13px' },
+  labelStyle: { color: 'var(--color-tooltip-label)', fontWeight: 600, fontSize: '12px', marginBottom: '6px' },
+  itemStyle: { color: 'var(--color-tooltip-value)', fontWeight: 700, fontSize: '14px' },
 };
 
 // ============================================================
@@ -98,7 +77,7 @@ function ChartSkeleton({ height = 360 }: { height?: number }) {
       <div className="h-4 w-40 rounded skeleton-shimmer mb-6" />
       <div className="flex items-end gap-1" style={{ height: height - 100 }}>
         {Array.from({ length: 20 }).map((_, i) => (
-          <div key={i} className="flex-1 rounded-t bg-[var(--color-glass)]" style={{ height: `${30 + Math.random() * 60}%` }} />
+          <div key={i} className="flex-1 rounded-t bg-[var(--color-glass)]" style={{ height: `${30 + ((i * 37 + 13) % 60)}%` }} />
         ))}
       </div>
     </div>
@@ -113,7 +92,7 @@ export function TitleAnalysis() {
   const { formatCurrency, t } = useApp();
 
   const [loading, setLoading] = useState(true);
-  const [titles, setTitles] = useState<TitleSummary[]>([]);
+  const [titles, setTitles] = useState<TitleSummaryRow[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTitle, setSelectedTitle] = useState<string | null>(null);
   const [detailData, setDetailData] = useState<TitleDetailData | null>(null);
@@ -131,7 +110,7 @@ export function TitleAnalysis() {
       setLoading(true);
       try {
         const data = await fetchTitleSummaries();
-        const result: TitleSummary[] = (data ?? []).map((row: TitleSummary) => ({
+        const result: TitleSummaryRow[] = (data ?? []).map((row: TitleSummaryRow) => ({
           title_jp: row.title_jp,
           title_kr: row.title_kr,
           channels: row.channels ?? [],
@@ -154,7 +133,7 @@ export function TitleAnalysis() {
     setSelectedTitle(titleJP);
     try {
       const data = await fetchTitleDetail(titleJP);
-      setDetailData(data as TitleDetailData);
+      setDetailData(data);
     } catch (err) {
       console.error('Failed to load title detail:', err);
       setDetailData(null);
@@ -404,7 +383,7 @@ export function TitleAnalysis() {
             style={{ color: 'var(--color-text-primary)' }}
           />
           {searchQuery && (
-            <button onClick={() => setSearchQuery('')} className="text-xs cursor-pointer" style={{ color: 'var(--color-text-secondary)' }}>
+            <button onClick={() => setSearchQuery('')} className="text-xs cursor-pointer hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:rounded" style={{ color: 'var(--color-text-secondary)' }}>
               {t('초기화', 'クリア')}
             </button>
           )}
@@ -413,7 +392,7 @@ export function TitleAnalysis() {
 
       {/* Results count */}
       <p className="text-xs mb-4" style={{ color: 'var(--color-text-muted)' }}>
-        {filteredTitles.length} {t('개 작품', 'タイトル')} {searchQuery && `(\"${searchQuery}\")`}
+        {filteredTitles.length} {t('개 작품', 'タイトル')} {searchQuery && `("${searchQuery}")`}
       </p>
 
       {/* Title list */}
@@ -441,11 +420,11 @@ export function TitleAnalysis() {
                   {title.channels.length}P
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate" style={{ color: 'var(--color-text-primary)' }}>
+                  <p className="text-sm font-semibold truncate" title={title.title_jp} style={{ color: 'var(--color-text-primary)' }}>
                     {title.title_jp}
                   </p>
                   {title.title_kr && (
-                    <p className="text-xs truncate" style={{ color: 'var(--color-text-muted)' }}>{title.title_kr}</p>
+                    <p className="text-xs truncate" title={title.title_kr} style={{ color: 'var(--color-text-muted)' }}>{title.title_kr}</p>
                   )}
                 </div>
                 <div className="flex gap-1 shrink-0">

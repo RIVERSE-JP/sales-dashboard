@@ -8,25 +8,7 @@ import { Monitor, TrendingUp, BarChart3 } from 'lucide-react';
 import { fetchPlatformSummary, fetchPlatformDetail } from '@/lib/supabase';
 import { getPlatformColor, getPlatformBrand, getPlatformLogo } from '@/utils/platformConfig';
 import { useApp } from '@/context/AppContext';
-
-// ============================================================
-// Types for RPC responses
-// ============================================================
-
-interface PlatformSummaryRow {
-  channel: string;
-  total_sales: number;
-  title_count: number;
-  avg_daily: number;
-}
-
-interface PlatformDetailData {
-  total_sales: number;
-  title_count: number;
-  daily_avg: number;
-  monthly_trend: Array<{ month: string; sales: number }>;
-  top_titles: Array<{ title_jp: string; title_kr: string | null; total_sales: number }>;
-}
+import type { PlatformSummaryRow, PlatformDetailData } from '@/types';
 
 // ============================================================
 // Shared styles & animation variants
@@ -58,11 +40,11 @@ const darkTooltipStyle = {
     backgroundColor: 'var(--color-tooltip-bg)',
     border: '1px solid var(--color-tooltip-border)',
     borderRadius: '12px',
-    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
-    padding: '12px 16px',
+    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.35)',
+    padding: '14px 18px',
   },
-  labelStyle: { color: 'var(--color-tooltip-label)', fontWeight: 600, fontSize: '12px', marginBottom: '4px' },
-  itemStyle: { color: 'var(--color-tooltip-value)', fontWeight: 700, fontSize: '13px' },
+  labelStyle: { color: 'var(--color-tooltip-label)', fontWeight: 600, fontSize: '12px', marginBottom: '6px' },
+  itemStyle: { color: 'var(--color-tooltip-value)', fontWeight: 700, fontSize: '14px' },
 };
 
 // ============================================================
@@ -89,7 +71,7 @@ function ChartSkeleton({ height = 360 }: { height?: number }) {
       <div className="h-4 w-40 rounded skeleton-shimmer mb-6" />
       <div className="flex items-end gap-1" style={{ height: height - 100 }}>
         {Array.from({ length: 20 }).map((_, i) => (
-          <div key={i} className="flex-1 rounded-t bg-[var(--color-glass)]" style={{ height: `${30 + Math.random() * 60}%` }} />
+          <div key={i} className="flex-1 rounded-t bg-[var(--color-glass)]" style={{ height: `${30 + ((i * 37 + 13) % 60)}%` }} />
         ))}
       </div>
     </div>
@@ -127,7 +109,7 @@ export function PlatformAnalysis() {
       setLoading(true);
       try {
         const data = await fetchPlatformSummary();
-        const rows = (data as PlatformSummaryRow[]) ?? [];
+        const rows = data ?? [];
         setPlatformSummary(rows);
         if (rows.length > 0) {
           setSelectedPlatform(rows[0].channel);
@@ -145,7 +127,7 @@ export function PlatformAnalysis() {
     setDetailLoading(true);
     try {
       const data = await fetchPlatformDetail(channel);
-      setDetailData(data as PlatformDetailData);
+      setDetailData(data);
     } catch (err) {
       console.error('Failed to load platform detail:', err);
       setDetailData(null);
@@ -156,6 +138,7 @@ export function PlatformAnalysis() {
   // When selected platform changes (single mode), load its detail
   useEffect(() => {
     if (selectedPlatform && !compareMode) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       loadPlatformDetail(selectedPlatform);
     }
   }, [selectedPlatform, compareMode, loadPlatformDetail]);
@@ -170,7 +153,7 @@ export function PlatformAnalysis() {
       for (const ch of comparePlatforms) {
         try {
           const data = await fetchPlatformDetail(ch);
-          if (!cancelled && data) newMap.set(ch, data as PlatformDetailData);
+          if (!cancelled && data) newMap.set(ch, data);
         } catch (err) {
           console.error(`Failed to load detail for ${ch}:`, err);
         }
@@ -482,9 +465,9 @@ export function PlatformAnalysis() {
                         <td className="py-3 px-2 font-bold" style={{ color: idx < 3 ? '#a5b4fc' : 'var(--color-text-muted)' }}>
                           {idx + 1}
                         </td>
-                        <td className="py-3 px-2">
-                          <p className="font-medium truncate max-w-[300px]" style={{ color: 'var(--color-text-primary)' }}>{title.title_jp}</p>
-                          {title.title_kr && <p className="text-xs truncate max-w-[300px]" style={{ color: 'var(--color-text-muted)' }}>{title.title_kr}</p>}
+                        <td className="py-3 px-2" style={{ maxWidth: '300px' }}>
+                          <p className="font-medium truncate" title={title.title_jp} style={{ color: 'var(--color-text-primary)' }}>{title.title_jp}</p>
+                          {title.title_kr && <p className="text-xs truncate" title={title.title_kr} style={{ color: 'var(--color-text-muted)' }}>{title.title_kr}</p>}
                         </td>
                         <td className="py-3 px-2 text-right font-bold" style={{ color: 'var(--color-text-primary)' }}>
                           {formatCurrency(title.total_sales)}

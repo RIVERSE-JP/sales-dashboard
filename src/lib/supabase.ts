@@ -1,5 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
-import type { Platform, Genre, DailySale, InitialSale, SalesAggregation, TimeGranularity } from '@/types';
+import type {
+  DailySale, InitialSale,
+  KPIData, MonthlyTrendRow, PlatformSummaryRow, TopTitleRow, GrowthAlertRow,
+  PlatformDetailData, TitleSummaryRow, TitleDetailData, UpsertResult,
+} from '@/types';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
@@ -24,52 +28,8 @@ function setCache(key: string, data: unknown) {
 }
 
 // ============================================================
-// Platform & Genre lookups (cached)
-// ============================================================
-
-let _platforms: Platform[] | null = null;
-let _genres: Genre[] | null = null;
-
-export async function fetchPlatforms(): Promise<Platform[]> {
-  if (_platforms) return _platforms;
-  const { data } = await supabase.from('platforms').select('*').order('sort_order');
-  _platforms = (data as Platform[] | null) ?? [];
-  return _platforms;
-}
-
-export async function fetchGenres(): Promise<Genre[]> {
-  if (_genres) return _genres;
-  const { data } = await supabase.from('genres').select('*').order('name_jp');
-  _genres = (data as Genre[] | null) ?? [];
-  return _genres;
-}
-
-// ============================================================
 // Daily Sales queries
 // ============================================================
-
-export async function fetchDailySalesAggregated(
-  granularity: TimeGranularity,
-  options?: {
-    platform?: string;
-    startDate?: string;
-    endDate?: string;
-  }
-): Promise<SalesAggregation[]> {
-  // Use RPC for complex aggregation
-  const { data, error } = await supabase.rpc('aggregate_sales', {
-    p_granularity: granularity,
-    p_platform: options?.platform || null,
-    p_start_date: options?.startDate || null,
-    p_end_date: options?.endDate || null,
-  });
-
-  if (error) {
-    console.error('fetchDailySalesAggregated error:', error);
-    return [];
-  }
-  return (data as SalesAggregation[] | null) ?? [];
-}
 
 export async function fetchDailySalesPage(
   page: number,
@@ -88,7 +48,11 @@ export async function fetchDailySalesPage(
     .select('*', { count: 'exact' });
 
   if (options?.platform) query = query.eq('channel', options.platform);
-  if (options?.titleSearch) query = query.or(`title_jp.ilike.%${options.titleSearch}%,title_kr.ilike.%${options.titleSearch}%`);
+  if (options?.titleSearch) {
+    // Sanitize search input: escape PostgREST special characters to prevent filter injection
+    const sanitized = options.titleSearch.replace(/[%_\\]/g, (ch) => `\\${ch}`);
+    query = query.or(`title_jp.ilike.%${sanitized}%,title_kr.ilike.%${sanitized}%`);
+  }
   if (options?.startDate) query = query.gte('sale_date', options.startDate);
   if (options?.endDate) query = query.lte('sale_date', options.endDate);
 
@@ -123,104 +87,87 @@ export async function fetchAllDailySales(): Promise<DailySale[]> {
 }
 
 // ============================================================
-// Dashboard summary queries (legacy — prefer RPC functions below)
-// ============================================================
-
-export async function fetchDashboardSummary() {
-  const [salesRes, platformRes, titleRes] = await Promise.all([
-    supabase.from('daily_sales_v2')
-      .select('sale_date, sales_amount, channel')
-      .order('sale_date', { ascending: true }),
-    supabase.from('platforms').select('*').eq('is_active', true).order('sort_order'),
-    supabase.from('daily_sales_v2')
-      .select('title_jp, title_kr, channel, sales_amount')
-  ]);
-
-  return {
-    sales: salesRes.data ?? [],
-    platforms: platformRes.data ?? [],
-    titles: titleRes.data ?? [],
-  };
-}
-
-// ============================================================
 // Server-side RPC functions (no 1000-row limit)
 // ============================================================
 
-export async function fetchDashboardKPIs() {
-  const cached = getCached('dashboard_kpis');
+export async function fetchDashboardKPIs(): Promise<KPIData | null> {
+  const cached = getCached<KPIData>('dashboard_kpis');
   if (cached) return cached;
   const { data, error } = await supabase.rpc('get_dashboard_kpis');
-  if (error) { console.error('RPC error:', error.message); return data ?? null; }
+  if (error) { console.error('RPC error:', error.message); return (data as KPIData | null) ?? null; }
   setCache('dashboard_kpis', data);
-  return data;
+  return data as KPIData | null;
 }
 
-export async function fetchMonthlyTrend() {
-  const cached = getCached('monthly_trend');
+export async function fetchMonthlyTrend(): Promise<MonthlyTrendRow[]> {
+  const cached = getCached<MonthlyTrendRow[]>('monthly_trend');
   if (cached) return cached;
   const { data, error } = await supabase.rpc('get_monthly_sales_trend');
-  if (error) { console.error('RPC error:', error.message); return data ?? null; }
-  setCache('monthly_trend', data ?? []);
-  return data ?? [];
+  if (error) { console.error('RPC error:', error.message); return (data as MonthlyTrendRow[] | null) ?? []; }
+  const result = (data as MonthlyTrendRow[] | null) ?? [];
+  setCache('monthly_trend', result);
+  return result;
 }
 
-export async function fetchPlatformSummary() {
-  const cached = getCached('platform_summary');
+export async function fetchPlatformSummary(): Promise<PlatformSummaryRow[]> {
+  const cached = getCached<PlatformSummaryRow[]>('platform_summary');
   if (cached) return cached;
   const { data, error } = await supabase.rpc('get_platform_sales_summary');
-  if (error) { console.error('RPC error:', error.message); return data ?? null; }
-  setCache('platform_summary', data ?? []);
-  return data ?? [];
+  if (error) { console.error('RPC error:', error.message); return (data as PlatformSummaryRow[] | null) ?? []; }
+  const result = (data as PlatformSummaryRow[] | null) ?? [];
+  setCache('platform_summary', result);
+  return result;
 }
 
-export async function fetchTopTitles(limit = 20, month?: string) {
+export async function fetchTopTitles(limit = 20, month?: string): Promise<TopTitleRow[]> {
   const key = `top_titles_${limit}_${month ?? 'all'}`;
-  const cached = getCached(key);
+  const cached = getCached<TopTitleRow[]>(key);
   if (cached) return cached;
   const { data, error } = await supabase.rpc('get_top_titles', {
     p_limit: limit,
     p_month: month || null,
   });
-  if (error) { console.error('RPC error:', error.message); return data ?? null; }
-  setCache(key, data ?? []);
-  return data ?? [];
+  if (error) { console.error('RPC error:', error.message); return (data as TopTitleRow[] | null) ?? []; }
+  const result = (data as TopTitleRow[] | null) ?? [];
+  setCache(key, result);
+  return result;
 }
 
-export async function fetchPlatformDetail(channel: string) {
+export async function fetchPlatformDetail(channel: string): Promise<PlatformDetailData | null> {
   const key = `platform_detail_${channel}`;
-  const cached = getCached(key);
+  const cached = getCached<PlatformDetailData>(key);
   if (cached) return cached;
   const { data, error } = await supabase.rpc('get_platform_detail', {
     p_channel: channel,
   });
-  if (error) { console.error('RPC error:', error.message); return data ?? null; }
+  if (error) { console.error('RPC error:', error.message); return (data as PlatformDetailData | null) ?? null; }
   setCache(key, data);
-  return data;
+  return data as PlatformDetailData | null;
 }
 
-export async function fetchTitleDetail(titleJP: string) {
+export async function fetchTitleDetail(titleJP: string): Promise<TitleDetailData | null> {
   const key = `title_detail_${titleJP}`;
-  const cached = getCached(key);
+  const cached = getCached<TitleDetailData>(key);
   if (cached) return cached;
   const { data, error } = await supabase.rpc('get_title_detail', {
     p_title_jp: titleJP,
   });
-  if (error) { console.error('RPC error:', error.message); return data ?? null; }
+  if (error) { console.error('RPC error:', error.message); return (data as TitleDetailData | null) ?? null; }
   setCache(key, data);
-  return data;
+  return data as TitleDetailData | null;
 }
 
-export async function fetchGrowthAlerts() {
-  const cached = getCached('growth_alerts');
+export async function fetchGrowthAlerts(): Promise<GrowthAlertRow[]> {
+  const cached = getCached<GrowthAlertRow[]>('growth_alerts');
   if (cached) return cached;
   const { data, error } = await supabase.rpc('get_growth_alerts');
   if (error) {
     console.warn('get_growth_alerts failed (non-critical):', error.message);
     return [];
   }
-  setCache('growth_alerts', data ?? []);
-  return data ?? [];
+  const result = (data as GrowthAlertRow[] | null) ?? [];
+  setCache('growth_alerts', result);
+  return result;
 }
 
 // ============================================================
@@ -232,8 +179,6 @@ let _prefetchStarted = false;
 
 export function clearAllCache() {
   cache.clear();
-  _platforms = null;
-  _genres = null;
   _prefetchStarted = false;
 }
 
@@ -249,18 +194,17 @@ export function prefetchAllData() {
     fetchTopTitles(20),
     fetchTitleSummaries(),
     fetchTitleMaster(),
-  ]).then(() => {
-    console.log('[prefetch] All core data cached');
-  });
+  ]);
 }
 
-export async function fetchTitleSummaries() {
-  const cached = getCached('title_summaries');
+export async function fetchTitleSummaries(): Promise<TitleSummaryRow[]> {
+  const cached = getCached<TitleSummaryRow[]>('title_summaries');
   if (cached) return cached;
   const { data, error } = await supabase.rpc('get_title_summaries');
-  if (error) { console.error('RPC error:', error.message); return data ?? null; }
-  setCache('title_summaries', data ?? []);
-  return data ?? [];
+  if (error) { console.error('RPC error:', error.message); return (data as TitleSummaryRow[] | null) ?? []; }
+  const result = (data as TitleSummaryRow[] | null) ?? [];
+  setCache('title_summaries', result);
+  return result;
 }
 
 // ============================================================
@@ -341,8 +285,9 @@ export async function upsertDailySales(
       continue;
     }
     if (data) {
-      totalInserted += (data as { inserted?: number }).inserted ?? 0;
-      totalUpdated += (data as { updated?: number }).updated ?? 0;
+      const result = data as UpsertResult;
+      totalInserted += result.inserted ?? 0;
+      totalUpdated += result.updated ?? 0;
     }
   }
 
