@@ -113,44 +113,44 @@ export function Layout() {
           borderRight: '1px solid var(--color-glass-border)',
         }}
       >
-        {/* Logo area */}
-        <div className="flex items-center h-16 px-4 shrink-0">
-          <button
-            onClick={() => {
+        {/* Logo area — clickable, navigates to dashboard + clears cache */}
+        <div
+          className="flex items-center h-16 px-4 shrink-0 cursor-pointer select-none"
+          role="button"
+          tabIndex={0}
+          title={t('홈으로 (데이터 새로고침)', 'ホームへ (データ更新)')}
+          onClick={() => {
+            clearAllCache();
+            navigate('/dashboard');
+            prefetchAllData();
+            setMobileOpen(false);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
               clearAllCache();
               navigate('/dashboard');
               prefetchAllData();
               setMobileOpen(false);
-            }}
-            className="flex items-center gap-0 rounded-lg transition-opacity duration-200 hover:opacity-70 active:opacity-50"
-            style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}
-            title={t('홈으로 (데이터 새로고침)', 'ホームへ (データ更新)')}
-          >
-            <img
-              src="/riverse_logo.png"
-              alt="RIVERSE"
-              className="shrink-0"
-              style={{ height: collapsed ? 26 : 30, width: 'auto', objectFit: 'contain' }}
-            />
-            <AnimatePresence>
-              {!collapsed && (
-                <motion.div
-                  initial={{ opacity: 0, x: -8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -8 }}
-                  transition={{ duration: 0.2 }}
-                  className="ml-2 overflow-hidden whitespace-nowrap"
-                >
-                  <span
-                    className="block text-sm font-bold"
-                    style={{ color: 'var(--color-text-primary)' }}
-                  >
-                    {t('매출 현황 보드', '売上現況ボード')}
-                  </span>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </button>
+            }
+          }}
+          style={{ transition: 'opacity 0.2s' }}
+          onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.7'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
+        >
+          <img
+            src="/riverse_logo.png"
+            alt="RIVERSE"
+            className="shrink-0"
+            style={{ height: collapsed ? 26 : 30, width: 'auto', objectFit: 'contain' }}
+          />
+          {!collapsed && (
+            <span
+              className="ml-2 text-sm font-bold whitespace-nowrap"
+              style={{ color: 'var(--color-text-primary)' }}
+            >
+              {t('매출 현황 보드', '売上現況ボード')}
+            </span>
+          )}
 
           {/* Mobile close button */}
           <button

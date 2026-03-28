@@ -6,7 +6,7 @@ import {
 } from 'recharts';
 import { Monitor, TrendingUp, BarChart3 } from 'lucide-react';
 import { fetchPlatformSummary, fetchPlatformDetail } from '@/lib/supabase';
-import { getPlatformColor, getPlatformBrand } from '@/utils/platformConfig';
+import { getPlatformColor, getPlatformBrand, getPlatformLogo } from '@/utils/platformConfig';
 import { useApp } from '@/context/AppContext';
 
 // ============================================================
@@ -277,22 +277,32 @@ export function PlatformAnalysis() {
             <div className="flex flex-wrap gap-2">
               {platformNames.map((pf) => {
                 const brand = getPlatformBrand(pf);
+                const logo = getPlatformLogo(pf);
                 const isSelected = compareMode ? comparePlatforms.includes(pf) : selectedPlatform === pf;
                 return (
                   <motion.button
                     key={pf}
-                    whileHover={{ scale: 1.04 }}
-                    whileTap={{ scale: 0.96 }}
+                    whileHover={{ scale: 1.08 }}
+                    whileTap={{ scale: 0.92 }}
                     onClick={() => compareMode ? toggleComparePlatform(pf) : setSelectedPlatform(pf)}
-                    className="px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer"
+                    className="w-11 h-11 rounded-xl flex items-center justify-center transition-all cursor-pointer"
                     style={{
-                      background: isSelected ? `${brand.color}25` : 'var(--color-glass)',
-                      color: isSelected ? brand.color : 'var(--color-text-secondary)',
-                      border: isSelected ? `1px solid ${brand.color}40` : '1px solid var(--color-glass-border)',
+                      background: isSelected ? `${brand.color}20` : 'var(--color-glass)',
+                      border: isSelected ? `2px solid ${brand.color}` : '1px solid var(--color-glass-border)',
+                      boxShadow: isSelected ? `0 0 12px ${brand.color}30` : 'none',
                     }}
+                    title={brand.nameJP || pf}
                   >
-                    {brand.icon !== '?' && <span className="mr-1">{brand.icon}</span>}
-                    {brand.nameJP || pf}
+                    {logo ? (
+                      <img
+                        src={logo}
+                        alt={brand.nameJP || pf}
+                        className="rounded"
+                        style={{ width: 26, height: 26, objectFit: 'contain' }}
+                      />
+                    ) : (
+                      <span className="text-xs font-bold" style={{ color: brand.color }}>{brand.icon}</span>
+                    )}
                   </motion.button>
                 );
               })}
