@@ -296,12 +296,13 @@ export function PlatformAnalysis() {
                     title={brand.nameJP || pf}
                   >
                     {logo ? (
-                      <img
-                        src={logo}
-                        alt={brand.nameJP || pf}
-                        className="rounded-lg"
-                        style={{ width: 40, height: 40, objectFit: 'contain' }}
-                      />
+                      <div className="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center">
+                        <img
+                          src={logo}
+                          alt={brand.nameJP || pf}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      </div>
                     ) : (
                       <span className="text-lg font-bold" style={{ color: brand.color }}>{brand.icon}</span>
                     )}
