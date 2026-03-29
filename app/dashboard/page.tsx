@@ -1,15 +1,15 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip,
   ResponsiveContainer, PieChart, Pie, Cell,
-  BarChart, Bar,
 } from 'recharts';
 import {
-  LayoutDashboard, TrendingUp, TrendingDown, BookOpen, Calendar,
-  Clock,
+  LayoutDashboard, TrendingUp, TrendingDown, AlertTriangle, Rocket,
+  Clock, Zap, ChevronRight, Activity, BarChart3, Globe, Layers, Building2,
+  BookOpen,
 } from 'lucide-react';
 import {
   fetchDashboardKPIs, fetchMonthlyTrend, fetchPlatformSummary,
@@ -17,176 +17,27 @@ import {
   fetchPeriodKpis, fetchGenreSummary, fetchCompanySummary,
   fetchFormatSummary, fetchDailyTrend, fetchWeeklyTrend,
 } from '@/lib/supabase';
-import { getPlatformColor, PLATFORM_BRANDS } from '@/utils/platformConfig';
+import { getPlatformColor, getPlatformBrand, PLATFORM_BRANDS } from '@/utils/platformConfig';
 import { PlatformBadge } from '@/components/PlatformBadge';
 import { useApp } from '@/context/AppContext';
 import { useRouter } from 'next/navigation';
-import type { KPIData, MonthlyTrendRow, PlatformSummaryRow, TopTitleRow, GrowthAlertRow } from '@/types';
+import type {
+  KPIData, MonthlyTrendRow, PlatformSummaryRow, TopTitleRow, GrowthAlertRow,
+  GenreSalesRow, CompanySalesRow, FormatSalesRow, DailyTrendRow, WeeklyTrendRow,
+} from '@/types';
 
-import DateRangePicker from '@/components/dashboard/DateRangePicker';
-import GenreChart from '@/components/dashboard/GenreChart';
-import CompanyRanking from '@/components/dashboard/CompanyRanking';
-import FormatChart from '@/components/dashboard/FormatChart';
-import GrowthAlertsPanel from '@/components/dashboard/GrowthAlerts';
-import SalesGoal from '@/components/dashboard/SalesGoal';
+import StatusKPICard from '@/components/dashboard/StatusKPICard';
+import InsightPanel from '@/components/dashboard/InsightPanel';
 import {
-  GLASS_CARD, GLASS_CARD_HOVER, containerVariants, cardVariants,
-  darkTooltipStyle, formatShort,
+  GLASS_CARD, darkTooltipStyle, formatShort, GENRE_COLORS,
 } from '@/components/dashboard/shared';
 
 // ============================================================
-// AnimatedNumber component
+// Types
 // ============================================================
 
-function AnimatedNumber({ value, formatter }: {
-  value: number;
-  formatter: (v: number) => string;
-}) {
-  const motionVal = useMotionValue(0);
-  const springVal = useSpring(motionVal, { stiffness: 50, damping: 20, duration: 1500 });
-  const display = useTransform(springVal, (v: number) => formatter(v));
-
-  useEffect(() => {
-    motionVal.set(value);
-  }, [value, motionVal]);
-
-  return <motion.span>{display}</motion.span>;
-}
-
-function AnimatedCount({ value }: { value: number }) {
-  const motionVal = useMotionValue(0);
-  const springVal = useSpring(motionVal, { stiffness: 60, damping: 20, duration: 1200 });
-  const display = useTransform(springVal, (v: number) => Math.round(v).toString());
-
-  useEffect(() => {
-    motionVal.set(value);
-  }, [value, motionVal]);
-
-  return <motion.span>{display}</motion.span>;
-}
-
-// ============================================================
-// Loading skeleton components
-// ============================================================
-
-function KPISkeleton() {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      {[0, 1, 2, 3].map((i) => (
-        <div key={i} className="rounded-2xl p-6" style={{ ...GLASS_CARD, minHeight: '140px' }}>
-          <div className="h-3 w-20 rounded skeleton-shimmer mb-4" />
-          <div className="h-8 w-32 rounded skeleton-shimmer mb-2" />
-          <div className="h-3 w-16 rounded skeleton-shimmer" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function ChartSkeleton({ height = 360 }: { height?: number }) {
-  return (
-    <div className="rounded-2xl p-6" style={{ ...GLASS_CARD, minHeight: height }}>
-      <div className="h-4 w-40 rounded skeleton-shimmer mb-6" />
-      <div className="flex items-end gap-1" style={{ height: height - 100 }}>
-        {Array.from({ length: 20 }).map((_, i) => (
-          <div key={i} className="flex-1 rounded-t skeleton-shimmer" style={{ height: `${30 + ((i * 37 + 13) % 60)}%` }} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function TableSkeleton() {
-  return (
-    <div className="rounded-2xl p-6" style={GLASS_CARD}>
-      <div className="h-4 w-48 rounded skeleton-shimmer mb-6" />
-      {Array.from({ length: 5 }).map((_, i) => (
-        <div key={i} className="flex gap-4 py-3">
-          <div className="h-4 w-8 rounded skeleton-shimmer" />
-          <div className="h-4 flex-1 rounded skeleton-shimmer" />
-          <div className="h-4 w-20 rounded skeleton-shimmer" />
-          <div className="h-4 w-24 rounded skeleton-shimmer" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ============================================================
-// Donut chart custom label
-// ============================================================
-
-interface DonutLabelProps {
-  cx?: number;
-  cy?: number;
-  midAngle?: number;
-  innerRadius?: number;
-  outerRadius?: number;
-  percent?: number;
-  name?: string;
-}
-
-function renderDonutLabel(props: DonutLabelProps) {
-  const cx = Number(props.cx ?? 0);
-  const cy = Number(props.cy ?? 0);
-  const midAngle = Number(props.midAngle ?? 0);
-  const innerRadius = Number(props.innerRadius ?? 0);
-  const outerRadius = Number(props.outerRadius ?? 0);
-  const percent = Number(props.percent ?? 0);
-  const name = String(props.name ?? '');
-  if (percent < 0.04) return null;
-  const RADIAN = Math.PI / 180;
-  const radius = innerRadius + (outerRadius - innerRadius) * 1.4;
-  const x = cx + radius * Math.cos(-midAngle * RADIAN);
-  const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
-  const displayName = PLATFORM_BRANDS[name]?.nameJP || name;
-
-  return (
-    <text
-      x={x} y={y}
-      fill="var(--color-text-secondary)"
-      textAnchor={x > cx ? 'start' : 'end'}
-      dominantBaseline="central"
-      fontSize={11}
-      fontWeight={500}
-    >
-      {displayName} ({(percent * 100).toFixed(1)}%)
-    </text>
-  );
-}
-
-// ============================================================
-// Custom Recharts Tooltip for Area chart
-// ============================================================
-
-function AreaChartTooltip({ active, payload, label, fmtCurrency }: {
-  active?: boolean;
-  payload?: Array<{ value: number }>;
-  label?: string;
-  fmtCurrency: (v: number) => string;
-}) {
-  if (!active || !payload || payload.length === 0) return null;
-  return (
-    <div style={{
-      background: 'var(--color-tooltip-bg)',
-      border: '1px solid var(--color-tooltip-border)',
-      borderRadius: '12px',
-      padding: '14px 18px',
-      boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
-      backdropFilter: 'blur(8px)',
-      minWidth: 140,
-    }}>
-      <p style={{ color: 'var(--color-tooltip-label)', fontSize: 12, marginBottom: 8, fontWeight: 600, letterSpacing: '0.01em' }}>{label}</p>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'linear-gradient(135deg, #3b82f6, #a78bfa)', boxShadow: '0 0 6px rgba(99, 102, 241, 0.5)', flexShrink: 0 }} />
-        <p style={{ color: 'var(--color-tooltip-value)', fontSize: 16, fontWeight: 700, margin: 0, letterSpacing: '-0.01em' }}>
-          {fmtCurrency(payload[0].value)}
-        </p>
-      </div>
-    </div>
-  );
-}
+type TrendMode = 'daily' | 'weekly' | 'monthly';
+type TabId = 'status' | 'trend' | 'platform' | 'genre' | 'company';
 
 // ============================================================
 // Date helpers
@@ -212,13 +63,111 @@ function getYoYRange(start: string, end: string): { start: string; end: string }
 }
 
 // ============================================================
-// Trend mode type
+// Loading skeletons
 // ============================================================
 
-type TrendMode = 'daily' | 'weekly' | 'monthly';
+function KPISkeleton() {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {[0, 1, 2, 3].map((i) => (
+        <div key={i} className="rounded-2xl p-5" style={{ ...GLASS_CARD, minHeight: '150px', borderLeft: '3px solid var(--color-glass-border)' }}>
+          <div className="h-3 w-20 rounded skeleton-shimmer mb-4" />
+          <div className="h-9 w-32 rounded skeleton-shimmer mb-2" />
+          <div className="h-5 w-24 rounded-full skeleton-shimmer" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ChartSkeleton({ height = 360 }: { height?: number }) {
+  return (
+    <div className="rounded-2xl p-6" style={{ ...GLASS_CARD, minHeight: height }}>
+      <div className="h-4 w-40 rounded skeleton-shimmer mb-6" />
+      <div className="flex items-end gap-1" style={{ height: height - 100 }}>
+        {Array.from({ length: 20 }).map((_, i) => (
+          <div key={i} className="flex-1 rounded-t skeleton-shimmer" style={{ height: `${30 + ((i * 37 + 13) % 60)}%` }} />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 // ============================================================
-// Main Dashboard Component
+// Custom chart tooltip
+// ============================================================
+
+function AreaChartTooltip({ active, payload, label, fmtCurrency }: {
+  active?: boolean;
+  payload?: Array<{ value: number }>;
+  label?: string;
+  fmtCurrency: (v: number) => string;
+}) {
+  if (!active || !payload || payload.length === 0) return null;
+  return (
+    <div style={{
+      background: 'var(--color-tooltip-bg)',
+      border: '1px solid var(--color-tooltip-border)',
+      borderRadius: '12px',
+      padding: '14px 18px',
+      boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
+      backdropFilter: 'blur(8px)',
+      minWidth: 140,
+    }}>
+      <p style={{ color: 'var(--color-tooltip-label)', fontSize: 12, marginBottom: 8, fontWeight: 600 }}>{label}</p>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'linear-gradient(135deg, #3b82f6, #a78bfa)', boxShadow: '0 0 6px rgba(99,102,241,0.5)', flexShrink: 0 }} />
+        <p style={{ color: 'var(--color-tooltip-value)', fontSize: 16, fontWeight: 700, margin: 0 }}>
+          {fmtCurrency(payload[0].value)}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// Donut label
+// ============================================================
+
+function renderDonutLabel(props: {
+  cx?: number; cy?: number; midAngle?: number;
+  innerRadius?: number; outerRadius?: number; percent?: number; name?: string;
+}) {
+  const cx = Number(props.cx ?? 0);
+  const cy = Number(props.cy ?? 0);
+  const midAngle = Number(props.midAngle ?? 0);
+  const innerRadius = Number(props.innerRadius ?? 0);
+  const outerRadius = Number(props.outerRadius ?? 0);
+  const percent = Number(props.percent ?? 0);
+  const name = String(props.name ?? '');
+  if (percent < 0.04) return null;
+  const RADIAN = Math.PI / 180;
+  const radius = innerRadius + (outerRadius - innerRadius) * 1.4;
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+  const displayName = PLATFORM_BRANDS[name]?.nameJP || name;
+  return (
+    <text x={x} y={y} fill="var(--color-text-secondary)" textAnchor={x > cx ? 'start' : 'end'}
+      dominantBaseline="central" fontSize={11} fontWeight={500}>
+      {displayName} ({(percent * 100).toFixed(1)}%)
+    </text>
+  );
+}
+
+// ============================================================
+// Tab configuration
+// ============================================================
+
+const TABS: Array<{ id: TabId; labelKo: string; labelJa: string; icon: React.ReactNode }> = [
+  { id: 'status', labelKo: '현황', labelJa: '現況', icon: <Activity size={15} /> },
+  { id: 'trend', labelKo: '트렌드', labelJa: 'トレンド', icon: <BarChart3 size={15} /> },
+  { id: 'platform', labelKo: '플랫폼', labelJa: 'PF', icon: <Globe size={15} /> },
+  { id: 'genre', labelKo: '장르', labelJa: 'ジャンル', icon: <Layers size={15} /> },
+  { id: 'company', labelKo: '제작사', labelJa: '制作会社', icon: <Building2 size={15} /> },
+];
+
+// ============================================================
+// Main Dashboard Page
 // ============================================================
 
 export default function DashboardPage() {
@@ -228,25 +177,25 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // A1: Date range
+  // Date range
   const defaultRange = useMemo(() => getThisMonthRange(), []);
-  const [startDate, setStartDate] = useState(defaultRange.start);
-  const [endDate, setEndDate] = useState(defaultRange.end);
+  const [startDate] = useState(defaultRange.start);
+  const [endDate] = useState(defaultRange.end);
 
-  // A9: Trend mode
+  // Tab
+  const [activeTab, setActiveTab] = useState<TabId>('status');
+
+  // Trend mode
   const [trendMode, setTrendMode] = useState<TrendMode>('monthly');
 
-  // A10: Sales goal (localStorage)
-  const [salesGoal, setSalesGoal] = useState(0);
-  useEffect(() => {
-    const saved = localStorage.getItem('dashboard_sales_goal');
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- reading localStorage on mount is intentional
-    if (saved) setSalesGoal(parseInt(saved, 10));
-  }, []);
-  const handleGoalChange = (v: number) => {
-    setSalesGoal(v);
-    localStorage.setItem('dashboard_sales_goal', String(v));
-  };
+  // Sales goal
+  const [salesGoal] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('dashboard_sales_goal');
+      if (saved) return parseInt(saved, 10);
+    }
+    return 0;
+  });
 
   // Core data
   const [kpis, setKpis] = useState<KPIData | null>(null);
@@ -254,27 +203,18 @@ export default function DashboardPage() {
   const [platformSummary, setPlatformSummary] = useState<PlatformSummaryRow[]>([]);
   const [topTitles, setTopTitles] = useState<TopTitleRow[]>([]);
   const [growthAlerts, setGrowthAlerts] = useState<GrowthAlertRow[]>([]);
-
-  // A2: YoY data
   const [yoyKpis, setYoyKpis] = useState<{ total_sales: number } | null>(null);
+  const [genreSummary, setGenreSummary] = useState<GenreSalesRow[]>([]);
+  const [companySummary, setCompanySummary] = useState<CompanySalesRow[]>([]);
+  const [, setFormatSummary] = useState<FormatSalesRow[]>([]);
+  const [dailyTrend, setDailyTrend] = useState<DailyTrendRow[]>([]);
+  const [weeklyTrend, setWeeklyTrend] = useState<WeeklyTrendRow[]>([]);
 
-  // A3: Genre
-  const [genreSummary, setGenreSummary] = useState<Array<{ genre_code: string; genre_kr: string; total_sales: number; title_count: number }>>([]);
-
-  // A4: Company
-  const [companySummary, setCompanySummary] = useState<Array<{ company_name: string; total_sales: number; title_count: number }>>([]);
-
-  // A5: Format
-  const [formatSummary, setFormatSummary] = useState<Array<{ content_format: string; total_sales: number; title_count: number }>>([]);
-
-  // A9: Daily/Weekly trend data
-  const [dailyTrend, setDailyTrend] = useState<Array<{ day: string; total_sales: number }>>([]);
-  const [weeklyTrend, setWeeklyTrend] = useState<Array<{ week: string; total_sales: number }>>([]);
-
-  // A8: Data freshness
-  const [lastDataDate, setLastDataDate] = useState<string>('');
+  // Data freshness
+  const [lastDataDate, setLastDataDate] = useState('');
   const [hasPreliminary, setHasPreliminary] = useState(false);
 
+  // ---------- Data loading ----------
   const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -282,11 +222,9 @@ export default function DashboardPage() {
       const sd = startDate || undefined;
       const ed = endDate || undefined;
 
-      // Core data + new analysis data in parallel
       const [
         kpiResult, trendResult, platformResult, titleResult, alertResult,
-        genreResult, companyResult, formatResult,
-        dailyResult, weeklyResult,
+        genreResult, companyResult, formatResult, dailyResult, weeklyResult,
       ] = await Promise.allSettled([
         fetchDashboardKPIs(),
         fetchMonthlyTrend(),
@@ -304,21 +242,18 @@ export default function DashboardPage() {
       if (trendResult.status === 'fulfilled') {
         const trend = trendResult.value ?? [];
         setMonthlyTrend(trend);
-        // A8: derive last data date from monthly trend
-        if (trend.length > 0) {
-          setLastDataDate(trend[trend.length - 1].month);
-        }
+        if (trend.length > 0) setLastDataDate(trend[trend.length - 1].month);
       }
       if (platformResult.status === 'fulfilled') setPlatformSummary(platformResult.value ?? []);
       if (titleResult.status === 'fulfilled') setTopTitles(titleResult.value ?? []);
       if (alertResult.status === 'fulfilled') setGrowthAlerts(alertResult.value ?? []);
-      if (genreResult.status === 'fulfilled') setGenreSummary(genreResult.value ?? []);
-      if (companyResult.status === 'fulfilled') setCompanySummary(companyResult.value ?? []);
-      if (formatResult.status === 'fulfilled') setFormatSummary(formatResult.value ?? []);
-      if (dailyResult.status === 'fulfilled') setDailyTrend(dailyResult.value ?? []);
-      if (weeklyResult.status === 'fulfilled') setWeeklyTrend(weeklyResult.value ?? []);
+      if (genreResult.status === 'fulfilled') setGenreSummary((genreResult.value ?? []) as GenreSalesRow[]);
+      if (companyResult.status === 'fulfilled') setCompanySummary((companyResult.value ?? []) as CompanySalesRow[]);
+      if (formatResult.status === 'fulfilled') setFormatSummary((formatResult.value ?? []) as FormatSalesRow[]);
+      if (dailyResult.status === 'fulfilled') setDailyTrend((dailyResult.value ?? []) as DailyTrendRow[]);
+      if (weeklyResult.status === 'fulfilled') setWeeklyTrend((weeklyResult.value ?? []) as WeeklyTrendRow[]);
 
-      // A2: YoY comparison
+      // YoY
       if (startDate && endDate) {
         const yoy = getYoYRange(startDate, endDate);
         fetchPeriodKpis(yoy.start, yoy.end)
@@ -326,7 +261,7 @@ export default function DashboardPage() {
           .catch(() => setYoyKpis(null));
       }
 
-      // A8: Check preliminary data
+      // Data freshness
       try {
         const res = await fetch('/api/sales/paginated?page=1&pageSize=1&sortBy=sale_date&sortDir=desc');
         if (res.ok) {
@@ -346,49 +281,28 @@ export default function DashboardPage() {
     }
   }, [startDate, endDate]);
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- async data fetch on mount
-    void loadData();
+  useEffect(() => { loadData(); // eslint-disable-line react-hooks/set-state-in-effect
   }, [loadData]);
 
-  // ---- Chart data preparation ----
-
-  const trendChartData = useMemo(() => {
-    if (trendMode === 'daily') {
-      return dailyTrend.map((r) => ({
-        label: r.day.length >= 10 ? r.day.slice(5) : r.day,
-        sales: r.total_sales,
-      }));
-    }
-    if (trendMode === 'weekly') {
-      return weeklyTrend.map((r) => ({
-        label: r.week,
-        sales: r.total_sales,
-      }));
-    }
-    return monthlyTrend.map((r) => ({
-      label: r.month.length >= 7 ? r.month.slice(2) : r.month,
-      sales: r.total_sales,
-    }));
-  }, [trendMode, dailyTrend, weeklyTrend, monthlyTrend]);
-
-  const pieData = platformSummary.map((r) => ({
-    name: r.channel,
-    value: r.total_sales,
-    color: getPlatformColor(r.channel),
-  }));
-
-  const platformBarData = platformSummary.slice(0, 8).map((r) => ({
-    name: r.channel,
-    sales: r.total_sales,
-    color: getPlatformColor(r.channel),
-  }));
-
-  // A2: YoY calculation
+  // ---------- Derived data ----------
   const yoyChange = useMemo(() => {
     if (!kpis || !yoyKpis || yoyKpis.total_sales === 0) return null;
     return ((kpis.this_month_sales - yoyKpis.total_sales) / yoyKpis.total_sales) * 100;
   }, [kpis, yoyKpis]);
+
+  const goalRate = useMemo(() => {
+    if (!kpis || salesGoal <= 0) return null;
+    return (kpis.this_month_sales / salesGoal) * 100;
+  }, [kpis, salesGoal]);
+
+  const trendChartData = useMemo(() => {
+    if (trendMode === 'daily') return dailyTrend.map(r => ({ label: r.day.length >= 10 ? r.day.slice(5) : r.day, sales: r.total_sales }));
+    if (trendMode === 'weekly') return weeklyTrend.map(r => ({ label: r.week, sales: r.total_sales }));
+    return monthlyTrend.map(r => ({ label: r.month.length >= 7 ? r.month.slice(2) : r.month, sales: r.total_sales }));
+  }, [trendMode, dailyTrend, weeklyTrend, monthlyTrend]);
+
+  const pieData = platformSummary.map(r => ({ name: r.channel, value: r.total_sales, color: getPlatformColor(r.channel) }));
+  const platformBarData = platformSummary.slice(0, 8).map(r => ({ name: r.channel, sales: r.total_sales, color: getPlatformColor(r.channel) }));
 
   const trendLabels: Record<TrendMode, string> = {
     daily: t('일별', '日別'),
@@ -396,83 +310,82 @@ export default function DashboardPage() {
     monthly: t('월별', '月別'),
   };
 
+  // ---------- Alert data ----------
+  const declining = useMemo(() => growthAlerts.filter(a => a.growth_pct <= -30).sort((a, b) => a.growth_pct - b.growth_pct), [growthAlerts]);
+  const surging = useMemo(() => growthAlerts.filter(a => a.growth_pct >= 50).sort((a, b) => b.growth_pct - a.growth_pct), [growthAlerts]);
+
+  // Genre pie data
+  const genrePieData = genreSummary.map((d, i) => ({
+    name: d.genre_kr || d.genre_code,
+    value: d.total_sales,
+    color: GENRE_COLORS[i % GENRE_COLORS.length],
+    genre_code: d.genre_code,
+  }));
+  const genreTotal = genreSummary.reduce((s, d) => s + d.total_sales, 0);
+
+  // ---------- Error state ----------
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
         <p style={{ color: '#ef4444', fontSize: 14 }}>Error: {error}</p>
-        <button
-          onClick={loadData}
-          className="px-4 py-2 rounded-lg text-sm font-medium"
-          style={{ background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', color: '#fff' }}
-        >
+        <button onClick={loadData} className="px-4 py-2 rounded-lg text-sm font-medium"
+          style={{ background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', color: '#fff' }}>
           {t('재시도', 'リトライ')}
         </button>
       </div>
     );
   }
 
+  // =================================================================
+  // RENDER
+  // =================================================================
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.15 }}
+      transition={{ duration: 0.3 }}
     >
-      {/* ---- Header with Data Freshness (A8) ---- */}
+      {/* ===== HEADER ===== */}
       <div className="flex items-center gap-4 mb-6 flex-wrap">
         <div className="w-11 h-11 rounded-xl flex items-center justify-center page-icon-glow">
           <LayoutDashboard size={22} color="white" />
         </div>
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-            {t('대시보드', 'ダッシュボード')}
+            {t('경영 브리핑', '経営ブリーフィング')}
           </h1>
           <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-            {t('매출 개요 및 주요 지표', '売上概要と主要指標')}
+            {lastDataDate
+              ? `${lastDataDate} ${t('기준', '基準')}`
+              : t('실시간 매출 개요', 'リアルタイム売上概要')}
           </p>
         </div>
-        {/* A8: Data freshness */}
-        {lastDataDate && (
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs" style={{
-              background: 'var(--color-surface)',
-              border: '1px solid var(--color-glass-border)',
-              color: 'var(--color-text-secondary)',
-            }}>
-              <Clock size={12} />
-              {t('최종 데이터:', '最終データ:')} {lastDataDate}
-            </div>
-            {hasPreliminary && (
-              <span className="px-2 py-1 rounded-lg text-[11px] font-medium" style={{
-                background: 'rgba(245, 158, 11, 0.15)',
-                color: '#f59e0b',
-                border: '1px solid rgba(245, 158, 11, 0.2)',
-              }}>
-                {t('속보치 포함', '速報値含む')}
-              </span>
-            )}
-          </div>
-        )}
-      </div>
 
-      {/* ---- A1: Date Range Picker ---- */}
-      <div className="mb-6">
-        <DateRangePicker
-          startDate={startDate}
-          endDate={endDate}
-          onChangeStart={setStartDate}
-          onChangeEnd={setEndDate}
-        />
+        {/* Freshness & preliminary badges */}
+        <div className="flex items-center gap-2 shrink-0">
+          {hasPreliminary && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold"
+              style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.2)' }}>
+              <Zap size={13} />
+              {t('속보치', '速報値')}
+            </span>
+          )}
+          {lastDataDate && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px]"
+              style={{ background: 'var(--color-surface)', border: '1px solid var(--color-glass-border)', color: 'var(--color-text-secondary)' }}>
+              <Clock size={12} />
+              {lastDataDate}
+            </span>
+          )}
+        </div>
       </div>
 
       {loading ? (
         <div className="space-y-6">
           <KPISkeleton />
+          <ChartSkeleton height={200} />
           <ChartSkeleton height={400} />
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <ChartSkeleton height={350} />
-            <ChartSkeleton height={350} />
-          </div>
-          <TableSkeleton />
         </div>
       ) : !kpis ? (
         <div className="rounded-2xl p-12 flex flex-col items-center justify-center min-h-[300px]" style={GLASS_CARD}>
@@ -484,352 +397,516 @@ export default function DashboardPage() {
       ) : (
         <div className="space-y-6">
 
-          {/* ---- KPI Summary Cards (A2: YoY added) ---- */}
-          <motion.div
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
-            variants={containerVariants}
-            initial="hidden"
-            animate="show"
-          >
-            {/* Total Sales */}
-            <motion.div
-              variants={cardVariants}
-              whileHover={{ y: -4, scale: 1.02, transition: { duration: 0.25 } }}
-              className="rounded-2xl p-6 cursor-default group kpi-accent-blue relative overflow-hidden"
-              style={GLASS_CARD}
-              onMouseEnter={(e) => { Object.assign(e.currentTarget.style, GLASS_CARD_HOVER); }}
-              onMouseLeave={(e) => { Object.assign(e.currentTarget.style, { background: GLASS_CARD.background, border: GLASS_CARD.border }); }}
-            >
-              <p className="text-xs font-medium mb-3" style={{ color: 'var(--color-text-secondary)' }}>
-                {t('총 누적매출', '累計売上')}
-              </p>
-              <p className="text-2xl font-bold mb-1" style={{ color: 'var(--color-text-primary)' }}>
-                <AnimatedNumber value={kpis.total_sales} formatter={formatCurrency} />
-              </p>
-              <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                {t('전체 기간', '全期間')}
-              </p>
-            </motion.div>
+          {/* ===== KPI SECTION ===== */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatusKPICard
+              label={t('이달 매출', '今月売上')}
+              value={kpis.this_month_sales}
+              formatter={formatCurrency}
+              status={kpis.mom_change >= 0 ? 'good' : kpis.mom_change >= -20 ? 'warn' : 'bad'}
+              subText={`${t('전월', '前月')}: ${formatCurrency(kpis.last_month_sales)}`}
+              delay={0}
+              icon={<BarChart3 size={16} />}
+            />
+            <StatusKPICard
+              label={t('전월 대비', '前月比')}
+              value={Math.abs(kpis.mom_change)}
+              formatter={(v) => `${kpis.mom_change >= 0 ? '+' : '-'}${v.toFixed(1)}%`}
+              status={kpis.mom_change >= 0 ? 'good' : kpis.mom_change >= -20 ? 'warn' : 'bad'}
+              changePct={kpis.mom_change}
+              changeLabel="MoM"
+              delay={0.08}
+              icon={kpis.mom_change >= 0 ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+            />
+            <StatusKPICard
+              label={t('전년 대비', '前年比')}
+              value={yoyChange !== null ? Math.abs(yoyChange) : 0}
+              formatter={(v) => yoyChange !== null ? `${yoyChange >= 0 ? '+' : '-'}${v.toFixed(1)}%` : '—'}
+              status={yoyChange === null ? 'neutral' : yoyChange >= 0 ? 'good' : yoyChange >= -20 ? 'warn' : 'bad'}
+              changePct={yoyChange}
+              changeLabel="YoY"
+              delay={0.16}
+              icon={<Activity size={16} />}
+            />
+            <StatusKPICard
+              label={t('목표 달성', '目標達成')}
+              value={goalRate ?? 0}
+              formatter={(v) => salesGoal > 0 ? `${v.toFixed(1)}%` : '—'}
+              status={goalRate === null ? 'neutral' : goalRate >= 100 ? 'good' : goalRate >= 70 ? 'warn' : 'bad'}
+              gauge={goalRate}
+              gaugeLabel={salesGoal > 0 ? `${formatCurrency(kpis.this_month_sales)} / ${formatCurrency(salesGoal)}` : t('목표 미설정', '目標未設定')}
+              delay={0.24}
+              icon={<Rocket size={16} />}
+            />
+          </div>
 
-            {/* This Month Sales + MoM + YoY */}
-            <motion.div
-              variants={cardVariants}
-              whileHover={{ y: -4, scale: 1.02, transition: { duration: 0.25 } }}
-              className="rounded-2xl p-6 cursor-default group kpi-accent-purple relative overflow-hidden"
-              style={GLASS_CARD}
-              onMouseEnter={(e) => { Object.assign(e.currentTarget.style, GLASS_CARD_HOVER); }}
-              onMouseLeave={(e) => { Object.assign(e.currentTarget.style, { background: GLASS_CARD.background, border: GLASS_CARD.border }); }}
-            >
-              <p className="text-xs font-medium mb-3" style={{ color: 'var(--color-text-secondary)' }}>
-                {t('이번달 매출', '今月の売上')}
-              </p>
-              <p className="text-2xl font-bold mb-1" style={{ color: 'var(--color-text-primary)' }}>
-                <AnimatedNumber value={kpis.this_month_sales} formatter={formatCurrency} />
-              </p>
-              <div className="flex items-center gap-2 flex-wrap">
-                <div className="flex items-center gap-1">
-                  {kpis.mom_change >= 0 ? (
-                    <TrendingUp size={12} color="#22c55e" />
-                  ) : (
-                    <TrendingDown size={12} color="#ef4444" />
-                  )}
-                  <span className="text-[11px] font-semibold" style={{ color: kpis.mom_change >= 0 ? '#22c55e' : '#ef4444' }}>
-                    {kpis.mom_change > 0 ? '+' : ''}{kpis.mom_change.toFixed(1)}% MoM
+          {/* ===== ALERT PANEL (2-column) ===== */}
+          {(declining.length > 0 || surging.length > 0) && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Declining */}
+              <motion.div
+                initial={{ opacity: 0, x: -16 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.4, delay: 0.3 }}
+                className="rounded-2xl p-5"
+                style={{ ...GLASS_CARD, borderLeft: '3px solid #ef4444' }}
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <AlertTriangle size={16} color="#ef4444" />
+                  <h3 className="text-[14px] font-semibold" style={{ color: '#ef4444' }}>
+                    {t('주의 작품', '注意作品')}
+                  </h3>
+                  <span className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>
+                    {declining.length}{t('건', '件')}
                   </span>
                 </div>
-                {/* A2: YoY */}
-                {yoyChange !== null && (
-                  <div className="flex items-center gap-1">
-                    <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>|</span>
-                    <span className="text-[11px] font-semibold" style={{ color: yoyChange >= 0 ? '#22c55e' : '#ef4444' }}>
-                      {yoyChange > 0 ? '+' : ''}{yoyChange.toFixed(1)}% YoY
-                    </span>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-
-            {/* MoM Growth Rate */}
-            <motion.div
-              variants={cardVariants}
-              whileHover={{ y: -4, scale: 1.02, transition: { duration: 0.25 } }}
-              className="rounded-2xl p-6 cursor-default group kpi-accent-green relative overflow-hidden"
-              style={GLASS_CARD}
-              onMouseEnter={(e) => { Object.assign(e.currentTarget.style, GLASS_CARD_HOVER); }}
-              onMouseLeave={(e) => { Object.assign(e.currentTarget.style, { background: GLASS_CARD.background, border: GLASS_CARD.border }); }}
-            >
-              <p className="text-xs font-medium mb-3" style={{ color: 'var(--color-text-secondary)' }}>
-                {t('전월대비 증감률', '前月比増減率')}
-              </p>
-              <p className="text-2xl font-bold mb-1" style={{ color: kpis.mom_change >= 0 ? '#22c55e' : '#ef4444' }}>
-                {kpis.mom_change > 0 ? '+' : ''}{kpis.mom_change.toFixed(1)}%
-              </p>
-              <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                {t('전월', '前月')}: {formatCurrency(kpis.last_month_sales)}
-              </p>
-            </motion.div>
-
-            {/* Active Titles */}
-            <motion.div
-              variants={cardVariants}
-              whileHover={{ y: -4, scale: 1.02, transition: { duration: 0.25 } }}
-              className="rounded-2xl p-6 cursor-default group kpi-accent-amber relative overflow-hidden"
-              style={GLASS_CARD}
-              onMouseEnter={(e) => { Object.assign(e.currentTarget.style, GLASS_CARD_HOVER); }}
-              onMouseLeave={(e) => { Object.assign(e.currentTarget.style, { background: GLASS_CARD.background, border: GLASS_CARD.border }); }}
-            >
-              <p className="text-xs font-medium mb-3" style={{ color: 'var(--color-text-secondary)' }}>
-                {t('활성 작품 수', '活性タイトル数')}
-              </p>
-              <p className="text-2xl font-bold mb-1" style={{ color: 'var(--color-text-primary)' }}>
-                <AnimatedCount value={kpis.active_titles} />
-              </p>
-              <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                {kpis.active_platforms} {t('개 플랫폼', 'プラットフォーム')}
-              </p>
-            </motion.div>
-          </motion.div>
-
-          {/* ---- A10: Sales Goal ---- */}
-          <SalesGoal
-            currentSales={kpis.this_month_sales}
-            goal={salesGoal}
-            onGoalChange={handleGoalChange}
-          />
-
-          {/* ---- Sales Trend (A9: daily/weekly/monthly toggle) ---- */}
-          <motion.div
-            variants={cardVariants}
-            initial="hidden"
-            animate="show"
-            className="rounded-2xl p-6"
-            style={GLASS_CARD}
-          >
-            <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
-              <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                <Calendar size={16} className="inline mr-2" style={{ verticalAlign: '-2px' }} />
-                {trendLabels[trendMode]} {t('매출 추이', '売上推移')}
-              </h2>
-              <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid var(--color-glass-border)' }}>
-                {(['daily', 'weekly', 'monthly'] as TrendMode[]).map((mode) => (
-                  <button
-                    key={mode}
-                    onClick={() => setTrendMode(mode)}
-                    className="px-3 py-1.5 text-xs font-medium transition-all"
-                    style={{
-                      background: trendMode === mode ? 'linear-gradient(135deg, #3b82f6, #8b5cf6)' : 'transparent',
-                      color: trendMode === mode ? '#fff' : 'var(--color-text-secondary)',
-                    }}
-                  >
-                    {trendLabels[mode]}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <ResponsiveContainer width="100%" height={350}>
-              <AreaChart data={trendChartData}>
-                <defs>
-                  <linearGradient id="dashAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#818cf8" stopOpacity={0.3} />
-                    <stop offset="100%" stopColor="#818cf8" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
-                <XAxis
-                  dataKey="label"
-                  tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }}
-                  axisLine={false}
-                  tickLine={false}
-                  tickFormatter={formatShort}
-                  width={60}
-                />
-                <ReTooltip content={<AreaChartTooltip fmtCurrency={formatCurrency} />} />
-                <Area
-                  type="monotone"
-                  dataKey="sales"
-                  stroke="#818cf8"
-                  strokeWidth={2.5}
-                  fill="url(#dashAreaGrad)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </motion.div>
-
-          {/* ---- Platform Share + Ranking (A7: drilldown) ---- */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <motion.div
-              variants={cardVariants}
-              initial="hidden"
-              animate="show"
-              className="rounded-2xl p-6"
-              style={GLASS_CARD}
-            >
-              <h2 className="text-base font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
-                {t('플랫폼 점유율', 'プラットフォーム占有率')}
-              </h2>
-              <ResponsiveContainer width="100%" height={320}>
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={65}
-                    outerRadius={110}
-                    paddingAngle={2}
-                    label={renderDonutLabel}
-                    labelLine={false}
-                    onClick={(_, idx) => router.push(`/platforms?channel=${encodeURIComponent(pieData[idx].name)}`)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    {pieData.map((entry, idx) => (
-                      <Cell key={idx} fill={entry.color} fillOpacity={0.85} />
-                    ))}
-                  </Pie>
-                  <ReTooltip
-                    {...darkTooltipStyle}
-                    formatter={(v: unknown) => [formatCurrency(Number(v ?? 0)), t('매출', '売上')]}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </motion.div>
-
-            <motion.div
-              variants={cardVariants}
-              initial="hidden"
-              animate="show"
-              className="rounded-2xl p-6"
-              style={GLASS_CARD}
-            >
-              <h2 className="text-base font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
-                {t('플랫폼 랭킹', 'プラットフォームランキング')}
-              </h2>
-              <ResponsiveContainer width="100%" height={320}>
-                <BarChart data={platformBarData} layout="vertical" margin={{ left: 80 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" horizontal={false} />
-                  <XAxis
-                    type="number"
-                    tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }}
-                    axisLine={false}
-                    tickLine={false}
-                    tickFormatter={formatShort}
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="name"
-                    tick={{ fill: 'var(--color-text-secondary)', fontSize: 11 }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={80}
-                    tickFormatter={(v: string) => PLATFORM_BRANDS[v]?.nameJP || v}
-                  />
-                  <ReTooltip
-                    {...darkTooltipStyle}
-                    formatter={(v: unknown) => [formatCurrency(Number(v ?? 0)), t('매출', '売上')]}
-                  />
-                  <Bar
-                    dataKey="sales"
-                    radius={[0, 6, 6, 0]}
-                    barSize={22}
-                    onClick={(data) => router.push(`/platforms?channel=${encodeURIComponent(String(data.name ?? ''))}`)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    {platformBarData.map((entry, idx) => (
-                      <Cell key={idx} fill={entry.color} fillOpacity={0.8} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </motion.div>
-          </div>
-
-          {/* ---- A3: Genre Chart + A4: Company Ranking ---- */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <GenreChart data={genreSummary} />
-            <CompanyRanking data={companySummary} />
-          </div>
-
-          {/* ---- A5: Format Chart ---- */}
-          <FormatChart data={formatSummary} />
-
-          {/* ---- A6: Growth Alerts ---- */}
-          <GrowthAlertsPanel data={growthAlerts} />
-
-          {/* ---- Top Titles Table (A7: drilldown) ---- */}
-          <motion.div
-            variants={cardVariants}
-            initial="hidden"
-            animate="show"
-            className="rounded-2xl p-6"
-            style={GLASS_CARD}
-          >
-            <h2 className="text-base font-semibold mb-6" style={{ color: 'var(--color-text-primary)' }}>
-              Top {Math.min(topTitles.length, 10)} {t('작품', 'タイトル')}
-            </h2>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[600px] table-striped">
-                <thead>
-                  <tr style={{ borderBottom: '1px solid var(--color-table-border)' }}>
-                    <th className="text-left py-3 px-2 font-medium" style={{ color: 'var(--color-text-secondary)' }}>#</th>
-                    <th className="text-left py-3 px-2 font-medium" style={{ color: 'var(--color-text-secondary)' }}>
-                      {t('작품', 'タイトル')}
-                    </th>
-                    <th className="text-left py-3 px-2 font-medium" style={{ color: 'var(--color-text-secondary)' }}>
-                      {t('플랫폼', 'PF')}
-                    </th>
-                    <th className="text-right py-3 px-2 font-medium" style={{ color: 'var(--color-text-secondary)' }}>
-                      {t('총 매출', '累計売上')}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {topTitles.slice(0, 10).map((title, idx) => (
-                    <tr
-                      key={title.title_jp}
-                      style={{ borderBottom: '1px solid var(--color-table-border-subtle)' }}
-                      className="cursor-pointer transition-colors hover:brightness-110"
-                      onClick={() => router.push(`/titles?search=${encodeURIComponent(title.title_jp)}`)}
+                <div className="space-y-2">
+                  {declining.slice(0, 5).map((alert, i) => (
+                    <motion.div
+                      key={alert.title_jp}
+                      initial={{ opacity: 0, x: -12 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.4 + i * 0.12 }}
+                      className="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all"
+                      style={{ background: 'rgba(239,68,68,0.04)', border: '1px solid rgba(239,68,68,0.08)' }}
+                      whileHover={{ x: 4, background: 'rgba(239,68,68,0.08)' }}
+                      onClick={() => router.push(`/titles?search=${encodeURIComponent(alert.title_jp)}`)}
                     >
-                      <td className="py-3 px-2 font-bold" style={{ color: idx < 3 ? '#a5b4fc' : 'var(--color-text-muted)' }}>
-                        {idx + 1}
-                      </td>
-                      <td className="py-3 px-2" style={{ maxWidth: '250px' }}>
-                        <p className="font-medium truncate" title={title.title_jp} style={{ color: 'var(--color-text-primary)' }}>
-                          {title.title_jp}
+                      <TrendingDown size={14} color="#ef4444" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>
+                          {alert.title_kr || alert.title_jp}
                         </p>
-                        {title.title_kr && (
-                          <p className="text-xs truncate" title={title.title_kr} style={{ color: 'var(--color-text-muted)' }}>
-                            {title.title_kr}
-                          </p>
-                        )}
-                      </td>
-                      <td className="py-3 px-2">
-                        <div className="flex gap-1 flex-wrap">
-                          {(title.channels ?? []).slice(0, 3).map((ch) => (
-                            <PlatformBadge key={ch} name={ch} showName={false} size="sm" />
-                          ))}
-                          {(title.channels ?? []).length > 3 && (
-                            <span className="text-[10px] px-1" style={{ color: 'var(--color-text-muted)' }}>
-                              +{title.channels.length - 3}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-3 px-2 text-right font-bold" style={{ color: 'var(--color-text-primary)' }}>
-                        {formatCurrency(title.total_sales)}
-                      </td>
-                    </tr>
+                      </div>
+                      <span className="text-[13px] font-bold shrink-0" style={{ color: '#ef4444' }}>
+                        {alert.growth_pct.toFixed(0)}%
+                      </span>
+                      <ChevronRight size={14} style={{ color: 'var(--color-text-muted)' }} />
+                    </motion.div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+                {declining.length > 5 && (
+                  <button onClick={() => router.push('/titles')}
+                    className="mt-3 text-[12px] font-medium w-full text-center py-1.5 rounded-lg transition-colors"
+                    style={{ color: '#ef4444', background: 'rgba(239,68,68,0.06)' }}>
+                    {t('전체 보기', 'すべて表示')} ({declining.length})
+                  </button>
+                )}
+              </motion.div>
+
+              {/* Surging */}
+              <motion.div
+                initial={{ opacity: 0, x: 16 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.4, delay: 0.3 }}
+                className="rounded-2xl p-5"
+                style={{ ...GLASS_CARD, borderLeft: '3px solid #22c55e' }}
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <Rocket size={16} color="#22c55e" />
+                  <h3 className="text-[14px] font-semibold" style={{ color: '#22c55e' }}>
+                    {t('급성장 작품', '急成長作品')}
+                  </h3>
+                  <span className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e' }}>
+                    {surging.length}{t('건', '件')}
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {surging.slice(0, 5).map((alert, i) => (
+                    <motion.div
+                      key={alert.title_jp}
+                      initial={{ opacity: 0, x: 12 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.4 + i * 0.12 }}
+                      className="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all"
+                      style={{ background: 'rgba(34,197,94,0.04)', border: '1px solid rgba(34,197,94,0.08)' }}
+                      whileHover={{ x: 4, background: 'rgba(34,197,94,0.08)' }}
+                      onClick={() => router.push(`/titles?search=${encodeURIComponent(alert.title_jp)}`)}
+                    >
+                      <TrendingUp size={14} color="#22c55e" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>
+                          {alert.title_kr || alert.title_jp}
+                        </p>
+                      </div>
+                      <span className="text-[13px] font-bold shrink-0" style={{ color: '#22c55e' }}>
+                        +{alert.growth_pct.toFixed(0)}%
+                      </span>
+                      <ChevronRight size={14} style={{ color: 'var(--color-text-muted)' }} />
+                    </motion.div>
+                  ))}
+                </div>
+                {surging.length > 5 && (
+                  <button onClick={() => router.push('/titles')}
+                    className="mt-3 text-[12px] font-medium w-full text-center py-1.5 rounded-lg transition-colors"
+                    style={{ color: '#22c55e', background: 'rgba(34,197,94,0.06)' }}>
+                    {t('전체 보기', 'すべて表示')} ({surging.length})
+                  </button>
+                )}
+              </motion.div>
             </div>
-          </motion.div>
+          )}
+
+          {/* ===== TAB NAVIGATION ===== */}
+          <div className="rounded-2xl overflow-hidden" style={GLASS_CARD}>
+            {/* Tab bar */}
+            <div className="flex border-b" style={{ borderColor: 'var(--color-glass-border)' }}>
+              {TABS.map((tab) => {
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className="relative flex items-center gap-1.5 px-5 py-3.5 text-[13px] font-medium transition-colors"
+                    style={{ color: isActive ? 'var(--color-text-primary)' : 'var(--color-text-muted)' }}
+                  >
+                    {tab.icon}
+                    {t(tab.labelKo, tab.labelJa)}
+                    {isActive && (
+                      <motion.div
+                        layoutId="tab-indicator"
+                        className="absolute bottom-0 left-0 right-0 h-[2px]"
+                        style={{ background: 'linear-gradient(90deg, #6366f1, #8b5cf6)' }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                      />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Tab content */}
+            <div className="p-6">
+              <AnimatePresence mode="wait">
+                {/* ---- STATUS TAB ---- */}
+                {activeTab === 'status' && (
+                  <motion.div
+                    key="status"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {/* Trend mode toggle */}
+                    <div className="flex items-center justify-between mb-5 flex-wrap gap-2">
+                      <h3 className="text-[15px] font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                        {trendLabels[trendMode]} {t('매출 추이', '売上推移')}
+                      </h3>
+                      <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid var(--color-glass-border)' }}>
+                        {(['daily', 'weekly', 'monthly'] as TrendMode[]).map((mode) => (
+                          <button
+                            key={mode}
+                            onClick={() => setTrendMode(mode)}
+                            className="px-3 py-1.5 text-[12px] font-medium transition-all"
+                            style={{
+                              background: trendMode === mode ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'transparent',
+                              color: trendMode === mode ? '#fff' : 'var(--color-text-secondary)',
+                            }}
+                          >
+                            {trendLabels[mode]}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <ResponsiveContainer width="100%" height={340}>
+                      <AreaChart data={trendChartData}>
+                        <defs>
+                          <linearGradient id="execAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#6366f1" stopOpacity={0.25} />
+                            <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
+                        <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={60} />
+                        <ReTooltip content={<AreaChartTooltip fmtCurrency={formatCurrency} />} />
+                        <Area type="monotone" dataKey="sales" stroke="#6366f1" strokeWidth={2.5} fill="url(#execAreaGrad)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </motion.div>
+                )}
+
+                {/* ---- TREND TAB (Top Titles) ---- */}
+                {activeTab === 'trend' && (
+                  <motion.div
+                    key="trend"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <h3 className="text-[15px] font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
+                      Top {Math.min(topTitles.length, 15)} {t('작품', 'タイトル')}
+                    </h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm min-w-[600px]">
+                        <thead>
+                          <tr style={{ borderBottom: '1px solid var(--color-table-border)' }}>
+                            <th className="text-left py-3 px-2 font-medium text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>#</th>
+                            <th className="text-left py-3 px-2 font-medium text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>{t('작품', 'タイトル')}</th>
+                            <th className="text-left py-3 px-2 font-medium text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>{t('플랫폼', 'PF')}</th>
+                            <th className="text-right py-3 px-2 font-medium text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>{t('총 매출', '累計売上')}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {topTitles.slice(0, 15).map((title, idx) => (
+                            <motion.tr
+                              key={title.title_jp}
+                              initial={{ opacity: 0, x: -8 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: idx * 0.04 }}
+                              style={{ borderBottom: '1px solid var(--color-table-border-subtle)' }}
+                              className="cursor-pointer transition-colors hover:brightness-110"
+                              onClick={() => router.push(`/titles?search=${encodeURIComponent(title.title_jp)}`)}
+                            >
+                              <td className="py-3 px-2 font-bold text-[13px]" style={{ color: idx < 3 ? '#6366f1' : 'var(--color-text-muted)' }}>
+                                {idx + 1}
+                              </td>
+                              <td className="py-3 px-2" style={{ maxWidth: 250 }}>
+                                <p className="font-medium text-[13px] truncate" style={{ color: 'var(--color-text-primary)' }}>{title.title_jp}</p>
+                                {title.title_kr && <p className="text-[11px] truncate" style={{ color: 'var(--color-text-muted)' }}>{title.title_kr}</p>}
+                              </td>
+                              <td className="py-3 px-2">
+                                <div className="flex gap-1 flex-wrap">
+                                  {(title.channels ?? []).slice(0, 3).map((ch) => (
+                                    <PlatformBadge key={ch} name={ch} showName={false} size="sm" />
+                                  ))}
+                                  {(title.channels ?? []).length > 3 && (
+                                    <span className="text-[10px] px-1" style={{ color: 'var(--color-text-muted)' }}>+{title.channels.length - 3}</span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="py-3 px-2 text-right font-bold text-[13px]" style={{ color: 'var(--color-text-primary)' }}>
+                                {formatCurrency(title.total_sales)}
+                              </td>
+                            </motion.tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* ---- PLATFORM TAB ---- */}
+                {activeTab === 'platform' && (
+                  <motion.div
+                    key="platform"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* Donut */}
+                      <div>
+                        <h3 className="text-[15px] font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
+                          {t('플랫폼 점유율', 'PF占有率')}
+                        </h3>
+                        <ResponsiveContainer width="100%" height={300}>
+                          <PieChart>
+                            <Pie
+                              data={pieData} dataKey="value" nameKey="name"
+                              cx="50%" cy="50%" innerRadius={60} outerRadius={105}
+                              paddingAngle={2} label={renderDonutLabel} labelLine={false}
+                              onClick={(_, idx) => router.push(`/platforms?channel=${encodeURIComponent(pieData[idx].name)}`)}
+                              style={{ cursor: 'pointer' }}
+                            >
+                              {pieData.map((entry, idx) => <Cell key={idx} fill={entry.color} fillOpacity={0.85} />)}
+                            </Pie>
+                            <ReTooltip {...darkTooltipStyle} formatter={(v: unknown) => [formatCurrency(Number(v ?? 0)), t('매출', '売上')]} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+
+                      {/* Ranking bars */}
+                      <div>
+                        <h3 className="text-[15px] font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
+                          {t('플랫폼 랭킹', 'PFランキング')}
+                        </h3>
+                        <div className="space-y-3">
+                          {platformBarData.map((pf, i) => {
+                            const maxSales = platformBarData[0]?.sales ?? 1;
+                            const barWidth = maxSales > 0 ? (pf.sales / maxSales) * 100 : 0;
+                            const brand = getPlatformBrand(pf.name);
+                            return (
+                              <motion.div
+                                key={pf.name}
+                                initial={{ opacity: 0, x: 16 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: i * 0.06 }}
+                                className="cursor-pointer group"
+                                onClick={() => router.push(`/platforms?channel=${encodeURIComponent(pf.name)}`)}
+                              >
+                                <div className="flex items-center gap-3 mb-1">
+                                  <span className="text-[12px] font-bold w-5 text-center" style={{ color: i < 3 ? pf.color : 'var(--color-text-muted)' }}>
+                                    {i + 1}
+                                  </span>
+                                  <div className="w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-bold"
+                                    style={{ background: brand.bgColor, color: brand.color, border: `1px solid ${brand.borderColor}` }}>
+                                    {brand.icon}
+                                  </div>
+                                  <span className="text-[13px] font-medium flex-1 truncate" style={{ color: 'var(--color-text-primary)' }}>
+                                    {brand.nameJP || pf.name}
+                                  </span>
+                                  <span className="text-[13px] font-bold shrink-0" style={{ color: 'var(--color-text-primary)' }}>
+                                    {formatCurrency(pf.sales)}
+                                  </span>
+                                </div>
+                                <div className="ml-8 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--color-glass-border)' }}>
+                                  <motion.div
+                                    className="h-full rounded-full"
+                                    style={{ background: pf.color }}
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${barWidth}%` }}
+                                    transition={{ duration: 0.7, delay: 0.1 + i * 0.06 }}
+                                  />
+                                </div>
+                              </motion.div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* ---- GENRE TAB ---- */}
+                {activeTab === 'genre' && (
+                  <motion.div
+                    key="genre"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* Genre donut */}
+                      <div>
+                        <h3 className="text-[15px] font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
+                          {t('장르별 점유율', 'ジャンル別占有率')}
+                        </h3>
+                        <ResponsiveContainer width="100%" height={300}>
+                          <PieChart>
+                            <Pie
+                              data={genrePieData} dataKey="value" nameKey="name"
+                              cx="50%" cy="50%" innerRadius={55} outerRadius={100} paddingAngle={2}
+                              onClick={(_, idx) => router.push(`/titles?genre=${encodeURIComponent(genrePieData[idx].genre_code)}`)}
+                              style={{ cursor: 'pointer' }}
+                            >
+                              {genrePieData.map((entry, idx) => <Cell key={idx} fill={entry.color} fillOpacity={0.85} />)}
+                            </Pie>
+                            <ReTooltip {...darkTooltipStyle} formatter={(v: unknown) => [formatCurrency(Number(v ?? 0)), t('매출', '売上')]} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+
+                      {/* Genre list */}
+                      <div>
+                        <h3 className="text-[15px] font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
+                          {t('장르별 매출', 'ジャンル別売上')}
+                        </h3>
+                        <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                          {genreSummary.map((row, i) => {
+                            const pct = genreTotal > 0 ? ((row.total_sales / genreTotal) * 100).toFixed(1) : '0';
+                            return (
+                              <motion.div
+                                key={row.genre_code}
+                                initial={{ opacity: 0, x: 12 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: i * 0.05 }}
+                                className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all hover:scale-[1.01]"
+                                style={{ background: 'var(--color-surface)' }}
+                                onClick={() => router.push(`/titles?genre=${encodeURIComponent(row.genre_code)}`)}
+                              >
+                                <div className="w-3 h-3 rounded-full shrink-0" style={{ background: GENRE_COLORS[i % GENRE_COLORS.length] }} />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-[13px] font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>
+                                    {row.genre_kr || row.genre_code}
+                                  </p>
+                                  <p className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
+                                    {row.title_count}{t('작품', '作品')} / {pct}%
+                                  </p>
+                                </div>
+                                <p className="text-[13px] font-bold shrink-0" style={{ color: 'var(--color-text-primary)' }}>
+                                  {formatCurrency(row.total_sales)}
+                                </p>
+                              </motion.div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* ---- COMPANY TAB ---- */}
+                {activeTab === 'company' && (
+                  <motion.div
+                    key="company"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <h3 className="text-[15px] font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
+                      {t('제작사별 매출 TOP 10', '制作会社別売上 TOP 10')}
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {companySummary.slice(0, 10).map((row, i) => {
+                        const maxSales = companySummary[0]?.total_sales ?? 1;
+                        const barWidth = maxSales > 0 ? (row.total_sales / maxSales) * 100 : 0;
+                        return (
+                          <motion.div
+                            key={row.company_name}
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: i * 0.05 }}
+                            className="rounded-xl p-4"
+                            style={{ background: 'var(--color-surface)', border: '1px solid var(--color-glass-border)' }}
+                          >
+                            <div className="flex items-center gap-3 mb-2">
+                              <span className="text-[20px] font-bold" style={{ color: i < 3 ? '#6366f1' : 'var(--color-text-muted)' }}>
+                                {i + 1}
+                              </span>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[13px] font-semibold truncate" style={{ color: 'var(--color-text-primary)' }}>
+                                  {row.company_name}
+                                </p>
+                                <p className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
+                                  {row.title_count}{t('작품', '作品')}
+                                </p>
+                              </div>
+                              <p className="text-[14px] font-bold shrink-0" style={{ color: 'var(--color-text-primary)' }}>
+                                {formatCurrency(row.total_sales)}
+                              </p>
+                            </div>
+                            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--color-glass-border)' }}>
+                              <motion.div
+                                className="h-full rounded-full"
+                                style={{ background: 'linear-gradient(90deg, #6366f1, #a78bfa)' }}
+                                initial={{ width: 0 }}
+                                animate={{ width: `${barWidth}%` }}
+                                transition={{ duration: 0.6, delay: 0.1 + i * 0.05 }}
+                              />
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+
+          {/* ===== INSIGHT PANEL ===== */}
+          <InsightPanel
+            kpis={kpis}
+            yoyChange={yoyChange}
+            growthAlerts={growthAlerts}
+            platformSummary={platformSummary}
+            goalRate={goalRate}
+          />
         </div>
       )}
     </motion.div>

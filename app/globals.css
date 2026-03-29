@@ -633,3 +633,45 @@ select:focus-visible,
     width: 100%;
   }
 }
+
+/* ========================================
+   REDESIGN: Enhanced Design System
+   ======================================== */
+
+@theme {
+  /* Status Colors */
+  --color-status-good: #10b981;
+  --color-status-good-bg: rgba(16, 185, 129, 0.08);
+  --color-status-good-border: rgba(16, 185, 129, 0.2);
+  --color-status-warning: #f59e0b;
+  --color-status-warning-bg: rgba(245, 158, 11, 0.08);
+  --color-status-warning-border: rgba(245, 158, 11, 0.2);
+  --color-status-danger: #ef4444;
+  --color-status-danger-bg: rgba(239, 68, 68, 0.08);
+  --color-status-danger-border: rgba(239, 68, 68, 0.2);
+
+  /* Enhanced Glass */
+  --glass-card-premium: rgba(255, 255, 255, 0.03);
+  --glass-card-premium-border: rgba(255, 255, 255, 0.06);
+  --glass-card-premium-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
+  --glass-card-hover-shadow: 0 12px 48px rgba(0, 0, 0, 0.16), 0 4px 12px rgba(0, 0, 0, 0.1);
+
+  /* KPI Card Sizes */
+  --kpi-number-size: 32px;
+  --kpi-label-size: 13px;
+  --kpi-change-size: 14px;
+}
+
+/* Light mode Status overrides */
+.theme-light {
+  --color-status-good-bg: rgba(16, 185, 129, 0.06);
+  --color-status-good-border: rgba(16, 185, 129, 0.25);
+  --color-status-warning-bg: rgba(245, 158, 11, 0.06);
+  --color-status-warning-border: rgba(245, 158, 11, 0.25);
+  --color-status-danger-bg: rgba(239, 68, 68, 0.06);
+  --color-status-danger-border: rgba(239, 68, 68, 0.25);
+  --glass-card-premium: rgba(255, 255, 255, 0.8);
+  --glass-card-premium-border: rgba(26, 43, 94, 0.08);
+  --glass-card-premium-shadow: 0 4px 16px rgba(26, 43, 94, 0.06), 0 1px 4px rgba(26, 43, 94, 0.04);
+  --glass-card-hover-shadow: 0 8px 32px rgba(26, 43, 94, 0.1), 0 2px 8px rgba(26, 43, 94, 0.06);
+}

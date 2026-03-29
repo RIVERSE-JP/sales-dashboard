@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,
@@ -22,15 +22,61 @@ import { clearAllCache, prefetchAllData } from '@/lib/supabase';
 import './globals.css';
 
 // ---------------------------------------------------------------------------
-// Navigation config with i18n labels
+// Navigation config – grouped by executive thinking flow
 // ---------------------------------------------------------------------------
-const navItems = [
-  { to: '/dashboard', ko: '경영 요약', ja: 'ダッシュボード', icon: LayoutDashboard },
-  { to: '/titles', ko: '작품별 분석', ja: 'タイトル分析', icon: BookOpen },
-  { to: '/platforms', ko: '플랫폼별 분석', ja: 'プラットフォーム分析', icon: Globe },
-  { to: '/initial-sales', ko: '초동매출 비교', ja: '初動売上比較', icon: Rocket },
+interface NavItem {
+  to: string;
+  ko: string;
+  ja: string;
+  icon: typeof LayoutDashboard;
+}
+
+interface NavGroup {
+  label: { ko: string; ja: string };
+  items: NavItem[];
+}
+
+const navGroups: NavGroup[] = [
+  {
+    label: { ko: '현황', ja: '現況' },
+    items: [
+      { to: '/dashboard', ko: '경영 브리핑', ja: '経営ブリーフィング', icon: LayoutDashboard },
+    ],
+  },
+  {
+    label: { ko: '분석', ja: '分析' },
+    items: [
+      { to: '/titles', ko: '작품 매출 현황', ja: 'タイトル売上', icon: BookOpen },
+      { to: '/platforms', ko: '플랫폼 성과', ja: 'プラットフォーム', icon: Globe },
+      { to: '/initial-sales', ko: '초동매출 비교', ja: '初動売上比較', icon: Rocket },
+    ],
+  },
+  {
+    label: { ko: '데이터', ja: 'データ' },
+    items: [
+      { to: '/data', ko: '원본 조회', ja: 'データ照会', icon: Database },
+      { to: '/upload', ko: '데이터 업로드', ja: 'アップロード', icon: Upload },
+    ],
+  },
+];
+
+// Flat list for breadcrumb lookup
+const allNavItems = navGroups.flatMap((g) => g.items);
+
+// Mobile bottom nav (5 items)
+const mobileNavItems: NavItem[] = [
+  { to: '/dashboard', ko: '브리핑', ja: 'ブリーフ', icon: LayoutDashboard },
+  { to: '/titles', ko: '작품', ja: 'タイトル', icon: BookOpen },
+  { to: '/platforms', ko: '플랫폼', ja: 'PF', icon: Globe },
   { to: '/data', ko: '데이터', ja: 'データ', icon: Database },
-  { to: '/upload', ko: '데이터 업데이트', ja: 'データ更新', icon: Upload },
+  { to: '/upload', ko: '업로드', ja: 'UP', icon: Upload },
+];
+
+// Period presets
+const periodPresets = [
+  { ko: '이번달', ja: '今月', value: 'this_month' },
+  { ko: '3개월', ja: '3ヶ月', value: '3months' },
+  { ko: '올해', ja: '今年', value: 'this_year' },
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -77,6 +123,7 @@ function ToggleButton({
 function LayoutInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const now = useCurrentTime();
@@ -84,6 +131,23 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
 
   const sidebarWidth = collapsed ? 72 : 260;
   const isLight = theme === 'light';
+
+  // Period filter state from URL
+  const activePeriod = searchParams.get('period') ?? '';
+
+  const setPeriod = useCallback(
+    (value: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (activePeriod === value) {
+        params.delete('period');
+      } else {
+        params.set('period', value);
+      }
+      const qs = params.toString();
+      router.push(pathname + (qs ? `?${qs}` : ''));
+    },
+    [activePeriod, pathname, router, searchParams]
+  );
 
   return (
     <div
@@ -180,73 +244,114 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
           }}
         />
 
-        {/* Nav links */}
-        <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
-          {navItems.map((item) => {
-            const isActive = pathname.startsWith(item.to);
-            return (
-              <Link
-                key={item.to}
-                href={item.to}
-                onClick={() => setMobileOpen(false)}
-                className="group relative flex items-center rounded-xl transition-all duration-200"
-                style={{
-                  padding: collapsed ? '10px 0' : '10px 12px',
-                  justifyContent: collapsed ? 'center' : 'flex-start',
-                  color: isActive ? 'var(--color-sidebar-active-text)' : 'var(--color-text-secondary)',
-                  background: isActive ? 'var(--color-sidebar-active)' : 'transparent',
-                  textDecoration: 'none',
-                }}
-              >
-                {/* Active indicator bar */}
-                {isActive && (
-                  <motion.div
-                    layoutId="sidebar-active-indicator"
-                    className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full"
-                    style={{
-                      height: '60%',
-                      background: '#1A2B5E',
-                      boxShadow: '0 0 8px rgba(26, 43, 94, 0.4)',
-                    }}
-                    transition={{ type: 'spring', stiffness: 350, damping: 30 }}
-                  />
-                )}
-
+        {/* Nav links – grouped */}
+        <nav className="flex-1 px-3 py-2 overflow-y-auto">
+          {navGroups.map((group, gi) => (
+            <div key={gi}>
+              {/* Group label */}
+              {!collapsed && (
                 <div
-                  className="shrink-0 transition-colors duration-200"
-                  style={{ color: isActive ? 'var(--color-sidebar-active-text)' : undefined }}
+                  className="text-[10px] tracking-wider uppercase font-semibold px-3 pt-3 pb-1.5 select-none"
+                  style={{ color: 'var(--color-text-muted)', letterSpacing: '1px' }}
                 >
-                  <item.icon size={20} />
+                  {lang === 'ko' ? group.label.ko : group.label.ja}
                 </div>
+              )}
 
-                <AnimatePresence>
-                  {!collapsed && (
-                    <motion.span
-                      initial={{ opacity: 0, x: -8 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -8 }}
-                      transition={{ duration: 0.15 }}
-                      className="ml-3 text-sm font-medium whitespace-nowrap"
-                    >
-                      {lang === 'ko' ? item.ko : item.ja}
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-
-                {/* Hover glow */}
+              {/* Group divider (except first group) */}
+              {gi > 0 && collapsed && (
                 <div
-                  className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"
-                  style={{
-                    background: isActive
-                      ? 'transparent'
-                      : isLight
-                        ? 'rgba(0, 0, 0, 0.03)'
-                        : 'rgba(255, 255, 255, 0.03)',
-                  }}
+                  className="mx-3 my-2"
+                  style={{ borderBottom: '1px solid rgba(128,128,128,0.06)' }}
                 />
-              </Link>
-            );
-          })}
+              )}
+              {gi > 0 && !collapsed && (
+                <div
+                  className="mx-3 mb-1"
+                  style={{ borderBottom: '1px solid rgba(128,128,128,0.06)' }}
+                />
+              )}
+
+              <div className="space-y-1">
+                {group.items.map((item) => {
+                  const isActive = pathname.startsWith(item.to);
+                  return (
+                    <Link
+                      key={item.to}
+                      href={item.to}
+                      onClick={() => setMobileOpen(false)}
+                      className="group relative flex items-center rounded-xl transition-all duration-200"
+                      style={{
+                        padding: collapsed ? '10px 0' : '10px 12px',
+                        justifyContent: collapsed ? 'center' : 'flex-start',
+                        color: isActive ? 'var(--color-sidebar-active-text)' : 'var(--color-text-secondary)',
+                        background: isActive ? 'var(--color-sidebar-active)' : 'transparent',
+                        textDecoration: 'none',
+                      }}
+                    >
+                      {/* Active indicator bar */}
+                      {isActive && (
+                        <motion.div
+                          layoutId="nav-active"
+                          className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-full"
+                          style={{
+                            height: '60%',
+                            background: 'var(--color-accent-blue, #3b82f6)',
+                            boxShadow: '0 0 8px rgba(59, 130, 246, 0.4)',
+                          }}
+                          transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+                        />
+                      )}
+
+                      {/* Hover accent bar (slides in from left) */}
+                      {!isActive && (
+                        <div
+                          className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 -translate-x-1 group-hover:translate-x-0"
+                          style={{
+                            height: '40%',
+                            background: 'var(--color-accent-blue, #3b82f6)',
+                          }}
+                        />
+                      )}
+
+                      <div
+                        className="shrink-0 transition-colors duration-200"
+                        style={{ color: isActive ? 'var(--color-sidebar-active-text)' : undefined }}
+                      >
+                        <item.icon size={20} />
+                      </div>
+
+                      <AnimatePresence>
+                        {!collapsed && (
+                          <motion.span
+                            initial={{ opacity: 0, x: -8 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -8 }}
+                            transition={{ duration: 0.15 }}
+                            className="ml-3 text-sm font-medium whitespace-nowrap"
+                          >
+                            {lang === 'ko' ? item.ko : item.ja}
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
+
+                      {/* Hover glow */}
+                      <div
+                        className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"
+                        style={{
+                          background: isActive
+                            ? 'transparent'
+                            : isLight
+                              ? 'rgba(0, 0, 0, 0.03)'
+                              : 'rgba(255, 255, 255, 0.03)',
+                        }}
+                      />
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
         {/* Theme, Language, Currency toggles */}
@@ -388,13 +493,38 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
               <span style={{ color: 'var(--color-text-subtle)' }}>/</span>
               <span style={{ color: 'var(--color-text-secondary)' }}>
                 {(() => {
-                  const item = navItems.find((n) => pathname.startsWith(n.to));
-                  return item ? (lang === 'ko' ? item.ko : item.ja) : t('경영 요약', 'ダッシュボード');
+                  const item = allNavItems.find((n) => pathname.startsWith(n.to));
+                  return item ? (lang === 'ko' ? item.ko : item.ja) : t('경영 브리핑', '経営ブリーフィング');
                 })()}
               </span>
             </div>
 
-            <div className="ml-auto flex items-center gap-4">
+            <div className="ml-auto flex items-center gap-3">
+              {/* Period preset buttons */}
+              <div className="hidden sm:flex items-center gap-1.5">
+                {periodPresets.map((preset) => (
+                  <button
+                    key={preset.value}
+                    onClick={() => setPeriod(preset.value)}
+                    className="px-2.5 py-1 text-[11px] font-semibold rounded-md transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue"
+                    style={{
+                      background: activePeriod === preset.value
+                        ? 'var(--color-accent-blue, #3b82f6)'
+                        : isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.06)',
+                      color: activePeriod === preset.value
+                        ? '#ffffff'
+                        : 'var(--color-text-muted)',
+                      border: '1px solid',
+                      borderColor: activePeriod === preset.value
+                        ? 'transparent'
+                        : isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)',
+                    }}
+                  >
+                    {t(preset.ko, preset.ja)}
+                  </button>
+                ))}
+              </div>
+
               {/* Date/time badge */}
               <div
                 className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg"
@@ -442,13 +572,59 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
           />
         </header>
 
-        {/* Page content */}
-        <main className="flex-1 overflow-y-auto">
-          <div className="min-h-full p-4 md:p-6 lg:p-8">
-            {children}
-          </div>
-        </main>
+        {/* Page content with transition animation */}
+        <AnimatePresence mode="wait">
+          <motion.main
+            key={pathname}
+            className="flex-1 overflow-y-auto"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <div className="min-h-full p-4 md:p-6 lg:p-8 pb-20 sm:pb-8">
+              {children}
+            </div>
+          </motion.main>
+        </AnimatePresence>
       </div>
+
+      {/* ---- Mobile bottom navigation (sm:hidden) ---- */}
+      <nav
+        className="fixed bottom-0 left-0 right-0 sm:hidden z-50 flex items-center justify-around h-16 px-2"
+        style={{
+          background: isLight
+            ? 'rgba(255, 255, 255, 0.90)'
+            : 'rgba(12, 12, 20, 0.90)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          borderTop: '1px solid var(--color-glass-border)',
+        }}
+      >
+        {mobileNavItems.map((item) => {
+          const isActive = pathname.startsWith(item.to);
+          return (
+            <Link
+              key={item.to}
+              href={item.to}
+              className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg transition-colors duration-150"
+              style={{
+                minWidth: '48px',
+                minHeight: '48px',
+                color: isActive
+                  ? 'var(--color-accent-blue, #3b82f6)'
+                  : 'var(--color-text-muted)',
+                textDecoration: 'none',
+              }}
+            >
+              <item.icon size={22} />
+              <span className="text-[10px] font-medium leading-none">
+                {lang === 'ko' ? item.ko : item.ja}
+              </span>
+            </Link>
+          );
+        })}
+      </nav>
     </div>
   );
 }
@@ -470,7 +646,9 @@ export default function RootLayout({
       </head>
       <body>
         <AppProvider>
-          <LayoutInner>{children}</LayoutInner>
+          <Suspense>
+            <LayoutInner>{children}</LayoutInner>
+          </Suspense>
         </AppProvider>
       </body>
     </html>

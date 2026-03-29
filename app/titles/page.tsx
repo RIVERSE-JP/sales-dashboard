@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip,
   ResponsiveContainer, BarChart, Bar, Cell,
 } from 'recharts';
 import { BookOpen, ArrowLeft, GitCompare, CheckSquare, Square } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 import { fetchTitleSummaries, fetchTitleDetail, fetchTitleMaster, fetchGenres, fetchTitleRankings } from '@/lib/supabase';
 import { getPlatformColor } from '@/utils/platformConfig';
 import { PlatformBadge } from '@/components/PlatformBadge';
@@ -21,6 +22,7 @@ import { CompareChart } from '@/components/titles/CompareChart';
 import { PeriodCompare } from '@/components/titles/PeriodCompare';
 import { TitleLifecycle } from '@/components/titles/TitleLifecycle';
 import { PlatformTimeSeries } from '@/components/titles/PlatformTimeSeries';
+import { PlatformContribution } from '@/components/titles/PlatformContribution';
 
 // ============================================================
 // Helpers
@@ -71,6 +73,8 @@ interface EnrichedTitle extends TitleSummaryRow {
 
 export default function TitleAnalysisPage() {
   const { formatCurrency, t } = useApp();
+  const searchParams = useSearchParams();
+  const highlightTitle = searchParams.get('highlight');
 
   // Core state
   const [loading, setLoading] = useState(true);
@@ -93,6 +97,9 @@ export default function TitleAnalysisPage() {
   const [selectedFormat, setSelectedFormat] = useState('');
   const [salesPreset, setSalesPreset] = useState<SalesPreset>('all');
   const [serialStatusTab, setSerialStatusTab] = useState('all');
+
+  // Sort state
+  const [sortBy, setSortBy] = useState('sales_desc');
 
   // Compare mode (B5)
   const [compareMode, setCompareMode] = useState(false);
@@ -255,8 +262,14 @@ export default function TitleAnalysisPage() {
       }
     }
 
+    // Sort
+    if (sortBy === 'sales_desc') result.sort((a, b) => b.total_sales - a.total_sales);
+    else if (sortBy === 'sales_asc') result.sort((a, b) => a.total_sales - b.total_sales);
+    else if (sortBy === 'name_asc') result.sort((a, b) => a.title_jp.localeCompare(b.title_jp));
+    else if (sortBy === 'newest') result.sort((a, b) => (b.first_date ?? '').localeCompare(a.first_date ?? ''));
+
     return result;
-  }, [enrichedTitles, searchQuery, serialStatusTab, selectedGenre, selectedCompany, selectedPlatform, selectedStatus, selectedFormat, salesPreset]);
+  }, [enrichedTitles, searchQuery, serialStatusTab, selectedGenre, selectedCompany, selectedPlatform, selectedStatus, selectedFormat, salesPreset, sortBy]);
 
   // ============================================================
   // Detail loading
@@ -282,6 +295,16 @@ export default function TitleAnalysisPage() {
     }
     setDetailLoading(false);
   }, []);
+
+  // URL-based drill-down: auto-select highlighted title
+  useEffect(() => {
+    if (highlightTitle && titles.length > 0 && !loading) {
+      const found = titles.find((ti) => ti.title_jp === highlightTitle);
+      if (found) {
+        loadTitleDetail(found.title_jp); // eslint-disable-line react-hooks/set-state-in-effect
+      }
+    }
+  }, [highlightTitle, titles, loading, loadTitleDetail]);
 
   // Compare toggle
   const toggleCompare = (titleJP: string) => {
@@ -334,7 +357,8 @@ export default function TitleAnalysisPage() {
     const perEpisodeSales = epCount && epCount > 0 ? totalSales / epCount : null;
 
     return (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }} style={{ minHeight: '100vh' }}>
+      <AnimatePresence mode="wait">
+      <motion.div key={selectedTitle} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.35 }} style={{ minHeight: '100vh' }}>
         {/* Header */}
         <div className="flex items-center gap-3 mb-8">
           <motion.button
@@ -485,6 +509,15 @@ export default function TitleAnalysisPage() {
               </motion.div>
             )}
 
+            {/* Platform Contribution: month-over-month change */}
+            {platformBreakdown.length > 0 && monthlyTrend.length >= 2 && (
+              <PlatformContribution
+                currentBreakdown={platformBreakdown}
+                monthlyTrend={monthlyTrend}
+                t={t}
+              />
+            )}
+
             {/* B10: Platform Time Series */}
             <PlatformTimeSeries
               titleJP={selectedTitle}
@@ -530,6 +563,7 @@ export default function TitleAnalysisPage() {
           </motion.div>
         )}
       </motion.div>
+      </AnimatePresence>
     );
   }
 
@@ -635,6 +669,8 @@ export default function TitleAnalysisPage() {
         setSalesPreset={setSalesPreset}
         serialStatusTab={serialStatusTab}
         setSerialStatusTab={setSerialStatusTab}
+        sortBy={sortBy}
+        setSortBy={setSortBy}
         onReset={resetFilters}
         filteredCount={filteredTitles.length}
         totalCount={titles.length}
@@ -644,122 +680,131 @@ export default function TitleAnalysisPage() {
       {loading ? (
         <ListSkeleton />
       ) : (
-        <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-3">
-          {filteredTitles.slice(0, 50).map((title, idx) => (
-            <motion.div
-              key={title.title_jp}
-              variants={cardVariants}
-              whileHover={{ scale: 1.01, background: 'var(--color-glass-hover)' }}
-              className="rounded-2xl p-5 cursor-pointer transition-all"
-              style={GLASS_CARD}
-              onClick={() => {
-                if (compareMode) {
-                  toggleCompare(title.title_jp);
-                } else {
-                  loadTitleDetail(title.title_jp);
-                }
-              }}
-            >
-              <div className="flex items-center gap-4">
-                {/* B5: Checkbox in compare mode */}
-                {compareMode && (
-                  <div className="shrink-0">
-                    {compareList.includes(title.title_jp) ? (
-                      <CheckSquare size={18} color="#818cf8" />
-                    ) : (
-                      <Square size={18} color="var(--color-text-muted)" />
-                    )}
-                  </div>
-                )}
+        <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-2">
+          {filteredTitles.slice(0, 50).map((title, idx) => {
+            const isCompareSelected = compareList.includes(title.title_jp);
 
-                {/* Rank number */}
-                <div className="shrink-0 w-8 text-center">
-                  <span className="text-xs font-bold" style={{ color: 'var(--color-text-muted)' }}>
-                    #{idx + 1}
-                  </span>
-                </div>
-
-                {/* Platform count icon */}
+            return (
+              <motion.div
+                key={title.title_jp}
+                variants={{
+                  hidden: { opacity: 0, y: 12 },
+                  show: { opacity: 1, y: 0, transition: { duration: 0.25, delay: idx * 0.05 } },
+                }}
+                whileHover={{ x: 2 }}
+                className="rounded-2xl cursor-pointer transition-all relative overflow-hidden group"
+                style={{
+                  ...GLASS_CARD,
+                  borderLeft: isCompareSelected ? '3px solid var(--color-accent-blue, #818cf8)' : '3px solid transparent',
+                }}
+                onClick={() => {
+                  if (compareMode) {
+                    toggleCompare(title.title_jp);
+                  } else {
+                    loadTitleDetail(title.title_jp);
+                  }
+                }}
+              >
+                {/* Hover border slide-in */}
                 <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold"
-                  style={{
-                    background: `${getPlatformColor(title.channels[0])}20`,
-                    color: getPlatformColor(title.channels[0]),
-                  }}
-                >
-                  {title.channels.length}P
-                </div>
+                  className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-2xl transition-all duration-300 origin-top scale-y-0 group-hover:scale-y-100"
+                  style={{ background: 'var(--color-accent-blue, #818cf8)' }}
+                />
 
-                {/* Title info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <p className="text-sm font-semibold truncate" title={title.title_jp} style={{ color: 'var(--color-text-primary)' }}>
-                      {title.title_jp}
-                    </p>
-                    {/* B3: New badge */}
-                    {title.isNew && (
-                      <span className="shrink-0 px-1.5 py-0.5 rounded-full text-[9px] font-bold" style={{ background: '#22c55e20', color: '#22c55e' }}>
-                        🆕
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {title.title_kr && (
-                      <p className="text-xs truncate" title={title.title_kr} style={{ color: 'var(--color-text-muted)' }}>{title.title_kr}</p>
-                    )}
-                    {/* Genre/Status badges */}
-                    {title.genre_name && (
-                      <span className="hidden sm:inline px-1.5 py-0.5 rounded text-[9px]" style={{ background: 'var(--color-glass)', color: 'var(--color-text-muted)' }}>
-                        {title.genre_name}
-                      </span>
-                    )}
-                    {title.serial_status && (
-                      <span className="hidden sm:inline px-1.5 py-0.5 rounded text-[9px]" style={{ background: 'var(--color-glass)', color: 'var(--color-text-muted)' }}>
-                        {title.serial_status}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Platform badges */}
-                <div className="flex gap-1 shrink-0">
-                  {title.channels.slice(0, 3).map((p) => (
-                    <PlatformBadge key={p} name={p} showName={false} size="sm" />
-                  ))}
-                  {title.channels.length > 3 && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ color: 'var(--color-text-muted)' }}>
-                      +{title.channels.length - 3}
-                    </span>
+                <div className="flex items-center gap-4 px-5 py-4">
+                  {/* B5: Checkbox in compare mode */}
+                  {compareMode && (
+                    <div className="shrink-0">
+                      {isCompareSelected ? (
+                        <CheckSquare size={18} color="#818cf8" />
+                      ) : (
+                        <Square size={18} color="var(--color-text-muted)" />
+                      )}
+                    </div>
                   )}
-                </div>
 
-                {/* B9: Rank change indicator */}
-                {title.rank_change !== undefined && title.rank_change !== 0 && (
+                  {/* Rank number - large, grey */}
                   <div className="shrink-0 w-10 text-center">
-                    {title.rank_change > 0 ? (
-                      <span className="text-xs font-bold" style={{ color: '#22c55e' }}>▲{title.rank_change}</span>
-                    ) : (
-                      <span className="text-xs font-bold" style={{ color: '#ef4444' }}>▼{Math.abs(title.rank_change)}</span>
+                    <span className="text-lg font-bold" style={{ color: 'var(--color-text-muted)', opacity: 0.5 }}>
+                      {idx + 1}
+                    </span>
+                  </div>
+
+                  {/* Title info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-bold truncate" title={title.title_jp} style={{ color: 'var(--color-text-primary)' }}>
+                        {title.title_jp}
+                      </p>
+                      {/* New badge - blue pill */}
+                      {title.isNew && (
+                        <span className="shrink-0 px-2 py-0.5 rounded-full text-[9px] font-bold" style={{ background: '#3b82f620', color: '#3b82f6' }}>
+                          NEW
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {title.title_kr && (
+                        <p className="text-xs truncate" title={title.title_kr} style={{ color: 'var(--color-text-muted)' }}>{title.title_kr}</p>
+                      )}
+                      {/* Platform logo badges */}
+                      <div className="flex gap-1 shrink-0 ml-1">
+                        {title.channels.slice(0, 4).map((p) => (
+                          <PlatformBadge key={p} name={p} showName={false} size="sm" />
+                        ))}
+                        {title.channels.length > 4 && (
+                          <span className="text-[10px] px-1 py-0.5 rounded-full font-medium" style={{ color: 'var(--color-text-muted)' }}>
+                            +{title.channels.length - 4}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right side: Sales + Change */}
+                  <div className="shrink-0 text-right">
+                    <p className="text-base font-bold" style={{ color: 'var(--color-text-primary)' }}>
+                      {formatCurrency(title.total_sales)}
+                    </p>
+                    {/* B9: Rank change badge */}
+                    {title.rank_change !== undefined && title.rank_change !== 0 && (
+                      <span
+                        className="inline-flex items-center gap-0.5 mt-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold"
+                        style={{
+                          background: title.rank_change > 0 ? '#22c55e15' : '#ef444415',
+                          color: title.rank_change > 0 ? '#22c55e' : '#ef4444',
+                        }}
+                      >
+                        {title.rank_change > 0 ? '▲' : '▼'}{Math.abs(title.rank_change)}
+                      </span>
+                    )}
+                    {title.rank_change === 0 && (
+                      <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>-</span>
                     )}
                   </div>
-                )}
-                {title.rank_change === 0 && (
-                  <div className="shrink-0 w-10 text-center">
-                    <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>-</span>
-                  </div>
-                )}
-
-                {/* Sales amount */}
-                <p className="text-sm font-bold shrink-0" style={{ color: 'var(--color-text-primary)' }}>
-                  {formatCurrency(title.total_sales)}
-                </p>
-              </div>
-            </motion.div>
-          ))}
+                </div>
+              </motion.div>
+            );
+          })}
           {filteredTitles.length === 0 && (
-            <div className="text-center py-12" style={{ color: 'var(--color-text-muted)' }}>
-              {t('해당하는 작품이 없습니다', '該当するタイトルがありません')}
-            </div>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex flex-col items-center justify-center py-20"
+            >
+              <motion.div
+                animate={{ y: [0, -8, 0] }}
+                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+              >
+                <BookOpen size={48} color="var(--color-text-muted)" strokeWidth={1.2} />
+              </motion.div>
+              <p className="mt-4 text-sm font-medium" style={{ color: 'var(--color-text-muted)' }}>
+                {t('해당하는 작품이 없습니다', '該当するタイトルがありません')}
+              </p>
+              <p className="text-xs mt-1" style={{ color: 'var(--color-text-muted)', opacity: 0.6 }}>
+                {t('필터를 조정해 보세요', 'フィルターを調整してみてください')}
+              </p>
+            </motion.div>
           )}
         </motion.div>
       )}
