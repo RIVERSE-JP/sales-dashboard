@@ -1,0 +1,55 @@
+export const dynamic = 'force-dynamic';
+
+import { NextResponse } from 'next/server';
+import { supabaseServer } from '@/lib/supabase-server';
+
+export async function POST(request: Request) {
+  const body = await request.json();
+  const { startDate, endDate, dataSource, channel } = body;
+
+  if (!startDate && !endDate && !dataSource && !channel) {
+    return NextResponse.json({ error: 'At least one filter condition is required' }, { status: 400 });
+  }
+
+  // Find matching rows
+  let query = supabaseServer.from('daily_sales_v2').select('id, title_jp, channel, sale_date, sales_amount');
+  if (startDate) query = query.gte('sale_date', startDate);
+  if (endDate) query = query.lte('sale_date', endDate);
+  if (dataSource) query = query.eq('data_source', dataSource);
+  if (channel) query = query.eq('channel', channel);
+
+  const { data: rows, error: findError } = await query;
+  if (findError) return NextResponse.json({ error: findError.message }, { status: 500 });
+  if (!rows || rows.length === 0) return NextResponse.json({ deleted: 0 });
+
+  const ids = rows.map((r: { id: number }) => r.id);
+
+  // Delete in batches of 500
+  const batchSize = 500;
+  let totalDeleted = 0;
+
+  for (let i = 0; i < ids.length; i += batchSize) {
+    const batch = ids.slice(i, i + batchSize);
+    const { error } = await supabaseServer
+      .from('daily_sales_v2')
+      .delete()
+      .in('id', batch);
+
+    if (error) {
+      return NextResponse.json(
+        { error: error.message, deletedSoFar: totalDeleted },
+        { status: 500 }
+      );
+    }
+    totalDeleted += batch.length;
+  }
+
+  await supabaseServer.from('audit_logs').insert({
+    action: 'DELETE',
+    table_name: 'daily_sales_v2',
+    record_id: `batch_${ids.length}`,
+    old_data: { count: ids.length, filter: { startDate, endDate, dataSource, channel } },
+  });
+
+  return NextResponse.json({ deleted: totalDeleted });
+}

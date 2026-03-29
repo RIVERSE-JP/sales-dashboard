@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, FileSpreadsheet, CheckCircle, AlertCircle, Loader2, Trash2, Clock } from 'lucide-react';
+import { Upload, FileSpreadsheet, CheckCircle, AlertCircle, Loader2, Trash2, Clock, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { supabase, upsertDailySales } from '@/lib/supabase';
 import { useApp } from '@/context/AppContext';
 import type { UploadLog } from '@/types';
@@ -35,12 +35,200 @@ interface ParsedRow {
   sales_amount: number;
 }
 
+interface ValidationWarning {
+  rowIndex: number;
+  type: 'platform' | 'amount' | 'date';
+  message: string;
+  severity: 'warning' | 'error';
+}
+
 type UploadStatus = 'idle' | 'parsing' | 'preview' | 'uploading' | 'success' | 'error';
 
 interface UploadResult {
   inserted: number;
   updated: number;
+  errors: number;
+  errorRows?: Array<{ row: number; message: string }>;
 }
+
+// ============================================================
+// Toast Component
+// ============================================================
+
+function Toast({ message, type, onClose }: { message: string; type: 'success' | 'error'; onClose: () => void }) {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 40 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 40 }}
+      className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium"
+      style={{
+        background: type === 'success' ? 'rgba(34, 197, 94, 0.9)' : 'rgba(239, 68, 68, 0.9)',
+        color: 'white',
+        backdropFilter: 'blur(8px)',
+      }}
+    >
+      {type === 'success' ? <CheckCircle size={16} /> : <X size={16} />}
+      {message}
+    </motion.div>
+  );
+}
+
+// ============================================================
+// Confirm Dialog
+// ============================================================
+
+function ConfirmDialog({ message, onConfirm, onCancel }: { message: string; onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}
+      onClick={onCancel}
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        className="rounded-2xl p-6 max-w-sm w-full mx-4"
+        style={{ background: 'var(--color-card-bg)', border: '1px solid var(--color-glass-border)' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <p className="text-sm mb-6" style={{ color: 'var(--color-text-primary)' }}>{message}</p>
+        <div className="flex justify-end gap-2">
+          <button onClick={onCancel} className="px-4 py-2 rounded-xl text-xs font-medium cursor-pointer" style={{ background: 'var(--color-input-bg)', color: 'var(--color-text-secondary)', border: '1px solid var(--color-input-border)' }}>
+            Cancel
+          </button>
+          <button onClick={onConfirm} className="px-4 py-2 rounded-xl text-xs font-semibold cursor-pointer" style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+            OK
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ============================================================
+// CSV Parser
+// ============================================================
+
+function parseCSVText(text: string): string[][] {
+  const lines: string[][] = [];
+  let current = '';
+  let inQuotes = false;
+  let row: string[] = [];
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQuotes) {
+      if (ch === '"' && text[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else if (ch === '"') {
+        inQuotes = false;
+      } else {
+        current += ch;
+      }
+    } else {
+      if (ch === '"') {
+        inQuotes = true;
+      } else if (ch === ',' || ch === '\t') {
+        row.push(current.trim());
+        current = '';
+      } else if (ch === '\n' || ch === '\r') {
+        if (ch === '\r' && text[i + 1] === '\n') i++;
+        row.push(current.trim());
+        if (row.some((c) => c !== '')) lines.push(row);
+        row = [];
+        current = '';
+      } else {
+        current += ch;
+      }
+    }
+  }
+  if (current || row.length > 0) {
+    row.push(current.trim());
+    if (row.some((c) => c !== '')) lines.push(row);
+  }
+  return lines;
+}
+
+function parseCSVWeeklyReport(text: string): ParsedRow[] {
+  const lines = parseCSVText(text);
+  if (lines.length < 2) return [];
+  const rows: ParsedRow[] = [];
+  // Find header row
+  let headerIdx = 0;
+  for (let i = 0; i < Math.min(5, lines.length); i++) {
+    if (lines[i].some((c) => c.includes('Title') || c.includes('Channel') || c.includes('Date'))) {
+      headerIdx = i;
+      break;
+    }
+  }
+  for (let i = headerIdx + 1; i < lines.length; i++) {
+    const vals = lines[i];
+    const titleJP = (vals[0] ?? '').trim();
+    const titleKR = (vals[1] ?? '').trim();
+    const channelTitleJP = (vals[2] ?? '').trim();
+    const channel = (vals[3] ?? '').trim();
+    const rawDate = (vals[4] ?? '').trim();
+    const rawAmount = (vals[5] ?? '').trim();
+    if (!titleJP || !channel) continue;
+    const saleDate = parseDateString(rawDate);
+    const salesAmount = parseInt(rawAmount.replace(/[¥,]/g, ''), 10) || 0;
+    if (saleDate && salesAmount > 0) {
+      rows.push({ title_jp: titleJP, title_kr: titleKR, channel_title_jp: channelTitleJP, channel, sale_date: saleDate, sales_amount: salesAmount });
+    }
+  }
+  return rows;
+}
+
+function parseCSVSokuhochi(text: string): ParsedRow[] {
+  const lines = parseCSVText(text);
+  if (lines.length < 2) return [];
+  const rows: ParsedRow[] = [];
+  let headerIdx = 0;
+  for (let i = 0; i < Math.min(5, lines.length); i++) {
+    if (lines[i].some((c) => c.includes('作品') || c.includes('タイトル') || c.includes('売上'))) {
+      headerIdx = i;
+      break;
+    }
+  }
+  for (let i = headerIdx + 1; i < lines.length; i++) {
+    const vals = lines[i];
+    const titleJP = (vals[0] ?? '').trim();
+    const channel = (vals[1] ?? '').trim();
+    const rawDate = (vals[2] ?? '').trim();
+    const rawAmount = (vals[3] ?? '').trim();
+    if (!titleJP) continue;
+    const saleDate = parseDateString(rawDate);
+    const salesAmount = parseInt(rawAmount.replace(/[¥,]/g, ''), 10) || 0;
+    if (saleDate && salesAmount > 0) {
+      rows.push({ title_jp: titleJP, title_kr: '', channel_title_jp: '', channel, sale_date: saleDate, sales_amount: salesAmount });
+    }
+  }
+  return rows;
+}
+
+function parseDateString(raw: string): string {
+  const cleaned = raw.replace(/\//g, '-');
+  if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(cleaned)) {
+    const parts = cleaned.split('-');
+    return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+  }
+  return '';
+}
+
+// ============================================================
+// Excel Parsers (unchanged logic)
+// ============================================================
 
 async function parseWeeklyReport(buffer: ArrayBuffer): Promise<ParsedRow[]> {
   const wb = new ExcelJS.Workbook();
@@ -73,11 +261,7 @@ async function parseWeeklyReport(buffer: ArrayBuffer): Promise<ParsedRow[]> {
     if (rawDate instanceof Date) {
       saleDate = rawDate.toISOString().slice(0, 10);
     } else if (typeof rawDate === 'string') {
-      const cleaned = rawDate.replace(/\//g, '-');
-      if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(cleaned)) {
-        const parts = cleaned.split('-');
-        saleDate = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
-      }
+      saleDate = parseDateString(rawDate);
     } else if (typeof rawDate === 'number') {
       const excelEpoch = new Date(1899, 11, 30);
       const d = new Date(excelEpoch.getTime() + rawDate * 86400000);
@@ -118,11 +302,7 @@ async function parseSokuhochi(buffer: ArrayBuffer): Promise<ParsedRow[]> {
     if (rawDate instanceof Date) {
       saleDate = rawDate.toISOString().slice(0, 10);
     } else if (typeof rawDate === 'string') {
-      const cleaned = rawDate.replace(/\//g, '-');
-      if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(cleaned)) {
-        const parts = cleaned.split('-');
-        saleDate = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
-      }
+      saleDate = parseDateString(rawDate);
     } else if (typeof rawDate === 'number') {
       const excelEpoch = new Date(1899, 11, 30);
       const d = new Date(excelEpoch.getTime() + rawDate * 86400000);
@@ -135,6 +315,10 @@ async function parseSokuhochi(buffer: ArrayBuffer): Promise<ParsedRow[]> {
   });
   return rows;
 }
+
+// ============================================================
+// Main Component
+// ============================================================
 
 export default function DataUploadPage() {
   const { t } = useApp();
@@ -149,6 +333,28 @@ export default function DataUploadPage() {
   const [uploadLogs, setUploadLogs] = useState<UploadLog[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [lastUploadTime, setLastUploadTime] = useState<string | null>(null);
+
+  // Validation warnings
+  const [warnings, setWarnings] = useState<ValidationWarning[]>([]);
+  const [showWarnings, setShowWarnings] = useState(false);
+
+  // Upload log detail
+  const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
+
+  // Toast & Confirm
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
+
+  // Known platforms (for validation)
+  const [knownPlatforms, setKnownPlatforms] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetch('/api/sales/platforms')
+      .then((res) => res.json())
+      .then((data: string[]) => { if (data) setKnownPlatforms(data); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     supabase
@@ -167,37 +373,78 @@ export default function DataUploadPage() {
     return 'weekly_report';
   };
 
+  // Validate parsed rows
+  const validateRows = useCallback((rows: ParsedRow[], platforms: string[]): ValidationWarning[] => {
+    const warns: ValidationWarning[] = [];
+    const amounts = rows.map((r) => r.sales_amount);
+    const avgAmount = amounts.length > 0 ? amounts.reduce((a, b) => a + b, 0) / amounts.length : 0;
+
+    rows.forEach((row, idx) => {
+      // Unknown platform
+      if (platforms.length > 0 && row.channel && !platforms.includes(row.channel)) {
+        warns.push({ rowIndex: idx, type: 'platform', severity: 'warning', message: t(`알 수 없는 플랫폼: ${row.channel}`, `不明なプラットフォーム: ${row.channel}`) });
+      }
+      // Negative amount
+      if (row.sales_amount < 0) {
+        warns.push({ rowIndex: idx, type: 'amount', severity: 'error', message: t(`음수 매출: ¥${row.sales_amount.toLocaleString()}`, `マイナス売上: ¥${row.sales_amount.toLocaleString()}`) });
+      }
+      // Abnormally large amount (10x average)
+      if (avgAmount > 0 && row.sales_amount > avgAmount * 10) {
+        warns.push({ rowIndex: idx, type: 'amount', severity: 'warning', message: t(`비정상 매출 (평균의 ${Math.round(row.sales_amount / avgAmount)}배)`, `異常な売上 (平均の${Math.round(row.sales_amount / avgAmount)}倍)`) });
+      }
+      // Date format check
+      if (!row.sale_date || !/^\d{4}-\d{2}-\d{2}$/.test(row.sale_date)) {
+        warns.push({ rowIndex: idx, type: 'date', severity: 'error', message: t(`날짜 형식 오류: ${row.sale_date || '(empty)'}`, `日付形式エラー: ${row.sale_date || '(空)'}`) });
+      }
+    });
+
+    return warns;
+  }, [t]);
+
   const handleFile = useCallback(async (file: File) => {
     setStatus('parsing');
     setFileName(file.name);
     setErrorMessage('');
     setUploadResult(null);
+    setWarnings([]);
     const detectedType = detectFileType(file.name);
     setFileType(detectedType);
     try {
-      const buffer = await file.arrayBuffer();
-      const rows = detectedType === 'sokuhochi' ? await parseSokuhochi(buffer) : await parseWeeklyReport(buffer);
+      const isCSV = file.name.toLowerCase().endsWith('.csv');
+      let rows: ParsedRow[];
+
+      if (isCSV) {
+        const text = await file.text();
+        rows = detectedType === 'sokuhochi' ? parseCSVSokuhochi(text) : parseCSVWeeklyReport(text);
+      } else {
+        const buffer = await file.arrayBuffer();
+        rows = detectedType === 'sokuhochi' ? await parseSokuhochi(buffer) : await parseWeeklyReport(buffer);
+      }
+
       if (rows.length === 0) {
         setStatus('error');
         setErrorMessage(t('데이터를 찾을 수 없습니다. 파일 형식을 확인해주세요.', 'データが見つかりませんでした。ファイル形式を確認してください。'));
         return;
       }
       setParsedRows(rows);
+      const warns = validateRows(rows, knownPlatforms);
+      setWarnings(warns);
+      if (warns.length > 0) setShowWarnings(true);
       setStatus('preview');
     } catch (err) {
       setStatus('error');
       setErrorMessage(err instanceof Error ? err.message : t('파일 분석에 실패했습니다', 'ファイルの解析に失敗しました'));
     }
-  }, [t]);
+  }, [t, knownPlatforms, validateRows]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
     const file = e.dataTransfer.files[0];
-    if (file && (file.name.endsWith('.xlsx') || file.name.endsWith('.xls'))) {
+    if (file && (file.name.endsWith('.xlsx') || file.name.endsWith('.xls') || file.name.endsWith('.csv'))) {
       handleFile(file);
     } else {
-      setErrorMessage(t('.xlsx 파일만 지원됩니다', '.xlsx ファイルのみ対応しています'));
+      setErrorMessage(t('.xlsx / .csv 파일만 지원됩니다', '.xlsx / .csv ファイルのみ対応しています'));
     }
   }, [handleFile, t]);
 
@@ -220,7 +467,9 @@ export default function DataUploadPage() {
         totalUpdated += result.updated;
         setUploadProgress(Math.round(((i + batchSize) / parsedRows.length) * 100));
       }
-      setUploadResult({ inserted: totalInserted, updated: totalUpdated });
+      const now = new Date().toISOString();
+      setLastUploadTime(now);
+      setUploadResult({ inserted: totalInserted, updated: totalUpdated, errors: 0 });
       setStatus('success');
       await supabase.from('upload_logs').insert({
         upload_type: fileType,
@@ -241,8 +490,78 @@ export default function DataUploadPage() {
     setUploadResult(null);
     setErrorMessage('');
     setUploadProgress(0);
+    setWarnings([]);
+    setShowWarnings(false);
+    setLastUploadTime(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
+
+  // Undo last upload - use date range of uploaded rows as filter
+  const handleUndoUpload = () => {
+    if (!lastUploadTime || parsedRows.length === 0) return;
+    const dates = parsedRows.map((r) => r.sale_date).filter(Boolean).sort();
+    const startDate = dates[0];
+    const endDate = dates[dates.length - 1];
+    const dataSource = fileType;
+    setConfirmDialog({
+      message: t('방금 업로드한 데이터를 모두 삭제하시겠습니까?', '直前のアップロードデータを全て削除しますか？'),
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        try {
+          const res = await fetch('/api/manage/sales/batch-delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ startDate, endDate, dataSource }),
+          });
+          if (!res.ok) throw new Error('Undo failed');
+          setToast({ message: t('업로드 취소 완료', 'アップロード取り消し完了'), type: 'success' });
+          setLastUploadTime(null);
+          reset();
+        } catch {
+          setToast({ message: t('취소 실패', '取り消しに失敗しました'), type: 'error' });
+        }
+      },
+    });
+  };
+
+  // Cancel an upload log - use data_source filter matching the upload type
+  const handleCancelLog = (log: UploadLog) => {
+    setConfirmDialog({
+      message: t(`"${log.source_file}" 업로드 건을 삭제하시겠습니까?`, `「${log.source_file}」のアップロード分を削除しますか？`),
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        try {
+          const res = await fetch('/api/manage/sales/batch-delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ dataSource: log.upload_type }),
+          });
+          if (!res.ok) throw new Error('Cancel failed');
+          setToast({ message: t('삭제 완료', '削除しました'), type: 'success' });
+          // Refresh logs
+          const { data } = await supabase.from('upload_logs').select('*').order('created_at', { ascending: false }).limit(20);
+          if (data) setUploadLogs(data as UploadLog[]);
+        } catch {
+          setToast({ message: t('삭제 실패', '削除に失敗しました'), type: 'error' });
+        }
+      },
+    });
+  };
+
+  // Warning counts
+  const warningCount = useMemo(() => warnings.filter((w) => w.severity === 'warning').length, [warnings]);
+  const errorCount = useMemo(() => warnings.filter((w) => w.severity === 'error').length, [warnings]);
+
+  // Row warning lookup for preview
+  const rowWarnings = useMemo(() => {
+    const map = new Map<number, ValidationWarning[]>();
+    warnings.forEach((w) => {
+      const list = map.get(w.rowIndex) || [];
+      list.push(w);
+      map.set(w.rowIndex, list);
+    });
+    return map;
+  }, [warnings]);
 
   return (
     <motion.div
@@ -250,6 +569,18 @@ export default function DataUploadPage() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
     >
+      {/* Toast */}
+      <AnimatePresence>
+        {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      </AnimatePresence>
+
+      {/* Confirm Dialog */}
+      <AnimatePresence>
+        {confirmDialog && (
+          <ConfirmDialog message={confirmDialog.message} onConfirm={confirmDialog.onConfirm} onCancel={() => setConfirmDialog(null)} />
+        )}
+      </AnimatePresence>
+
       <div className="flex items-center gap-3 mb-8">
         <div className="w-11 h-11 rounded-xl flex items-center justify-center page-icon-glow">
           <Upload size={20} color="white" />
@@ -259,7 +590,7 @@ export default function DataUploadPage() {
             {t('데이터 업로드', 'データアップロード')}
           </h1>
           <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-            {t('엑셀 파일로 데이터 업로드', 'Excelファイルからデータをアップロード')}
+            {t('엑셀/CSV 파일로 데이터 업로드', 'Excel/CSVファイルからデータをアップロード')}
           </p>
         </div>
       </div>
@@ -288,9 +619,9 @@ export default function DataUploadPage() {
                 <motion.div animate={{ y: dragOver ? -8 : 0 }} className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4" style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.15))' }}>
                   <FileSpreadsheet size={32} color="#818cf8" />
                 </motion.div>
-                <p className="text-sm font-semibold mb-1" style={{ color: 'var(--color-text-primary)' }}>{t('Excel 파일을 드래그 앤 드롭', 'Excelファイルをドラッグ＆ドロップ')}</p>
-                <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{t('Weekly Report (.xlsx) / 속보치 (.xlsx) 지원', 'Weekly Report (.xlsx) / 速報値 (.xlsx) に対応')}</p>
-                <input ref={fileInputRef} type="file" accept=".xlsx,.xls" onChange={handleFileInput} className="hidden" />
+                <p className="text-sm font-semibold mb-1" style={{ color: 'var(--color-text-primary)' }}>{t('파일을 드래그 앤 드롭', 'ファイルをドラッグ＆ドロップ')}</p>
+                <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{t('Excel (.xlsx) / CSV (.csv) 지원', 'Excel (.xlsx) / CSV (.csv) に対応')}</p>
+                <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleFileInput} className="hidden" />
               </motion.div>
             )}
 
@@ -320,6 +651,48 @@ export default function DataUploadPage() {
                     </motion.button>
                   </div>
                 </div>
+
+                {/* Warnings banner */}
+                {warnings.length > 0 && (
+                  <div className="mb-4">
+                    <button
+                      onClick={() => setShowWarnings(!showWarnings)}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium cursor-pointer"
+                      style={{
+                        background: errorCount > 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(251, 191, 36, 0.1)',
+                        border: `1px solid ${errorCount > 0 ? 'rgba(239, 68, 68, 0.3)' : 'rgba(251, 191, 36, 0.3)'}`,
+                        color: errorCount > 0 ? '#f87171' : '#fbbf24',
+                      }}
+                    >
+                      <AlertCircle size={14} />
+                      {warningCount > 0 && <span>{warningCount}{t('건 경고', '件の警告')}</span>}
+                      {errorCount > 0 && <span>{errorCount}{t('건 오류', '件のエラー')}</span>}
+                      {showWarnings ? <ChevronUp size={12} className="ml-auto" /> : <ChevronDown size={12} className="ml-auto" />}
+                    </button>
+                    <AnimatePresence>
+                      {showWarnings && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="mt-2 max-h-40 overflow-y-auto rounded-xl px-3 py-2 space-y-1"
+                          style={{ background: 'var(--color-input-bg)', border: '1px solid var(--color-input-border)' }}
+                        >
+                          {warnings.map((w, i) => (
+                            <div key={i} className="flex items-center gap-2 text-xs py-0.5">
+                              <span style={{ color: w.severity === 'error' ? '#f87171' : '#fbbf24' }}>
+                                {w.severity === 'error' ? '\u2715' : '\u26A0\uFE0F'}
+                              </span>
+                              <span style={{ color: 'var(--color-text-muted)' }}>#{w.rowIndex + 1}</span>
+                              <span style={{ color: 'var(--color-text-secondary)' }}>{w.message}</span>
+                            </div>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                )}
+
                 <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid var(--color-table-border)' }}>
                   <table className="w-full text-xs min-w-[600px]">
                     <thead>
@@ -332,20 +705,40 @@ export default function DataUploadPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {parsedRows.slice(0, 10).map((row, idx) => (
-                        <tr key={idx} style={{ borderBottom: '1px solid var(--color-table-border-subtle)' }}>
-                          <td className="py-2.5 px-3" style={{ color: 'var(--color-text-muted)' }}>{idx + 1}</td>
-                          <td className="py-2.5 px-3 truncate max-w-[200px]" style={{ color: 'var(--color-text-primary)' }}>{row.title_jp}</td>
-                          <td className="py-2.5 px-3" style={{ color: 'var(--color-text-secondary)' }}>{row.channel}</td>
-                          <td className="py-2.5 px-3 font-mono" style={{ color: 'var(--color-text-secondary)' }}>{row.sale_date}</td>
-                          <td className="py-2.5 px-3 text-right font-mono font-semibold" style={{ color: 'var(--color-text-primary)' }}>¥{row.sales_amount.toLocaleString()}</td>
-                        </tr>
-                      ))}
+                      {parsedRows.slice(0, 20).map((row, idx) => {
+                        const rowWarns = rowWarnings.get(idx);
+                        const hasError = rowWarns?.some((w) => w.severity === 'error');
+                        const hasWarning = rowWarns?.some((w) => w.severity === 'warning');
+
+                        return (
+                          <tr
+                            key={idx}
+                            style={{
+                              borderBottom: '1px solid var(--color-table-border-subtle)',
+                              background: hasError
+                                ? 'rgba(239, 68, 68, 0.08)'
+                                : hasWarning
+                                  ? 'rgba(251, 191, 36, 0.08)'
+                                  : undefined,
+                            }}
+                          >
+                            <td className="py-2.5 px-3" style={{ color: 'var(--color-text-muted)' }}>
+                              {hasError && <span className="mr-1" style={{ color: '#f87171' }}>{'\u2715'}</span>}
+                              {!hasError && hasWarning && <span className="mr-1" style={{ color: '#fbbf24' }}>{'\u26A0\uFE0F'}</span>}
+                              {idx + 1}
+                            </td>
+                            <td className="py-2.5 px-3 truncate max-w-[200px]" style={{ color: 'var(--color-text-primary)' }}>{row.title_jp}</td>
+                            <td className="py-2.5 px-3" style={{ color: 'var(--color-text-secondary)' }}>{row.channel}</td>
+                            <td className="py-2.5 px-3 font-mono" style={{ color: 'var(--color-text-secondary)' }}>{row.sale_date}</td>
+                            <td className="py-2.5 px-3 text-right font-mono font-semibold" style={{ color: 'var(--color-text-primary)' }}>¥{row.sales_amount.toLocaleString()}</td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
-                  {parsedRows.length > 10 && (
+                  {parsedRows.length > 20 && (
                     <div className="py-2 text-center text-xs" style={{ color: 'var(--color-text-muted)', background: 'var(--color-glass)' }}>
-                      ... {t('외', '他')} {(parsedRows.length - 10).toLocaleString()} {t('행', '行')}
+                      ... {t('외', '他')} {(parsedRows.length - 20).toLocaleString()} {t('행', '行')}
                     </div>
                   )}
                 </div>
@@ -368,20 +761,54 @@ export default function DataUploadPage() {
                 <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 200, damping: 12 }}>
                   <CheckCircle size={48} color="#22c55e" />
                 </motion.div>
-                <p className="text-lg font-bold mt-4 mb-2" style={{ color: 'var(--color-text-primary)' }}>{t('업로드 완료', 'アップロード完了')}</p>
-                <div className="flex gap-6 mb-4">
-                  <div className="text-center">
+                <p className="text-lg font-bold mt-4 mb-4" style={{ color: 'var(--color-text-primary)' }}>{t('업로드 완료', 'アップロード完了')}</p>
+
+                {/* Result cards */}
+                <div className="flex gap-4 mb-6">
+                  <div className="text-center px-4 py-3 rounded-xl" style={{ background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.2)' }}>
                     <p className="text-2xl font-bold" style={{ color: '#22c55e' }}>{uploadResult.inserted}</p>
                     <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>{t('신규 추가', '新規追加')}</p>
                   </div>
-                  <div className="text-center">
+                  <div className="text-center px-4 py-3 rounded-xl" style={{ background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
                     <p className="text-2xl font-bold" style={{ color: '#818cf8' }}>{uploadResult.updated}</p>
                     <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>{t('업데이트', '更新')}</p>
                   </div>
+                  {uploadResult.errors > 0 && (
+                    <div className="text-center px-4 py-3 rounded-xl" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                      <p className="text-2xl font-bold" style={{ color: '#f87171' }}>{uploadResult.errors}</p>
+                      <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>{t('에러', 'エラー')}</p>
+                    </div>
+                  )}
                 </div>
-                <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={reset} className="px-6 py-2.5 rounded-xl text-sm font-semibold cursor-pointer" style={{ background: 'var(--color-glass-border)', color: 'var(--color-text-primary)', border: '1px solid var(--color-glass-border)' }}>
-                  {t('새로 업로드', '新規アップロード')}
-                </motion.button>
+
+                {/* Error rows detail */}
+                {uploadResult.errorRows && uploadResult.errorRows.length > 0 && (
+                  <div className="w-full max-w-md mb-4 rounded-xl p-3 max-h-32 overflow-y-auto" style={{ background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                    {uploadResult.errorRows.map((er, i) => (
+                      <div key={i} className="text-xs py-0.5 flex gap-2" style={{ color: '#f87171' }}>
+                        <span>#{er.row}</span>
+                        <span>{er.message}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  {lastUploadTime && (
+                    <motion.button
+                      whileHover={{ scale: 1.04 }}
+                      whileTap={{ scale: 0.96 }}
+                      onClick={handleUndoUpload}
+                      className="px-5 py-2.5 rounded-xl text-sm font-semibold cursor-pointer"
+                      style={{ background: 'transparent', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.4)' }}
+                    >
+                      {t('업로드 취소', 'アップロード取消')}
+                    </motion.button>
+                  )}
+                  <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={reset} className="px-6 py-2.5 rounded-xl text-sm font-semibold cursor-pointer" style={{ background: 'var(--color-glass-border)', color: 'var(--color-text-primary)', border: '1px solid var(--color-glass-border)' }}>
+                    {t('새로 업로드', '新規アップロード')}
+                  </motion.button>
+                </div>
               </motion.div>
             )}
 
@@ -398,6 +825,7 @@ export default function DataUploadPage() {
           </AnimatePresence>
         </motion.div>
 
+        {/* Upload History */}
         <motion.div variants={cardVariants} className="rounded-2xl p-6" style={GLASS_CARD}>
           <div className="flex items-center gap-2 mb-4">
             <Clock size={16} color="var(--color-text-secondary)" />
@@ -413,27 +841,74 @@ export default function DataUploadPage() {
                     <th className="py-2.5 px-2 text-left font-medium" style={{ color: 'var(--color-text-secondary)' }}>{t('파일', 'ファイル')}</th>
                     <th className="py-2.5 px-2 text-right font-medium" style={{ color: 'var(--color-text-secondary)' }}>{t('행수', '行数')}</th>
                     <th className="py-2.5 px-2 text-center font-medium" style={{ color: 'var(--color-text-secondary)' }}>{t('상태', 'ステータス')}</th>
+                    <th className="py-2.5 px-2 text-center font-medium" style={{ color: 'var(--color-text-secondary)' }}></th>
                   </tr>
                 </thead>
                 <tbody>
                   {uploadLogs.map((log) => (
-                    <tr key={log.id} style={{ borderBottom: '1px solid var(--color-table-border-subtle)' }}>
-                      <td className="py-2.5 px-2 font-mono text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-                        {new Date(log.created_at).toLocaleString(t('ko-KR', 'ja-JP'), { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                      </td>
-                      <td className="py-2.5 px-2">
-                        <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ background: log.upload_type === 'sokuhochi' ? 'rgba(251,191,36,0.15)' : 'rgba(99,102,241,0.15)', color: log.upload_type === 'sokuhochi' ? '#fbbf24' : '#818cf8' }}>
-                          {log.upload_type === 'weekly_report' ? 'WR' : t('속보', '速報')}
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-2 text-xs truncate max-w-[200px]" style={{ color: 'var(--color-text-primary)' }}>{log.source_file ?? '-'}</td>
-                      <td className="py-2.5 px-2 text-right font-mono text-xs" style={{ color: 'var(--color-text-primary)' }}>{log.row_count.toLocaleString()}</td>
-                      <td className="py-2.5 px-2 text-center">
-                        <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ background: log.status === 'success' ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)', color: log.status === 'success' ? '#22c55e' : '#ef4444' }}>
-                          {log.status === 'success' ? t('성공', '成功') : t('오류', 'エラー')}
-                        </span>
-                      </td>
-                    </tr>
+                    <>
+                      <tr key={log.id} style={{ borderBottom: '1px solid var(--color-table-border-subtle)' }}>
+                        <td className="py-2.5 px-2 font-mono text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                          {new Date(log.created_at).toLocaleString(t('ko-KR', 'ja-JP'), { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </td>
+                        <td className="py-2.5 px-2">
+                          <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ background: log.upload_type === 'sokuhochi' ? 'rgba(251,191,36,0.15)' : 'rgba(99,102,241,0.15)', color: log.upload_type === 'sokuhochi' ? '#fbbf24' : '#818cf8' }}>
+                            {log.upload_type === 'weekly_report' ? 'WR' : t('속보', '速報')}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-2 text-xs truncate max-w-[200px]" style={{ color: 'var(--color-text-primary)' }}>{log.source_file ?? '-'}</td>
+                        <td className="py-2.5 px-2 text-right font-mono text-xs" style={{ color: 'var(--color-text-primary)' }}>{log.row_count.toLocaleString()}</td>
+                        <td className="py-2.5 px-2 text-center">
+                          <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{
+                            background: log.status === 'success' ? 'rgba(34,197,94,0.15)' : log.status === 'cancelled' ? 'rgba(156,163,175,0.15)' : 'rgba(239,68,68,0.15)',
+                            color: log.status === 'success' ? '#22c55e' : log.status === 'cancelled' ? '#9ca3af' : '#ef4444',
+                          }}>
+                            {log.status === 'success' ? t('성공', '成功') : log.status === 'cancelled' ? t('취소됨', 'キャンセル済') : t('오류', 'エラー')}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-2 text-center">
+                          <div className="flex items-center gap-1 justify-center">
+                            <button
+                              onClick={() => setExpandedLogId(expandedLogId === log.id ? null : log.id)}
+                              className="text-[10px] px-2 py-1 rounded-full cursor-pointer"
+                              style={{ background: 'rgba(99, 102, 241, 0.1)', color: '#818cf8', border: '1px solid rgba(99, 102, 241, 0.2)' }}
+                            >
+                              {t('상세', '詳細')}
+                            </button>
+                            {log.status === 'success' && (
+                              <button
+                                onClick={() => handleCancelLog(log)}
+                                className="text-[10px] px-2 py-1 rounded-full cursor-pointer"
+                                style={{ background: 'transparent', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.3)' }}
+                              >
+                                {t('취소', '取消')}
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                      {/* Expanded detail */}
+                      {expandedLogId === log.id && (
+                        <tr key={`${log.id}-detail`}>
+                          <td colSpan={6} className="px-4 py-3">
+                            <div className="text-xs space-y-1 rounded-xl p-3" style={{ background: 'var(--color-input-bg)', border: '1px solid var(--color-input-border)' }}>
+                              <div style={{ color: 'var(--color-text-secondary)' }}>
+                                <span className="font-medium">{t('파일', 'ファイル')}:</span> {log.source_file ?? '-'}
+                              </div>
+                              <div style={{ color: 'var(--color-text-secondary)' }}>
+                                <span className="font-medium">{t('업로드 일시', 'アップロード日時')}:</span> {new Date(log.created_at).toLocaleString(t('ko-KR', 'ja-JP'))}
+                              </div>
+                              <div style={{ color: 'var(--color-text-secondary)' }}>
+                                <span className="font-medium">{t('행수', '行数')}:</span> {log.row_count.toLocaleString()}{t('행', '行')}
+                              </div>
+                              <div style={{ color: 'var(--color-text-secondary)' }}>
+                                <span className="font-medium">{t('타입', 'タイプ')}:</span> {log.upload_type === 'weekly_report' ? 'Weekly Report' : t('속보치', '速報値')}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </>
                   ))}
                 </tbody>
               </table>

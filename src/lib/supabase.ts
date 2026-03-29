@@ -3,6 +3,7 @@ import type {
   DailySale, InitialSale,
   KPIData, MonthlyTrendRow, PlatformSummaryRow, TopTitleRow, GrowthAlertRow,
   PlatformDetailData, TitleSummaryRow, TitleDetailData,
+  TitleMasterRow,
 } from '@/types';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
@@ -311,5 +312,189 @@ export async function fetchPlatformHealth(channel: string, months?: number) {
   if (months) params.set('months', String(months));
   return apiFetch<{ monthly_health: Array<{ month: string; total_sales: number; active_titles: number; daily_avg: number }> }>(
     `/api/analysis/platform-health?${params}`
+  );
+}
+
+// ============================================================
+// Manage API: 작품 CRUD
+// ============================================================
+
+export async function createTitle(data: Partial<TitleMasterRow>) {
+  return apiFetch<TitleMasterRow>('/api/manage/titles', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateTitle(id: string, data: Partial<TitleMasterRow>) {
+  return apiFetch<TitleMasterRow>('/api/manage/titles', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, ...data }),
+  });
+}
+
+export async function deleteTitle(id: string) {
+  return apiFetch<{ deleted: number }>('/api/manage/titles', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id }),
+  });
+}
+
+export async function batchUpdateTitles(ids: string[], updates: Record<string, unknown>) {
+  return apiFetch<{ updated: number }>('/api/manage/titles/batch', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids, updates }),
+  });
+}
+
+// ============================================================
+// Manage API: 플랫폼 CRUD
+// ============================================================
+
+interface Platform {
+  id: number;
+  code: string;
+  name_jp: string;
+  name_kr?: string;
+  color?: string;
+  is_active?: boolean;
+  sort_order?: number;
+}
+
+export async function createPlatform(data: { code: string; name_jp: string; name_kr?: string; color?: string; sort_order?: number }) {
+  return apiFetch<Platform>('/api/manage/platforms', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updatePlatform(id: number, data: Partial<Platform>) {
+  return apiFetch<Platform>('/api/manage/platforms', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, ...data }),
+  });
+}
+
+export async function deletePlatform(id: number) {
+  return apiFetch<{ deleted: number }>('/api/manage/platforms', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id }),
+  });
+}
+
+// ============================================================
+// Manage API: 장르 CRUD
+// ============================================================
+
+interface Genre {
+  id: number;
+  code: string;
+  name_jp: string;
+  name_kr?: string;
+}
+
+export async function createGenre(data: { code: string; name_jp: string; name_kr?: string }) {
+  return apiFetch<Genre>('/api/manage/genres', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateGenre(id: number, data: Partial<Genre>) {
+  return apiFetch<Genre>('/api/manage/genres', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, ...data }),
+  });
+}
+
+export async function deleteGenre(id: number) {
+  return apiFetch<{ deleted: number }>('/api/manage/genres', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id }),
+  });
+}
+
+// ============================================================
+// Manage API: 제작사 CRUD
+// ============================================================
+
+export async function createCompany(name: string) {
+  return apiFetch<{ id: number; name: string }>('/api/manage/companies', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  });
+}
+
+export async function updateCompany(id: number, name: string) {
+  return apiFetch<{ id: number; name: string }>('/api/manage/companies', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, name }),
+  });
+}
+
+export async function deleteCompany(id: number) {
+  return apiFetch<{ deleted: number }>('/api/manage/companies', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id }),
+  });
+}
+
+export async function mergeCompanies(fromId: number, toId: number) {
+  return apiFetch<{ merged: boolean; from: number; to: number }>('/api/manage/companies', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mergeFrom: fromId, mergeTo: toId }),
+  });
+}
+
+// ============================================================
+// Manage API: 매출 데이터 수정/삭제
+// ============================================================
+
+export async function updateSalesRow(id: number, data: Partial<DailySale>) {
+  return apiFetch<DailySale>('/api/manage/sales', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, ...data }),
+  });
+}
+
+export async function deleteSalesRows(ids: number[]) {
+  return apiFetch<{ deleted: number }>('/api/manage/sales', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids }),
+  });
+}
+
+export async function confirmPreliminary(ids: number[]) {
+  return apiFetch<{ confirmed: number }>('/api/manage/sales/confirm', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids }),
+  });
+}
+
+// ============================================================
+// Manage API: 감사 로그
+// ============================================================
+
+export async function fetchAuditLogs(page = 1, limit = 50) {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  return apiFetch<{ rows: Array<{ id: string; action: string; table_name: string; record_id: string; old_data: unknown; new_data: unknown; user_info: string; created_at: string }>; count: number }>(
+    `/api/manage/audit-logs?${params}`
   );
 }

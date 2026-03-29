@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Database, Search, Download, ChevronLeft, ChevronRight,
-  ChevronDown, ChevronUp, Loader2, Filter,
+  ChevronDown, ChevronUp, Loader2, Filter, Trash2, CheckCircle, X,
 } from 'lucide-react';
 import { fetchDailySalesPage, fetchAllDailySales } from '@/lib/supabase';
 import { generateDailyRawExcel } from '@/utils/dailyRawExporter';
@@ -39,8 +39,76 @@ const cardVariants = {
 };
 
 // ============================================================
-// Helpers
+// Toast Component
 // ============================================================
+
+function Toast({ message, type, onClose }: { message: string; type: 'success' | 'error'; onClose: () => void }) {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 40 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 40 }}
+      className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium"
+      style={{
+        background: type === 'success' ? 'rgba(34, 197, 94, 0.9)' : 'rgba(239, 68, 68, 0.9)',
+        color: 'white',
+        backdropFilter: 'blur(8px)',
+      }}
+    >
+      {type === 'success' ? <CheckCircle size={16} /> : <X size={16} />}
+      {message}
+    </motion.div>
+  );
+}
+
+// ============================================================
+// Confirm Dialog
+// ============================================================
+
+function ConfirmDialog({ message, onConfirm, onCancel }: { message: string; onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}
+      onClick={onCancel}
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        className="rounded-2xl p-6 max-w-sm w-full mx-4"
+        style={{ background: 'var(--color-card-bg)', border: '1px solid var(--color-glass-border)' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <p className="text-sm mb-6" style={{ color: 'var(--color-text-primary)' }}>{message}</p>
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 rounded-xl text-xs font-medium cursor-pointer"
+            style={{ background: 'var(--color-input-bg)', color: 'var(--color-text-secondary)', border: '1px solid var(--color-input-border)' }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-4 py-2 rounded-xl text-xs font-semibold cursor-pointer"
+            style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.3)' }}
+          >
+            OK
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
 
 // ============================================================
 // Loading Skeleton
@@ -91,6 +159,21 @@ export default function DataPage() {
   // Platform list
   const [platformNames, setPlatformNames] = useState<string[]>([]);
 
+  // Selection
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
+  // Inline editing
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editValue, setEditValue] = useState('');
+  const [highlightedId, setHighlightedId] = useState<number | null>(null);
+  const editInputRef = useRef<HTMLInputElement>(null);
+
+  // Toast
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  // Confirm dialog
+  const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
+
   useEffect(() => {
     fetch('/api/sales/platforms')
       .then((res) => res.json())
@@ -116,15 +199,21 @@ export default function DataPage() {
   }, [page, platformFilter, titleSearch, startDate, endDate, sortBy, sortDir]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadPage();
   }, [loadPage]);
 
   // Reset to page 0 when filters change
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPage(0);
   }, [platformFilter, titleSearch, startDate, endDate, sortBy, sortDir]);
+
+  // Focus edit input
+  useEffect(() => {
+    if (editingId !== null && editInputRef.current) {
+      editInputRef.current.focus();
+      editInputRef.current.select();
+    }
+  }, [editingId]);
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
@@ -149,10 +238,142 @@ export default function DataPage() {
     return sortDir === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />;
   };
 
+  // ---- Selection ----
+  const toggleSelect = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === rows.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(rows.map((r) => r.id)));
+    }
+  };
+
+  // ---- Delete selected ----
+  const handleDeleteSelected = () => {
+    if (selectedIds.size === 0) return;
+    setConfirmDialog({
+      message: t(`${selectedIds.size}건을 삭제하시겠습니까?`, `${selectedIds.size}件を削除しますか？`),
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        try {
+          const res = await fetch('/api/manage/sales', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids: Array.from(selectedIds) }),
+          });
+          if (!res.ok) throw new Error('Delete failed');
+          setToast({ message: t(`${selectedIds.size}건 삭제 완료`, `${selectedIds.size}件削除しました`), type: 'success' });
+          setSelectedIds(new Set());
+          void loadPage();
+        } catch {
+          setToast({ message: t('삭제 실패', '削除に失敗しました'), type: 'error' });
+        }
+      },
+    });
+  };
+
+  // ---- Inline edit ----
+  const startEdit = (row: DailySale) => {
+    setEditingId(row.id);
+    setEditValue(String(row.sales_amount));
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditValue('');
+  };
+
+  const saveEdit = async () => {
+    if (editingId === null) return;
+    const newAmount = parseInt(editValue.replace(/[^0-9-]/g, ''), 10);
+    if (isNaN(newAmount)) { cancelEdit(); return; }
+
+    try {
+      const res = await fetch('/api/manage/sales', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: editingId, sales_amount: newAmount }),
+      });
+      if (!res.ok) throw new Error('Update failed');
+      setRows((prev) => prev.map((r) => r.id === editingId ? { ...r, sales_amount: newAmount } : r));
+      setHighlightedId(editingId);
+      setTimeout(() => setHighlightedId(null), 2000);
+      setToast({ message: t('수정 완료', '更新しました'), type: 'success' });
+    } catch {
+      setToast({ message: t('수정 실패', '更新に失敗しました'), type: 'error' });
+    }
+    cancelEdit();
+  };
+
+  // ---- Confirm sokuhochi ----
+  const handleConfirm = (ids: number[]) => {
+    setConfirmDialog({
+      message: t(`${ids.length}건을 확정 처리하시겠습니까?`, `${ids.length}件を確定しますか？`),
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        try {
+          const res = await fetch('/api/manage/sales/confirm', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids }),
+          });
+          if (!res.ok) throw new Error('Confirm failed');
+          setToast({ message: t('확정 완료', '確定しました'), type: 'success' });
+          void loadPage();
+        } catch {
+          setToast({ message: t('확정 실패', '確定に失敗しました'), type: 'error' });
+        }
+      },
+    });
+  };
+
+  // ---- Batch delete by filters (reserved for future use) ----
+  // @ts-expect-error reserved for future use
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleBatchDelete = (filter: { startDate?: string; endDate?: string; dataSource?: string; channel?: string }) => {
+    setConfirmDialog({
+      message: t('이 조건에 해당하는 데이터를 모두 삭제하시겠습니까?', 'この条件に該当するデータを全て削除しますか？'),
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        try {
+          const res = await fetch('/api/manage/sales/batch-delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(filter),
+          });
+          if (!res.ok) throw new Error('Batch delete failed');
+          setToast({ message: t('일괄 삭제 완료', '一括削除しました'), type: 'success' });
+          void loadPage();
+        } catch {
+          setToast({ message: t('일괄 삭제 실패', '一括削除に失敗しました'), type: 'error' });
+        }
+      },
+    });
+  };
+
+  // Confirm selected sokuhochi rows
+  const handleConfirmSelected = () => {
+    const sokuhochiIds = rows
+      .filter((r) => selectedIds.has(r.id) && r.data_source === 'sokuhochi')
+      .map((r) => r.id);
+    if (sokuhochiIds.length === 0) return;
+    handleConfirm(sokuhochiIds);
+  };
+
   // Date range summary
   const dateRange = rows.length > 0
     ? `${rows[rows.length - 1]?.sale_date ?? ''} ~ ${rows[0]?.sale_date ?? ''}`
     : '';
+
+  const selectedSokuhochiCount = rows.filter((r) => selectedIds.has(r.id) && r.data_source === 'sokuhochi').length;
 
   return (
     <motion.div
@@ -160,6 +381,22 @@ export default function DataPage() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
     >
+      {/* Toast */}
+      <AnimatePresence>
+        {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      </AnimatePresence>
+
+      {/* Confirm Dialog */}
+      <AnimatePresence>
+        {confirmDialog && (
+          <ConfirmDialog
+            message={confirmDialog.message}
+            onConfirm={confirmDialog.onConfirm}
+            onCancel={() => setConfirmDialog(null)}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Header */}
       <div className="flex items-center gap-3 mb-8">
         <div
@@ -267,6 +504,62 @@ export default function DataPage() {
           )}
         </motion.div>
 
+        {/* Toolbar - shown when items selected */}
+        <AnimatePresence>
+          {selectedIds.size > 0 && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              variants={cardVariants}
+              className="rounded-2xl px-4 py-3 flex items-center gap-3 flex-wrap"
+              style={{ ...GLASS_CARD, border: '1px solid rgba(99, 102, 241, 0.3)' }}
+            >
+              <span className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                {selectedIds.size}{t('건 선택', '件選択')}
+              </span>
+
+              <motion.button
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.96 }}
+                onClick={handleDeleteSelected}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer"
+                style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.3)' }}
+              >
+                <Trash2 size={12} />
+                {t('삭제', '削除')}
+                <span className="ml-0.5 px-1.5 py-0.5 rounded-full text-[10px]" style={{ background: 'rgba(239, 68, 68, 0.2)' }}>
+                  {selectedIds.size}
+                </span>
+              </motion.button>
+
+              {selectedSokuhochiCount > 0 && (
+                <motion.button
+                  whileHover={{ scale: 1.04 }}
+                  whileTap={{ scale: 0.96 }}
+                  onClick={handleConfirmSelected}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer"
+                  style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e', border: '1px solid rgba(34, 197, 94, 0.3)' }}
+                >
+                  <CheckCircle size={12} />
+                  {t('확정', '確定')}
+                  <span className="ml-0.5 px-1.5 py-0.5 rounded-full text-[10px]" style={{ background: 'rgba(34, 197, 94, 0.2)' }}>
+                    {selectedSokuhochiCount}
+                  </span>
+                </motion.button>
+              )}
+
+              <button
+                onClick={() => setSelectedIds(new Set())}
+                className="ml-auto text-xs cursor-pointer"
+                style={{ color: 'var(--color-text-muted)' }}
+              >
+                {t('선택 해제', '選択解除')}
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Summary bar */}
         <motion.div variants={cardVariants} className="flex flex-wrap items-center justify-between gap-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
           <span>{totalCount.toLocaleString()} {t('건', '件')} {dateRange && `| ${dateRange}`}</span>
@@ -278,9 +571,18 @@ export default function DataPage() {
           <TableSkeleton />
         ) : (
           <motion.div variants={cardVariants} className="rounded-2xl p-4 overflow-x-auto" style={GLASS_CARD}>
-            <table className="w-full text-sm min-w-[700px] table-striped">
+            <table className="w-full text-sm min-w-[800px] table-striped">
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--color-table-border)' }}>
+                  {/* Checkbox header */}
+                  <th className="py-3 px-2 w-10">
+                    <input
+                      type="checkbox"
+                      checked={rows.length > 0 && selectedIds.size === rows.length}
+                      onChange={toggleSelectAll}
+                      className="w-4 h-4 rounded cursor-pointer accent-indigo-500"
+                    />
+                  </th>
                   {[
                     { key: 'sale_date', label: t('날짜', '日付'), align: 'left' as const },
                     { key: 'title_jp', label: t('작품(JP)', 'タイトル(JP)'), align: 'left' as const },
@@ -288,15 +590,16 @@ export default function DataPage() {
                     { key: 'channel', label: 'PF', align: 'left' as const },
                     { key: 'sales_amount', label: t('매출', '売上'), align: 'right' as const },
                     { key: 'data_source', label: t('소스', 'ソース'), align: 'center' as const },
+                    { key: '_actions', label: '', align: 'center' as const },
                   ].map((col) => (
                     <th
                       key={col.key}
-                      className={`py-3 px-2 font-medium cursor-pointer select-none text-${col.align}`}
+                      className={`py-3 px-2 font-medium ${col.key !== '_actions' ? 'cursor-pointer' : ''} select-none text-${col.align}`}
                       style={{ color: 'var(--color-text-secondary)' }}
-                      onClick={() => handleSort(col.key)}
+                      onClick={() => col.key !== '_actions' && handleSort(col.key)}
                     >
                       <span className="inline-flex items-center gap-1">
-                        {col.label} <SortIcon col={col.key} />
+                        {col.label} {col.key !== '_actions' && <SortIcon col={col.key} />}
                       </span>
                     </th>
                   ))}
@@ -304,8 +607,33 @@ export default function DataPage() {
               </thead>
               <tbody>
                 {rows.map((row) => {
+                  const isEditing = editingId === row.id;
+                  const isHighlighted = highlightedId === row.id;
+                  const isSelected = selectedIds.has(row.id);
+
                   return (
-                    <tr key={row.id} style={{ borderBottom: '1px solid var(--color-table-border-subtle)' }} className="hover:bg-[var(--color-glass)] transition-colors">
+                    <tr
+                      key={row.id}
+                      style={{
+                        borderBottom: '1px solid var(--color-table-border-subtle)',
+                        background: isHighlighted
+                          ? 'rgba(99, 102, 241, 0.1)'
+                          : isSelected
+                            ? 'rgba(99, 102, 241, 0.05)'
+                            : undefined,
+                        transition: 'background 0.3s',
+                      }}
+                      className="hover:bg-[var(--color-glass)]"
+                    >
+                      {/* Checkbox */}
+                      <td className="py-3 px-2">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelect(row.id)}
+                          className="w-4 h-4 rounded cursor-pointer accent-indigo-500"
+                        />
+                      </td>
                       <td className="py-3 px-2 font-mono text-xs" style={{ color: 'var(--color-text-secondary)' }}>{row.sale_date}</td>
                       <td className="py-3 px-2" style={{ maxWidth: '200px' }}>
                         <p className="font-medium truncate" title={row.title_jp} style={{ color: 'var(--color-text-primary)' }}>{row.title_jp}</p>
@@ -316,8 +644,35 @@ export default function DataPage() {
                       <td className="py-3 px-2">
                         <PlatformBadge name={row.channel} showName={false} size="sm" />
                       </td>
-                      <td className="py-3 px-2 text-right font-mono font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                        {formatCurrency(row.sales_amount)}
+                      {/* Sales amount - inline editable */}
+                      <td
+                        className="py-3 px-2 text-right font-mono font-semibold"
+                        style={{ color: 'var(--color-text-primary)' }}
+                        onDoubleClick={() => startEdit(row)}
+                      >
+                        {isEditing ? (
+                          <input
+                            ref={editInputRef}
+                            type="text"
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') saveEdit();
+                              if (e.key === 'Escape') cancelEdit();
+                            }}
+                            onBlur={saveEdit}
+                            className="w-full text-right text-sm font-mono font-semibold px-2 py-1 rounded-lg outline-none"
+                            style={{
+                              background: 'var(--color-input-bg)',
+                              color: 'var(--color-text-primary)',
+                              border: '2px solid rgba(99, 102, 241, 0.5)',
+                            }}
+                          />
+                        ) : (
+                          <span className="cursor-pointer hover:underline" title={t('더블클릭으로 수정', 'ダブルクリックで編集')}>
+                            {formatCurrency(row.sales_amount)}
+                          </span>
+                        )}
                       </td>
                       <td className="py-3 px-2 text-center">
                         <span
@@ -333,6 +688,24 @@ export default function DataPage() {
                           <span className="ml-1 text-[10px] px-1 py-0.5 rounded" style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#f87171' }}>
                             {t('잠정', '暫定')}
                           </span>
+                        )}
+                      </td>
+                      {/* Actions */}
+                      <td className="py-3 px-2 text-center">
+                        {row.data_source === 'sokuhochi' && (
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => handleConfirm([row.id])}
+                            className="text-[10px] px-2 py-1 rounded-full font-semibold cursor-pointer"
+                            style={{
+                              background: 'rgba(34, 197, 94, 0.15)',
+                              color: '#22c55e',
+                              border: '1px solid rgba(34, 197, 94, 0.3)',
+                            }}
+                          >
+                            {t('확정', '確定')}
+                          </motion.button>
                         )}
                       </td>
                     </tr>
