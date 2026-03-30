@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip,
@@ -10,7 +10,8 @@ import {
   Monitor, TrendingUp, BarChart3, ChevronUp, ChevronDown, Minus,
   Activity, PieChart, X, Check, Hash, CalendarDays,
 } from 'lucide-react';
-import { fetchPlatformSummary, fetchPlatformDetail } from '@/lib/supabase';
+import { usePlatformSummary, usePlatformDetail } from '@/hooks/useData';
+import { fetchPlatformDetail } from '@/lib/supabase';
 import { getPlatformColor, getPlatformBrand, getPlatformLogo } from '@/utils/platformConfig';
 import { useApp } from '@/context/AppContext';
 import type { PlatformSummaryRow, PlatformDetailData } from '@/types';
@@ -118,12 +119,33 @@ const TOP_N_OPTIONS = [5, 10, 20, 50];
 export default function PlatformAnalysisPage() {
   const { formatCurrency, t } = useApp();
 
-  // Core state
-  const [loading, setLoading] = useState(true);
-  const [platformSummary, setPlatformSummary] = useState<PlatformSummaryRow[]>([]);
+  // SWR data hooks
+  const { data: platformSummaryRaw } = usePlatformSummary();
+  const platformSummary = useMemo<PlatformSummaryRow[]>(() => platformSummaryRaw ?? [], [platformSummaryRaw]);
+  const loading = !platformSummaryRaw;
+
+  // Auto-select first platform once data loads
   const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
-  const [detailData, setDetailData] = useState<PlatformDetailData | null>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
+
+  // Use SWR for detail of selected platform (non-compare mode)
+  const { data: platformDetailSWR, isValidating: platformDetailValidating } = usePlatformDetail(
+    selectedPlatform && !loading ? selectedPlatform : null
+  );
+
+  // Derive detail state from SWR (no more separate useState + useEffect)
+  const detailData = useMemo<PlatformDetailData | null>(() => {
+    return (platformDetailSWR as PlatformDetailData) ?? null;
+  }, [platformDetailSWR]);
+  const detailLoading = platformDetailValidating && !platformDetailSWR;
+
+  useEffect(() => {
+    if (platformSummary.length > 0 && selectedPlatform === null) {
+      setSelectedPlatform(platformSummary[0].channel); // eslint-disable-line react-hooks/set-state-in-effect
+    }
+  }, [platformSummary, selectedPlatform]);
+
+  // C2: Previous period summary for growth (use same data as current)
+  const prevSummary: PlatformSummaryRow[] = platformSummary;
 
   // Detail tab
   const [detailTab, setDetailTab] = useState<DetailTab>('trend');
@@ -138,9 +160,6 @@ export default function PlatformAnalysisPage() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  // C2: Previous period summary for growth
-  const [prevSummary, setPrevSummary] = useState<PlatformSummaryRow[]>([]);
-
   // C8: Top N
   const [topN, setTopN] = useState(10);
 
@@ -150,40 +169,7 @@ export default function PlatformAnalysisPage() {
     return value.toLocaleString();
   };
 
-  // ─── Data loading ──────────────────────────────────────────
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
-      try {
-        const data = await fetchPlatformSummary();
-        const rows = data ?? [];
-        setPlatformSummary(rows);
-        setPrevSummary(rows);
-        if (rows.length > 0) setSelectedPlatform(rows[0].channel);
-      } catch (err) {
-        console.error('Failed to load platform summary:', err);
-      }
-      setLoading(false);
-    }
-    load();
-  }, []);
-
-  const loadPlatformDetail = useCallback(async (channel: string) => {
-    setDetailLoading(true);
-    try {
-      const data = await fetchPlatformDetail(channel);
-      setDetailData(data);
-    } catch (err) {
-      console.error('Failed to load platform detail:', err);
-      setDetailData(null);
-    }
-    setDetailLoading(false);
-  }, []);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- async data fetch on selection change
-    if (selectedPlatform && !compareMode) loadPlatformDetail(selectedPlatform);
-  }, [selectedPlatform, compareMode, loadPlatformDetail]);
+  // Compare mode still uses manual fetch for multiple platforms
 
   useEffect(() => {
     if (!compareMode || comparePlatforms.length === 0) return;

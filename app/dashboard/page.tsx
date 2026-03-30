@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip,
@@ -12,18 +12,18 @@ import {
   BookOpen,
 } from 'lucide-react';
 import {
-  fetchDashboardKPIs, fetchMonthlyTrend, fetchPlatformSummary,
-  fetchTopTitles, fetchGrowthAlerts,
-  fetchPeriodKpis, fetchGenreSummary, fetchCompanySummary,
-  fetchFormatSummary, fetchDailyTrend, fetchWeeklyTrend,
-} from '@/lib/supabase';
+  useDashboardKPIs, useMonthlyTrend, usePlatformSummary,
+  useTopTitles, useGrowthAlerts, usePeriodKpis,
+  useGenreSummary, useCompanySummary,
+  useDailyTrend, useWeeklyTrend,
+} from '@/hooks/useData';
 import { getPlatformColor, getPlatformBrand, PLATFORM_BRANDS } from '@/utils/platformConfig';
 import { PlatformBadge } from '@/components/PlatformBadge';
 import { useApp } from '@/context/AppContext';
 import { useRouter } from 'next/navigation';
 import type {
-  KPIData, MonthlyTrendRow, PlatformSummaryRow, TopTitleRow, GrowthAlertRow,
-  GenreSalesRow, CompanySalesRow, FormatSalesRow, DailyTrendRow, WeeklyTrendRow,
+  MonthlyTrendRow, PlatformSummaryRow, TopTitleRow, GrowthAlertRow,
+  GenreSalesRow, CompanySalesRow, DailyTrendRow, WeeklyTrendRow,
 } from '@/types';
 
 import StatusKPICard from '@/components/dashboard/StatusKPICard';
@@ -174,9 +174,6 @@ export default function DashboardPage() {
   const { formatCurrency, t } = useApp();
   const router = useRouter();
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
   // Date range
   const defaultRange = useMemo(() => getThisMonthRange(), []);
   const [startDate] = useState(defaultRange.start);
@@ -197,92 +194,62 @@ export default function DashboardPage() {
     return 0;
   });
 
-  // Core data
-  const [kpis, setKpis] = useState<KPIData | null>(null);
-  const [monthlyTrend, setMonthlyTrend] = useState<MonthlyTrendRow[]>([]);
-  const [platformSummary, setPlatformSummary] = useState<PlatformSummaryRow[]>([]);
-  const [topTitles, setTopTitles] = useState<TopTitleRow[]>([]);
-  const [growthAlerts, setGrowthAlerts] = useState<GrowthAlertRow[]>([]);
-  const [yoyKpis, setYoyKpis] = useState<{ total_sales: number } | null>(null);
-  const [genreSummary, setGenreSummary] = useState<GenreSalesRow[]>([]);
-  const [companySummary, setCompanySummary] = useState<CompanySalesRow[]>([]);
-  const [, setFormatSummary] = useState<FormatSalesRow[]>([]);
-  const [dailyTrend, setDailyTrend] = useState<DailyTrendRow[]>([]);
-  const [weeklyTrend, setWeeklyTrend] = useState<WeeklyTrendRow[]>([]);
+  // SWR data hooks
+  const sd = startDate || undefined;
+  const ed = endDate || undefined;
+
+  const { data: kpis, error: kpiError } = useDashboardKPIs();
+  const { data: monthlyTrendRaw } = useMonthlyTrend();
+  const { data: platformSummaryRaw } = usePlatformSummary();
+  const { data: topTitlesRaw } = useTopTitles(20);
+  const { data: growthAlertsRaw } = useGrowthAlerts();
+  const { data: genreSummaryRaw } = useGenreSummary(sd, ed);
+  const { data: companySummaryRaw } = useCompanySummary(sd, ed);
+  const { data: dailyTrendRaw } = useDailyTrend(sd, ed);
+  const { data: weeklyTrendRaw } = useWeeklyTrend(sd, ed);
+
+  // YoY
+  const yoyRange = useMemo(() => startDate && endDate ? getYoYRange(startDate, endDate) : null, [startDate, endDate]);
+  const { data: yoyKpis } = usePeriodKpis(yoyRange?.start ?? '', yoyRange?.end ?? '');
+
+  // Normalize SWR data with fallbacks (memoized to keep stable references)
+  const monthlyTrend = useMemo<MonthlyTrendRow[]>(() => monthlyTrendRaw ?? [], [monthlyTrendRaw]);
+  const platformSummary = useMemo<PlatformSummaryRow[]>(() => platformSummaryRaw ?? [], [platformSummaryRaw]);
+  const topTitles = useMemo<TopTitleRow[]>(() => topTitlesRaw ?? [], [topTitlesRaw]);
+  const growthAlerts = useMemo<GrowthAlertRow[]>(() => growthAlertsRaw ?? [], [growthAlertsRaw]);
+  const genreSummary = useMemo<GenreSalesRow[]>(() => (genreSummaryRaw ?? []) as GenreSalesRow[], [genreSummaryRaw]);
+  const companySummary = useMemo<CompanySalesRow[]>(() => (companySummaryRaw ?? []) as CompanySalesRow[], [companySummaryRaw]);
+  const dailyTrend = useMemo<DailyTrendRow[]>(() => (dailyTrendRaw ?? []) as DailyTrendRow[], [dailyTrendRaw]);
+  const weeklyTrend = useMemo<WeeklyTrendRow[]>(() => (weeklyTrendRaw ?? []) as WeeklyTrendRow[], [weeklyTrendRaw]);
+
+  const loading = !kpis && !monthlyTrendRaw;
+  const error = kpiError ? (kpiError instanceof Error ? kpiError.message : 'Failed to load data') : null;
 
   // Data freshness
-  const [lastDataDate, setLastDataDate] = useState('');
+  const [freshnessDate, setFreshnessDate] = useState('');
   const [hasPreliminary, setHasPreliminary] = useState(false);
 
-  // ---------- Data loading ----------
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const sd = startDate || undefined;
-      const ed = endDate || undefined;
+  const lastDataDate = useMemo(() => {
+    if (freshnessDate) return freshnessDate;
+    if (monthlyTrend.length > 0) return monthlyTrend[monthlyTrend.length - 1].month;
+    return '';
+  }, [freshnessDate, monthlyTrend]);
 
-      const [
-        kpiResult, trendResult, platformResult, titleResult, alertResult,
-        genreResult, companyResult, formatResult, dailyResult, weeklyResult,
-      ] = await Promise.allSettled([
-        fetchDashboardKPIs(),
-        fetchMonthlyTrend(),
-        fetchPlatformSummary(),
-        fetchTopTitles(20),
-        fetchGrowthAlerts(),
-        fetchGenreSummary(sd, ed).catch(() => []),
-        fetchCompanySummary(sd, ed).catch(() => []),
-        fetchFormatSummary(sd, ed).catch(() => []),
-        fetchDailyTrend(sd, ed).catch(() => []),
-        fetchWeeklyTrend(sd, ed).catch(() => []),
-      ]);
-
-      if (kpiResult.status === 'fulfilled') setKpis(kpiResult.value);
-      if (trendResult.status === 'fulfilled') {
-        const trend = trendResult.value ?? [];
-        setMonthlyTrend(trend);
-        if (trend.length > 0) setLastDataDate(trend[trend.length - 1].month);
-      }
-      if (platformResult.status === 'fulfilled') setPlatformSummary(platformResult.value ?? []);
-      if (titleResult.status === 'fulfilled') setTopTitles(titleResult.value ?? []);
-      if (alertResult.status === 'fulfilled') setGrowthAlerts(alertResult.value ?? []);
-      if (genreResult.status === 'fulfilled') setGenreSummary((genreResult.value ?? []) as GenreSalesRow[]);
-      if (companyResult.status === 'fulfilled') setCompanySummary((companyResult.value ?? []) as CompanySalesRow[]);
-      if (formatResult.status === 'fulfilled') setFormatSummary((formatResult.value ?? []) as FormatSalesRow[]);
-      if (dailyResult.status === 'fulfilled') setDailyTrend((dailyResult.value ?? []) as DailyTrendRow[]);
-      if (weeklyResult.status === 'fulfilled') setWeeklyTrend((weeklyResult.value ?? []) as WeeklyTrendRow[]);
-
-      // YoY
-      if (startDate && endDate) {
-        const yoy = getYoYRange(startDate, endDate);
-        fetchPeriodKpis(yoy.start, yoy.end)
-          .then((r) => setYoyKpis(r))
-          .catch(() => setYoyKpis(null));
-      }
-
-      // Data freshness
+  useEffect(() => {
+    async function checkFreshness() {
       try {
         const res = await fetch('/api/sales/paginated?page=1&pageSize=1&sortBy=sale_date&sortDir=desc');
         if (res.ok) {
           const data = await res.json();
           if (data.rows?.[0]) {
-            setLastDataDate(data.rows[0].sale_date);
+            setFreshnessDate(data.rows[0].sale_date);
             setHasPreliminary(data.rows[0].is_preliminary === true);
           }
         }
       } catch { /* non-critical */ }
-
-      setLoading(false);
-    } catch (err: unknown) {
-      console.error('Dashboard data load error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load data');
-      setLoading(false);
     }
-  }, [startDate, endDate]);
-
-  useEffect(() => { loadData(); // eslint-disable-line react-hooks/set-state-in-effect
-  }, [loadData]);
+    checkFreshness();
+  }, []);
 
   // ---------- Derived data ----------
   const yoyChange = useMemo(() => {
@@ -328,7 +295,7 @@ export default function DashboardPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
         <p style={{ color: '#ef4444', fontSize: 14 }}>Error: {error}</p>
-        <button onClick={loadData} className="px-4 py-2 rounded-lg text-sm font-medium"
+        <button onClick={() => window.location.reload()} className="px-4 py-2 rounded-lg text-sm font-medium"
           style={{ background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', color: '#fff' }}>
           {t('재시도', 'リトライ')}
         </button>

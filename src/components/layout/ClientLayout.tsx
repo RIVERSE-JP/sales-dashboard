@@ -20,8 +20,9 @@ import {
   X,
   Clock,
 } from 'lucide-react';
+import { SWRConfig } from 'swr';
 import { AppProvider, useApp } from '@/context/AppContext';
-import { clearAllCache, prefetchAllData } from '@/lib/supabase';
+import { clearAllCache } from '@/lib/supabase';
 
 // ---------------------------------------------------------------------------
 // Navigation config – grouped by executive thinking flow
@@ -195,14 +196,12 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
           onClick={() => {
             clearAllCache();
             router.push('/dashboard');
-            prefetchAllData();
             setMobileOpen(false);
           }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               clearAllCache();
               router.push('/dashboard');
-              prefetchAllData();
               setMobileOpen(false);
             }
           }}
@@ -640,9 +639,14 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   return (
     <AppProvider>
-      <Suspense>
-        <LayoutInner>{children}</LayoutInner>
-      </Suspense>
+      <SWRConfig value={{
+        revalidateOnFocus: false,
+        keepPreviousData: true,
+      }}>
+        <Suspense>
+          <LayoutInner>{children}</LayoutInner>
+        </Suspense>
+      </SWRConfig>
     </AppProvider>
   );
 }

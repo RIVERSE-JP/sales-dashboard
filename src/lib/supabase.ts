@@ -133,32 +133,12 @@ export async function fetchGrowthAlerts(): Promise<GrowthAlertRow[]> {
 // Prefetch ALL page data on app startup (background)
 // ============================================================
 
-let _prefetchStarted = false;
-
 export function clearAllCache() {
-  _prefetchStarted = false;
-  // Optionally call revalidate API if needed
+  // SWR handles caching — no manual prefetch needed
 }
 
 export function prefetchAllData() {
-  if (_prefetchStarted) return;
-  _prefetchStarted = true;
-
-  // Stage 1: Critical KPIs first
-  Promise.allSettled([
-    fetchDashboardKPIs(),
-    fetchMonthlyTrend(),
-    fetchPlatformSummary(),
-  ]);
-
-  // Stage 2: Secondary data after 1s delay
-  setTimeout(() => {
-    Promise.allSettled([
-      fetchTopTitles(20),
-      fetchGrowthAlerts(),
-      fetchTitleSummaries(),
-    ]);
-  }, 1000);
+  // SWR handles caching — no manual prefetch needed
 }
 
 export async function fetchTitleSummaries(): Promise<TitleSummaryRow[]> {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useTitleSummaries, useTitleMaster, useGenres, useTitleRankings } from '@/hooks/useData';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip,
@@ -8,7 +9,7 @@ import {
 } from 'recharts';
 import { BookOpen, ArrowLeft, GitCompare, CheckSquare, Square } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
-import { fetchTitleSummaries, fetchTitleDetail, fetchTitleMaster, fetchGenres, fetchTitleRankings } from '@/lib/supabase';
+import { fetchTitleDetail } from '@/lib/supabase';
 import { getPlatformColor } from '@/utils/platformConfig';
 import { PlatformBadge } from '@/components/PlatformBadge';
 import { useApp } from '@/context/AppContext';
@@ -76,12 +77,32 @@ export default function TitleAnalysisPage() {
   const searchParams = useSearchParams();
   const highlightTitle = searchParams.get('highlight');
 
-  // Core state
-  const [loading, setLoading] = useState(true);
-  const [titles, setTitles] = useState<TitleSummaryRow[]>([]);
-  const [titleMaster, setTitleMaster] = useState<TitleMasterRow[]>([]);
-  const [genres, setGenres] = useState<Array<{ id: number; name: string }>>([]);
-  const [rankings, setRankings] = useState<TitleRankingRow[]>([]);
+  // SWR data hooks
+  const { data: summariesRaw } = useTitleSummaries();
+  const { data: masterRaw } = useTitleMaster();
+  const { data: genreListRaw } = useGenres();
+
+  const { currentStart, currentEnd, prevStart, prevEnd } = useMemo(() => getDateRangeForRanking(), []);
+  const { data: rankingsRaw } = useTitleRankings(currentStart, currentEnd, prevStart, prevEnd);
+
+  // Normalize SWR data
+  const titles = useMemo<TitleSummaryRow[]>(() => {
+    if (!summariesRaw) return [];
+    return (summariesRaw as TitleSummaryRow[]).map((row: TitleSummaryRow) => ({
+      title_jp: row.title_jp,
+      title_kr: row.title_kr,
+      channels: row.channels ?? [],
+      first_date: row.first_date,
+      total_sales: row.total_sales,
+      day_count: row.day_count,
+    })).sort((a: TitleSummaryRow, b: TitleSummaryRow) => b.total_sales - a.total_sales);
+  }, [summariesRaw]);
+
+  const titleMaster = useMemo<TitleMasterRow[]>(() => (masterRaw as unknown as TitleMasterRow[]) ?? [], [masterRaw]);
+  const genres = useMemo<Array<{ id: number; name: string }>>(() => genreListRaw ?? [], [genreListRaw]);
+  const rankings = useMemo<TitleRankingRow[]>(() => rankingsRaw ?? [], [rankingsRaw]);
+
+  const loading = !summariesRaw && !masterRaw;
 
   // Detail state
   const [selectedTitle, setSelectedTitle] = useState<string | null>(null);
@@ -109,48 +130,6 @@ export default function TitleAnalysisPage() {
   // Period compare (B4) — for detail view
   const [periodA, setPeriodA] = useState({ start: '', end: '' });
   const [periodB, setPeriodB] = useState({ start: '', end: '' });
-
-  // ============================================================
-  // Data loading
-  // ============================================================
-
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
-      try {
-        const [summaries, master, genreList] = await Promise.all([
-          fetchTitleSummaries(),
-          fetchTitleMaster(),
-          fetchGenres(),
-        ]);
-
-        const result: TitleSummaryRow[] = (summaries ?? []).map((row: TitleSummaryRow) => ({
-          title_jp: row.title_jp,
-          title_kr: row.title_kr,
-          channels: row.channels ?? [],
-          first_date: row.first_date,
-          total_sales: row.total_sales,
-          day_count: row.day_count,
-        }));
-        setTitles(result.sort((a, b) => b.total_sales - a.total_sales));
-        setTitleMaster((master as unknown as TitleMasterRow[]) ?? []);
-        setGenres(genreList ?? []);
-
-        // Fetch rankings (B9)
-        try {
-          const { currentStart, currentEnd, prevStart, prevEnd } = getDateRangeForRanking();
-          const rankData = await fetchTitleRankings(currentStart, currentEnd, prevStart, prevEnd, 200);
-          setRankings(rankData ?? []);
-        } catch {
-          // non-critical
-        }
-      } catch (err) {
-        console.error('Failed to load title data:', err);
-      }
-      setLoading(false);
-    }
-    load();
-  }, []);
 
   // ============================================================
   // Title master map
