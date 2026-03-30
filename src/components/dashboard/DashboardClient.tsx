@@ -8,7 +8,7 @@ import {
 } from 'recharts';
 import {
   LayoutDashboard, TrendingUp, TrendingDown, AlertTriangle, Rocket,
-  Clock, Zap, ChevronRight, Activity, BarChart3, Globe, Layers, Building2,
+  Zap, ChevronRight, ChevronLeft, Activity, BarChart3, Globe, Layers, Building2,
   BookOpen,
 } from 'lucide-react';
 import {
@@ -192,8 +192,9 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
 
   // Date range
   const defaultRange = useMemo(() => getThisMonthRange(), []);
-  const [startDate] = useState(defaultRange.start);
-  const [endDate] = useState(defaultRange.end);
+  const [startDate, setStartDate] = useState(defaultRange.start);
+  const [endDate, setEndDate] = useState(defaultRange.end);
+  const [activePreset, setActivePreset] = useState('thisMonth');
 
   // Tab
   const [activeTab, setActiveTab] = useState<TabId>('status');
@@ -348,20 +349,96 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
           </p>
         </div>
 
-        {/* Freshness & preliminary badges */}
-        <div className="flex items-center gap-2 shrink-0">
-          {hasPreliminary && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold"
-              style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.2)' }}>
-              <Zap size={13} />
-              {t('속보치', '速報値')}
+        {/* Date selector + badges */}
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          {/* 월 선택 네비게이션 */}
+          <div className="flex items-center gap-1 rounded-xl px-1 py-1" style={{ background: 'var(--color-glass)', border: '1px solid var(--color-glass-border)' }}>
+            <button
+              onClick={() => {
+                const d = new Date(startDate);
+                d.setMonth(d.getMonth() - 1);
+                const y = d.getFullYear();
+                const m = d.getMonth();
+                setStartDate(`${y}-${String(m + 1).padStart(2, '0')}-01`);
+                const lastDay = new Date(y, m + 1, 0);
+                setEndDate(lastDay.toISOString().slice(0, 10));
+                setActivePreset('custom');
+              }}
+              className="p-1.5 rounded-lg transition-colors hover:brightness-125"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <span className="text-[14px] font-bold px-3 min-w-[140px] text-center" style={{ color: 'var(--color-text-primary)' }}>
+              {(() => {
+                const d = new Date(startDate);
+                return `${d.getFullYear()}${t('년', '年')} ${d.getMonth() + 1}${t('월', '月')}`;
+              })()}
             </span>
-          )}
-          {lastDataDate && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px]"
-              style={{ background: 'var(--color-surface)', border: '1px solid var(--color-glass-border)', color: 'var(--color-text-secondary)' }}>
-              <Clock size={12} />
-              {lastDataDate}
+            <button
+              onClick={() => {
+                const d = new Date(startDate);
+                d.setMonth(d.getMonth() + 1);
+                const y = d.getFullYear();
+                const m = d.getMonth();
+                setStartDate(`${y}-${String(m + 1).padStart(2, '0')}-01`);
+                const lastDay = new Date(y, m + 1, 0);
+                const today = new Date();
+                setEndDate(lastDay > today ? today.toISOString().slice(0, 10) : lastDay.toISOString().slice(0, 10));
+                setActivePreset('custom');
+              }}
+              className="p-1.5 rounded-lg transition-colors hover:brightness-125"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+
+          {/* 프리셋 버튼 */}
+          {[
+            { id: 'thisMonth', ko: '이번달', ja: '今月' },
+            { id: 'lastMonth', ko: '지난달', ja: '先月' },
+            { id: 'thisYear', ko: '올해', ja: '今年' },
+            { id: 'all', ko: '전체', ja: '全体' },
+          ].map((preset) => (
+            <button
+              key={preset.id}
+              onClick={() => {
+                setActivePreset(preset.id);
+                const now = new Date();
+                if (preset.id === 'thisMonth') {
+                  setStartDate(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`);
+                  setEndDate(now.toISOString().slice(0, 10));
+                } else if (preset.id === 'lastMonth') {
+                  const lm = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                  setStartDate(`${lm.getFullYear()}-${String(lm.getMonth() + 1).padStart(2, '0')}-01`);
+                  const lastDay = new Date(lm.getFullYear(), lm.getMonth() + 1, 0);
+                  setEndDate(lastDay.toISOString().slice(0, 10));
+                } else if (preset.id === 'thisYear') {
+                  setStartDate(`${now.getFullYear()}-01-01`);
+                  setEndDate(now.toISOString().slice(0, 10));
+                } else {
+                  setStartDate('2020-01-01');
+                  setEndDate(now.toISOString().slice(0, 10));
+                }
+              }}
+              className="px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all"
+              style={{
+                background: activePreset === preset.id ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'var(--color-glass)',
+                color: activePreset === preset.id ? '#fff' : 'var(--color-text-secondary)',
+                border: `1px solid ${activePreset === preset.id ? 'transparent' : 'var(--color-glass-border)'}`,
+              }}
+            >
+              {t(preset.ko, preset.ja)}
+            </button>
+          ))}
+
+          {/* 속보치 배지 */}
+          {hasPreliminary && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold"
+              style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b' }}>
+              <Zap size={12} />
+              {t('속보치', '速報値')}
             </span>
           )}
         </div>
@@ -415,14 +492,12 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
               icon={<Activity size={16} />}
             />
             <StatusKPICard
-              label={t('목표 달성', '目標達成')}
-              value={goalRate ?? 0}
-              formatter={(v) => salesGoal > 0 ? `${v.toFixed(1)}%` : '—'}
-              status={goalRate === null ? 'neutral' : goalRate >= 100 ? 'good' : goalRate >= 70 ? 'warn' : 'bad'}
-              gauge={goalRate}
-              gaugeLabel={salesGoal > 0 ? `${formatCurrency(kpis.this_month_sales)} / ${formatCurrency(salesGoal)}` : t('목표 미설정', '目標未設定')}
+              label={t('활성 작품/PF', 'アクティブ')}
+              value={kpis.active_titles}
+              formatter={(v) => `${v}${t('작품', '作品')} / ${kpis.active_platforms}PF`}
+              status="neutral"
               delay={0.24}
-              icon={<Rocket size={16} />}
+              icon={<BookOpen size={16} />}
             />
           </div>
 
