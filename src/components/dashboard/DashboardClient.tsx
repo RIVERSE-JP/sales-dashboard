@@ -209,7 +209,7 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
   const sd = startDate || undefined;
   const ed = endDate || undefined;
 
-  const { data: kpisRaw, error: kpiError } = useDashboardKPIs();
+  const { data: kpisRaw } = useDashboardKPIs();
   const { data: monthlyTrendRaw } = useMonthlyTrend();
   const { data: platformSummaryRaw } = usePlatformSummary();
   const { data: topTitlesRaw } = useTopTitles(20);
@@ -258,8 +258,8 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
   const dailyTrend = useMemo<DailyTrendRow[]>(() => (dailyTrendRaw ?? []) as DailyTrendRow[], [dailyTrendRaw]);
   const weeklyTrend = useMemo<WeeklyTrendRow[]>(() => (weeklyTrendRaw ?? []) as WeeklyTrendRow[], [weeklyTrendRaw]);
 
-  const isError = !!kpiError;
-  const loading = !kpis && !isError && !initialData?.kpis;
+  // 데이터가 없으면 로딩 (에러 중에도 재시도 대기하므로 로딩 유지)
+  const loading = !kpis;
 
   // Data freshness
   const [freshnessDate, setFreshnessDate] = useState('');
@@ -326,18 +326,7 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
   }));
   // genreTotal removed — ranking bars used instead of percentage
 
-  // ---------- Error state ----------
-  if (isError && !kpis) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <p style={{ color: '#ef4444', fontSize: 14 }}>{t('데이터를 불러오지 못했습니다.', 'データの読み込みに失敗しました。')}</p>
-        <button onClick={() => window.location.reload()} className="px-4 py-2 rounded-lg text-sm font-medium"
-          style={{ background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', color: '#fff' }}>
-          {t('재시도', 'リトライ')}
-        </button>
-      </div>
-    );
-  }
+  // Error state removed — loading skeleton shown while SWR retries
 
   // =================================================================
   // RENDER
@@ -467,25 +456,10 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
           <ChartSkeleton height={400} />
         </div>
       ) : !kpis ? (
-        <div className="rounded-2xl p-12 flex flex-col items-center justify-center min-h-[300px]" style={GLASS_CARD}>
-          <BookOpen size={48} style={{ color: 'var(--color-text-muted)' }} className="mb-4" />
-          <p style={{ color: 'var(--color-text-muted)', fontSize: 15 }} className="mb-4">
-            {isError
-              ? t('데이터를 불러오지 못했습니다.', 'データの読み込みに失敗しました。')
-              : t('데이터가 없습니다. 업로드 후 시작하세요.', 'データがありません。アップロードしてください。')}
-          </p>
-          {isError && (
-            <button
-              onClick={() => window.location.reload()}
-              className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
-              style={{
-                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                color: '#fff',
-              }}
-            >
-              {t('다시 시도', '再読み込み')}
-            </button>
-          )}
+        /* kpis가 없으면 로딩과 동일하게 스켈레톤 표시 (SWR 재시도 대기) */
+        <div className="space-y-6">
+          <KPISkeleton />
+          <ChartSkeleton height={200} />
         </div>
       ) : (
         <div className="space-y-6">
