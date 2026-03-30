@@ -97,6 +97,13 @@ export function useWeeklyTrend(startDate?: string, endDate?: string) {
   return useSWR(`/api/analysis/weekly-trend?${params}`, fetcher, SWR_CONFIG);
 }
 
+export function usePlatformSummaryForPeriod(startDate: string, endDate: string) {
+  const key = startDate && endDate
+    ? `/api/analysis/platform-summary-period?startDate=${startDate}&endDate=${endDate}`
+    : null;
+  return useSWR(key, fetcher, SWR_CONFIG);
+}
+
 export function usePeriodKpis(startDate: string, endDate: string) {
   const key = startDate && endDate
     ? `/api/analysis/period-kpis?startDate=${startDate}&endDate=${endDate}`

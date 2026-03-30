@@ -11,7 +11,7 @@ import {
   Activity, X, Check, Hash, CalendarDays,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { usePlatformSummary, usePlatformDetail } from '@/hooks/useData';
+import { usePlatformSummary, usePlatformDetail, usePlatformSummaryForPeriod } from '@/hooks/useData';
 import { fetchPlatformDetail } from '@/lib/supabase';
 import { getPlatformColor, getPlatformBrand, getPlatformLogo } from '@/utils/platformConfig';
 import { useApp } from '@/context/AppContext';
@@ -150,14 +150,51 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
   }, [platformDetailSWR]);
   const detailLoading = platformDetailValidating && !platformDetailSWR;
 
+  // C1: Date range (default: this month)
+  const [startDate, setStartDate] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+  });
+  const [endDate, setEndDate] = useState(() => {
+    return new Date().toISOString().slice(0, 10);
+  });
+
   useEffect(() => {
     if (platformSummary.length > 0 && selectedPlatform === null) {
       setSelectedPlatform(platformSummary[0].channel); // eslint-disable-line react-hooks/set-state-in-effect
     }
   }, [platformSummary, selectedPlatform]);
 
-  // C2: Previous period summary for growth (use same data as current)
-  const prevSummary: PlatformSummaryRow[] = platformSummary;
+  // C2: Period-based platform summary
+  const { data: periodSummaryRaw } = usePlatformSummaryForPeriod(startDate, endDate);
+
+  // Previous period range (same duration, immediately before startDate)
+  const prevRange = useMemo(() => {
+    if (!startDate || !endDate) return { start: '', end: '' };
+    const s = new Date(startDate + 'T00:00:00');
+    const e = new Date(endDate + 'T00:00:00');
+    const diffMs = e.getTime() - s.getTime();
+    const prevEnd = new Date(s.getTime() - 86400000); // day before startDate
+    const prevStart = new Date(prevEnd.getTime() - diffMs);
+    return {
+      start: prevStart.toISOString().slice(0, 10),
+      end: prevEnd.toISOString().slice(0, 10),
+    };
+  }, [startDate, endDate]);
+
+  const { data: prevSummaryRaw } = usePlatformSummaryForPeriod(prevRange.start, prevRange.end);
+
+  // Display data: period selection -> periodSummary, else -> platformSummary (all-time)
+  const displaySummary = useMemo<PlatformSummaryRow[]>(() => {
+    if (startDate && endDate && periodSummaryRaw) return periodSummaryRaw as PlatformSummaryRow[];
+    return platformSummary;
+  }, [startDate, endDate, periodSummaryRaw, platformSummary]);
+
+  // Previous period data for growth calculation
+  const prevSummary = useMemo<PlatformSummaryRow[]>(() => {
+    if (prevSummaryRaw) return prevSummaryRaw as PlatformSummaryRow[];
+    return [];
+  }, [prevSummaryRaw]);
 
   // Detail tab
   // detailTab removed — content shown inline
@@ -167,10 +204,6 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
   const [comparePlatforms, setComparePlatforms] = useState<string[]>([]);
   const [compareDetails, setCompareDetails] = useState<Map<string, PlatformDetailData>>(new Map());
   const [compareLoading, setCompareLoading] = useState(false);
-
-  // C1: Date range
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
 
   // C8: Top N
   const [topN, setTopN] = useState(10);
@@ -209,7 +242,7 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
   // ─── Computed values ───────────────────────────────────────
   // C2: sorted platforms with rank info
   const sortedPlatforms = useMemo(() => {
-    const current = [...platformSummary].sort((a, b) => b.total_sales - a.total_sales);
+    const current = [...displaySummary].sort((a, b) => b.total_sales - a.total_sales);
     const prevRanks = new Map<string, number>();
     const prevSorted = [...prevSummary].sort((a, b) => b.total_sales - a.total_sales);
     prevSorted.forEach((p, i) => prevRanks.set(p.channel, i + 1));
@@ -224,7 +257,7 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
         prevTotalSales: prevData?.total_sales ?? 0,
       };
     });
-  }, [platformSummary, prevSummary]);
+  }, [displaySummary, prevSummary]);
 
   // Title count shown inline in the list header
 
@@ -264,8 +297,8 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
   };
 
   const selectedSummary = useMemo(
-    () => platformSummary.find((p) => p.channel === selectedPlatform),
-    [platformSummary, selectedPlatform]
+    () => displaySummary.find((p) => p.channel === selectedPlatform),
+    [displaySummary, selectedPlatform]
   );
 
   const selectedSorted = useMemo(
