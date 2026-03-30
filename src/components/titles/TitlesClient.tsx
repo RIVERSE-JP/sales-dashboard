@@ -9,7 +9,7 @@ import {
 } from 'recharts';
 import { BookOpen, ArrowLeft, GitCompare, CheckSquare, Square } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
-import { fetchTitleDetail } from '@/lib/supabase';
+import { fetchTitleDetail, extractBaseTitle, extractProductType } from '@/lib/supabase';
 import { getPlatformColor } from '@/utils/platformConfig';
 import { PlatformBadge } from '@/components/PlatformBadge';
 import { useApp } from '@/context/AppContext';
@@ -82,6 +82,17 @@ interface EnrichedTitle extends TitleSummaryRow {
   rank_change?: number;
 }
 
+interface EnrichedGroupedProduct extends EnrichedTitle {
+  product_type: string;
+}
+
+interface EnrichedGroupedTitle {
+  base_title: string;
+  products: EnrichedGroupedProduct[];
+  total_sales: number;
+  channels: string[];
+}
+
 // ============================================================
 // Main Page
 // ============================================================
@@ -123,6 +134,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
   const [selectedTitle, setSelectedTitle] = useState<string | null>(null);
   const [detailData, setDetailData] = useState<TitleDetailData | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState<EnrichedGroupedTitle | null>(null);
 
   // Filter state (B1)
   const [searchQuery, setSearchQuery] = useState('');
@@ -202,48 +214,81 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
     });
   }, [titles, masterMap, rankingMap]);
 
-  const filteredTitles = useMemo(() => {
-    let result = enrichedTitles;
+  // ============================================================
+  // Group by base_title
+  // ============================================================
 
-    // Search
+  const groupedTitles = useMemo((): EnrichedGroupedTitle[] => {
+    if (!enrichedTitles.length) return [];
+    const map = new Map<string, EnrichedGroupedTitle>();
+    for (const t of enrichedTitles) {
+      const base = extractBaseTitle(t.title_jp);
+      const productType = extractProductType(t.title_jp);
+      if (!map.has(base)) {
+        map.set(base, {
+          base_title: base,
+          products: [],
+          total_sales: 0,
+          channels: [],
+        });
+      }
+      const group = map.get(base)!;
+      group.products.push({ ...t, product_type: productType });
+      group.total_sales += t.total_sales;
+      for (const ch of (t.channels || [])) {
+        if (!group.channels.includes(ch)) group.channels.push(ch);
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => b.total_sales - a.total_sales);
+  }, [enrichedTitles]);
+
+  // ============================================================
+  // Filtered grouped titles
+  // ============================================================
+
+  const filteredGrouped = useMemo((): EnrichedGroupedTitle[] => {
+    let result = groupedTitles;
+
+    // Search across base_title and all product names
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      result = result.filter(
-        (t) => t.title_jp.toLowerCase().includes(q) || (t.title_kr?.toLowerCase().includes(q) ?? false)
+      result = result.filter(g =>
+        g.base_title.toLowerCase().includes(q) ||
+        g.products.some(p => p.title_jp.toLowerCase().includes(q) || (p.title_kr?.toLowerCase().includes(q) ?? false))
       );
     }
 
-    // Serial status tab (B6)
+    // Serial status tab
     if (serialStatusTab !== 'all') {
-      result = result.filter((t) => t.serial_status === serialStatusTab);
+      result = result.filter(g => g.products.some(p => p.serial_status === serialStatusTab));
     }
 
-    // Genre (B1)
+    // Genre
     if (selectedGenre) {
-      result = result.filter((t) => t.genre_name === selectedGenre);
+      result = result.filter(g => g.products.some(p => p.genre_name === selectedGenre));
     }
 
-    // Company (B1)
+    // Company
     if (selectedCompany) {
-      result = result.filter((t) => t.company_name === selectedCompany);
+      result = result.filter(g => g.products.some(p => p.company_name === selectedCompany));
     }
 
-    // Platform (B1)
+    // Platform
     if (selectedPlatform) {
-      result = result.filter((t) => t.channels.includes(selectedPlatform));
+      result = result.filter(g => g.channels.includes(selectedPlatform));
     }
 
-    // Serial status dropdown (B1)
+    // Serial status dropdown
     if (selectedStatus) {
-      result = result.filter((t) => t.serial_status === selectedStatus);
+      result = result.filter(g => g.products.some(p => p.serial_status === selectedStatus));
     }
 
-    // Content format (B1)
+    // Content format
     if (selectedFormat) {
-      result = result.filter((t) => t.content_format === selectedFormat);
+      result = result.filter(g => g.products.some(p => p.content_format === selectedFormat));
     }
 
-    // Sales preset (B2)
+    // Sales preset
     if (salesPreset !== 'all' && result.length > 0) {
       const sorted = [...result].sort((a, b) => b.total_sales - a.total_sales);
       const len = sorted.length;
@@ -259,21 +304,30 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
     // Sort
     if (sortBy === 'sales_desc') result.sort((a, b) => b.total_sales - a.total_sales);
     else if (sortBy === 'sales_asc') result.sort((a, b) => a.total_sales - b.total_sales);
-    else if (sortBy === 'name_asc') result.sort((a, b) => a.title_jp.localeCompare(b.title_jp));
-    else if (sortBy === 'newest') result.sort((a, b) => (b.first_date ?? '').localeCompare(a.first_date ?? ''));
+    else if (sortBy === 'name_asc') result.sort((a, b) => a.base_title.localeCompare(b.base_title));
+    else if (sortBy === 'newest') result.sort((a, b) => {
+      const aDate = a.products[0]?.first_date ?? '';
+      const bDate = b.products[0]?.first_date ?? '';
+      return bDate.localeCompare(aDate);
+    });
 
     return result;
-  }, [enrichedTitles, searchQuery, serialStatusTab, selectedGenre, selectedCompany, selectedPlatform, selectedStatus, selectedFormat, salesPreset, sortBy]);
+  }, [groupedTitles, searchQuery, serialStatusTab, selectedGenre, selectedCompany, selectedPlatform, selectedStatus, selectedFormat, salesPreset, sortBy]);
 
   // ============================================================
   // Detail loading
   // ============================================================
 
-  const loadTitleDetail = useCallback(async (titleJP: string) => {
+  const loadTitleDetail = useCallback(async (titleJP: string, group?: EnrichedGroupedTitle | null) => {
     setDetailLoading(true);
     setSelectedTitle(titleJP);
+    setSelectedGroup(group ?? null);
+    // Pick main product: prefer original, fallback to first
+    const mainTitleJP = group
+      ? (group.products.find(p => p.product_type === 'オリジナル') ?? group.products[0])?.title_jp ?? titleJP
+      : titleJP;
     try {
-      const data = await fetchTitleDetail(titleJP);
+      const data = await fetchTitleDetail(mainTitleJP);
       setDetailData(data);
       // Initialize period comparison defaults from monthly trend
       if (data?.monthly_trend && data.monthly_trend.length >= 2) {
@@ -292,13 +346,15 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
 
   // URL-based drill-down: auto-select highlighted title
   useEffect(() => {
-    if (highlightTitle && titles.length > 0 && !loading) {
-      const found = titles.find((ti) => ti.title_jp === highlightTitle);
-      if (found) {
-        loadTitleDetail(found.title_jp); // eslint-disable-line react-hooks/set-state-in-effect
+    if (highlightTitle && groupedTitles.length > 0 && !loading) {
+      // Find a group that contains the highlighted title
+      const foundGroup = groupedTitles.find(g => g.products.some(p => p.title_jp === highlightTitle));
+      if (foundGroup) {
+        const mainProduct = foundGroup.products.find(p => p.product_type === 'オリジナル') ?? foundGroup.products[0];
+        loadTitleDetail(mainProduct?.title_jp ?? highlightTitle, foundGroup); // eslint-disable-line react-hooks/set-state-in-effect
       }
     }
-  }, [highlightTitle, titles, loading, loadTitleDetail]);
+  }, [highlightTitle, groupedTitles, loading, loadTitleDetail]);
 
   // Compare toggle
   const toggleCompare = (titleJP: string) => {
@@ -347,7 +403,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
 
     // B7: Episode efficiency
     const epCount = selectedTitleInfo?.latest_episode_count;
-    const totalSales = detailData?.total_sales ?? selectedTitleInfo?.total_sales ?? 0;
+    const totalSales = selectedGroup ? selectedGroup.total_sales : (detailData?.total_sales ?? selectedTitleInfo?.total_sales ?? 0);
     const perEpisodeSales = epCount && epCount > 0 ? totalSales / epCount : null;
 
     return (
@@ -358,7 +414,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => { setSelectedTitle(null); setDetailData(null); }}
+            onClick={() => { setSelectedTitle(null); setDetailData(null); setSelectedGroup(null); }}
             className="w-10 h-10 rounded-xl flex items-center justify-center cursor-pointer"
             style={{ ...GLASS_CARD }}
           >
@@ -367,7 +423,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-bold truncate" style={{ color: 'var(--color-text-primary)' }}>
-                {selectedTitle}
+                {selectedGroup ? selectedGroup.base_title : selectedTitle}
               </h1>
               {/* B3: New badge */}
               {selectedTitleInfo?.isNew && (
@@ -447,6 +503,45 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                 </motion.div>
               ))}
             </div>
+
+            {/* Product breakdown for grouped titles */}
+            {selectedGroup && selectedGroup.products.length > 1 && (
+              <motion.div variants={cardVariants} className="rounded-2xl p-6" style={GLASS_CARD}>
+                <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--color-text-primary)' }}>
+                  {t('상품별 매출', '商品別売上')}
+                </h3>
+                <div className="space-y-2">
+                  {selectedGroup.products
+                    .sort((a, b) => b.total_sales - a.total_sales)
+                    .map((product) => {
+                      const pt = product.product_type;
+                      return (
+                        <div
+                          key={product.title_jp}
+                          className="flex items-center justify-between p-3 rounded-xl"
+                          style={{ background: 'var(--color-glass)', border: '1px solid var(--color-glass-border)' }}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-xs px-2 py-0.5 rounded-full font-medium shrink-0"
+                              style={{
+                                background: pt === 'オリジナル' ? 'rgba(59,111,246,0.1)' : 'rgba(139,92,246,0.1)',
+                                color: pt === 'オリジナル' ? '#3B6FF6' : '#8B5CF6',
+                              }}>
+                              {pt}
+                            </span>
+                            <span className="text-sm truncate" style={{ color: 'var(--color-text-primary)' }}>
+                              {product.title_jp}
+                            </span>
+                          </div>
+                          <span className="text-sm font-bold shrink-0 ml-2" style={{ color: 'var(--color-text-primary)' }}>
+                            {formatCurrency(product.total_sales)}
+                          </span>
+                        </div>
+                      );
+                    })}
+                </div>
+              </motion.div>
+            )}
 
             {/* B8: Lifecycle Timeline */}
             {monthlyTrend.length > 0 && (
@@ -666,8 +761,8 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
         sortBy={sortBy}
         setSortBy={setSortBy}
         onReset={resetFilters}
-        filteredCount={filteredTitles.length}
-        totalCount={titles.length}
+        filteredCount={filteredGrouped.length}
+        totalCount={groupedTitles.length}
       />
 
       {/* Title List */}
@@ -675,12 +770,19 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
         <ListSkeleton />
       ) : (
         <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-2">
-          {filteredTitles.slice(0, 50).map((title, idx) => {
-            const isCompareSelected = compareList.includes(title.title_jp);
+          {filteredGrouped.slice(0, 50).map((group, idx) => {
+            // For compare mode, use the main product's title_jp
+            const mainProduct = group.products.find(p => p.product_type === 'オリジナル') ?? group.products[0];
+            const mainTitleJP = mainProduct?.title_jp ?? group.base_title;
+            const isCompareSelected = compareList.includes(mainTitleJP);
+            const mainTitle = mainProduct;
+            const nonOriginalTypes = group.products
+              .map(p => p.product_type)
+              .filter(t => t !== 'オリジナル');
 
             return (
               <motion.div
-                key={title.title_jp}
+                key={group.base_title}
                 variants={{
                   hidden: { opacity: 0, y: 12 },
                   show: { opacity: 1, y: 0, transition: { duration: 0.25, delay: idx * 0.05 } },
@@ -693,9 +795,9 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                 }}
                 onClick={() => {
                   if (compareMode) {
-                    toggleCompare(title.title_jp);
+                    toggleCompare(mainTitleJP);
                   } else {
-                    loadTitleDetail(title.title_jp);
+                    loadTitleDetail(mainTitleJP, group);
                   }
                 }}
               >
@@ -727,28 +829,35 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                   {/* Title info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-bold truncate" title={title.title_jp} style={{ color: 'var(--color-text-primary)' }}>
-                        {title.title_jp}
+                      <p className="text-sm font-bold truncate" title={group.base_title} style={{ color: 'var(--color-text-primary)' }}>
+                        {group.base_title}
                       </p>
                       {/* New badge - blue pill */}
-                      {title.isNew && (
+                      {mainTitle?.isNew && (
                         <span className="shrink-0 px-2 py-0.5 rounded-full text-[9px] font-bold" style={{ background: '#3b82f620', color: '#3b82f6' }}>
                           NEW
                         </span>
                       )}
+                      {/* Product type badges for multi-product groups */}
+                      {group.products.length > 1 && nonOriginalTypes.length > 0 && (
+                        <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full"
+                          style={{ background: 'rgba(139,92,246,0.1)', color: '#8B5CF6' }}>
+                          {nonOriginalTypes.join('+')}
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-2 mt-0.5">
-                      {title.title_kr && (
-                        <p className="text-xs truncate" title={title.title_kr} style={{ color: 'var(--color-text-muted)' }}>{title.title_kr}</p>
+                      {mainTitle?.title_kr && (
+                        <p className="text-xs truncate" title={mainTitle.title_kr} style={{ color: 'var(--color-text-muted)' }}>{mainTitle.title_kr}</p>
                       )}
                       {/* Platform logo badges */}
                       <div className="flex gap-1 shrink-0 ml-1">
-                        {title.channels.slice(0, 4).map((p) => (
+                        {group.channels.slice(0, 4).map((p) => (
                           <PlatformBadge key={p} name={p} showName={false} size="sm" />
                         ))}
-                        {title.channels.length > 4 && (
+                        {group.channels.length > 4 && (
                           <span className="text-[10px] px-1 py-0.5 rounded-full font-medium" style={{ color: 'var(--color-text-muted)' }}>
-                            +{title.channels.length - 4}
+                            +{group.channels.length - 4}
                           </span>
                         )}
                       </div>
@@ -758,21 +867,21 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                   {/* Right side: Sales + Change */}
                   <div className="shrink-0 text-right">
                     <p className="text-base font-bold" style={{ color: 'var(--color-text-primary)' }}>
-                      {formatCurrency(title.total_sales)}
+                      {formatCurrency(group.total_sales)}
                     </p>
-                    {/* B9: Rank change badge */}
-                    {title.rank_change !== undefined && title.rank_change !== 0 && (
+                    {/* B9: Rank change badge - use main product's rank */}
+                    {mainTitle?.rank_change !== undefined && mainTitle.rank_change !== 0 && (
                       <span
                         className="inline-flex items-center gap-0.5 mt-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold"
                         style={{
-                          background: title.rank_change > 0 ? '#22c55e15' : '#ef444415',
-                          color: title.rank_change > 0 ? '#22c55e' : '#ef4444',
+                          background: mainTitle.rank_change > 0 ? '#22c55e15' : '#ef444415',
+                          color: mainTitle.rank_change > 0 ? '#22c55e' : '#ef4444',
                         }}
                       >
-                        {title.rank_change > 0 ? '▲' : '▼'}{Math.abs(title.rank_change)}
+                        {mainTitle.rank_change > 0 ? '▲' : '▼'}{Math.abs(mainTitle.rank_change)}
                       </span>
                     )}
-                    {title.rank_change === 0 && (
+                    {mainTitle?.rank_change === 0 && (
                       <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>-</span>
                     )}
                   </div>
@@ -780,7 +889,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
               </motion.div>
             );
           })}
-          {filteredTitles.length === 0 && (
+          {filteredGrouped.length === 0 && (
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}

@@ -216,10 +216,13 @@ export interface TitleMasterRow {
 }
 
 /** base_title로 그룹화된 작품 요약 */
+export interface GroupedTitleProduct extends TitleSummaryRow {
+  product_type: string;
+}
+
 export interface GroupedTitle {
   base_title: string;
-  product_type: string;
-  products: TitleSummaryRow[];
+  products: GroupedTitleProduct[];
   total_sales: number;
   channels: string[];
 }
