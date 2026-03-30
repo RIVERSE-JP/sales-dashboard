@@ -498,6 +498,7 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
               status="neutral"
               delay={0.24}
               icon={<BookOpen size={16} />}
+              noAnimation
             />
           </div>
 

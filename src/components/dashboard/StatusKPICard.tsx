@@ -18,6 +18,8 @@ interface StatusKPICardProps {
   gaugeLabel?: string;
   delay?: number;
   icon?: React.ReactNode;
+  /** true면 숫자 카운트업 애니메이션 비활성 */
+  noAnimation?: boolean;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -47,6 +49,7 @@ export default function StatusKPICard({
   gaugeLabel,
   delay = 0,
   icon,
+  noAnimation = false,
 }: StatusKPICardProps) {
   const borderColor = STATUS_COLORS[status] ?? STATUS_COLORS.neutral;
 
@@ -82,7 +85,7 @@ export default function StatusKPICard({
 
         {/* Main value */}
         <p className="text-[32px] font-bold leading-tight mb-1" style={{ color: 'var(--color-text-primary)' }}>
-          <AnimatedValue value={value} formatter={formatter} />
+          {noAnimation ? formatter(value) : <AnimatedValue value={value} formatter={formatter} />}
         </p>
 
         {/* Change pill */}
