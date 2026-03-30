@@ -308,7 +308,7 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
     color: GENRE_COLORS[i % GENRE_COLORS.length],
     genre_code: d.genre_code,
   }));
-  const genreTotal = genreSummary.reduce((s, d) => s + d.total_sales, 0);
+  // genreTotal removed — ranking bars used instead of percentage
 
   // ---------- Error state ----------
   if (error) {
@@ -866,36 +866,49 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
                         </ResponsiveContainer>
                       </div>
 
-                      {/* Genre list */}
+                      {/* Genre ranking bars */}
                       <div>
                         <h3 className="text-[15px] font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
-                          {t('장르별 매출', 'ジャンル別売上')}
+                          {t('장르별 랭킹', 'ジャンル別ランキング')}
                         </h3>
-                        <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                          {genreSummary.map((row, i) => {
-                            const pct = genreTotal > 0 ? ((row.total_sales / genreTotal) * 100).toFixed(1) : '0';
+                        <div className="space-y-3">
+                          {genreSummary.slice(0, 10).map((row, i) => {
+                            const maxSales = genreSummary[0]?.total_sales ?? 1;
+                            const barWidth = maxSales > 0 ? (row.total_sales / maxSales) * 100 : 0;
+                            const color = GENRE_COLORS[i % GENRE_COLORS.length];
                             return (
                               <motion.div
                                 key={row.genre_code}
-                                initial={{ opacity: 0, x: 12 }}
+                                initial={{ opacity: 0, x: 16 }}
                                 animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: i * 0.05 }}
-                                className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all hover:scale-[1.01]"
-                                style={{ background: 'var(--color-surface)' }}
+                                transition={{ delay: i * 0.06 }}
+                                className="cursor-pointer group"
                                 onClick={() => router.push(`/titles?genre=${encodeURIComponent(row.genre_code)}`)}
                               >
-                                <div className="w-3 h-3 rounded-full shrink-0" style={{ background: GENRE_COLORS[i % GENRE_COLORS.length] }} />
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-[13px] font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>
+                                <div className="flex items-center gap-3 mb-1">
+                                  <span className="text-[12px] font-bold w-5 text-center" style={{ color: i < 3 ? color : 'var(--color-text-muted)' }}>
+                                    {i + 1}
+                                  </span>
+                                  <div className="w-3 h-3 rounded-full shrink-0" style={{ background: color }} />
+                                  <span className="text-[13px] font-medium flex-1 truncate" style={{ color: 'var(--color-text-primary)' }}>
                                     {row.genre_kr || row.genre_code}
-                                  </p>
-                                  <p className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
-                                    {row.title_count}{t('작품', '作品')} / {pct}%
-                                  </p>
+                                  </span>
+                                  <span className="text-[11px] shrink-0" style={{ color: 'var(--color-text-muted)' }}>
+                                    {row.title_count}{t('작품', '作品')}
+                                  </span>
+                                  <span className="text-[13px] font-bold shrink-0" style={{ color: 'var(--color-text-primary)' }}>
+                                    {formatCurrency(row.total_sales)}
+                                  </span>
                                 </div>
-                                <p className="text-[13px] font-bold shrink-0" style={{ color: 'var(--color-text-primary)' }}>
-                                  {formatCurrency(row.total_sales)}
-                                </p>
+                                <div className="ml-8 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--color-glass-border)' }}>
+                                  <motion.div
+                                    className="h-full rounded-full"
+                                    style={{ background: color }}
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${barWidth}%` }}
+                                    transition={{ duration: 0.7, delay: 0.1 + i * 0.06 }}
+                                  />
+                                </div>
                               </motion.div>
                             );
                           })}
@@ -914,50 +927,78 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
                     exit={{ opacity: 0, y: -8 }}
                     transition={{ duration: 0.2 }}
                   >
-                    <h3 className="text-[15px] font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
-                      {t('제작사별 매출 TOP 10', '制作会社別売上 TOP 10')}
-                    </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {companySummary.slice(0, 10).map((row, i) => {
-                        const maxSales = companySummary[0]?.total_sales ?? 1;
-                        const barWidth = maxSales > 0 ? (row.total_sales / maxSales) * 100 : 0;
-                        return (
-                          <motion.div
-                            key={row.company_name}
-                            initial={{ opacity: 0, y: 8 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.05 }}
-                            className="rounded-xl p-4"
-                            style={{ background: 'var(--color-surface)', border: '1px solid var(--color-glass-border)' }}
-                          >
-                            <div className="flex items-center gap-3 mb-2">
-                              <span className="text-[20px] font-bold" style={{ color: i < 3 ? '#6366f1' : 'var(--color-text-muted)' }}>
-                                {i + 1}
-                              </span>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-[13px] font-semibold truncate" style={{ color: 'var(--color-text-primary)' }}>
-                                  {row.company_name}
-                                </p>
-                                <p className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
-                                  {row.title_count}{t('작품', '作品')}
-                                </p>
-                              </div>
-                              <p className="text-[14px] font-bold shrink-0" style={{ color: 'var(--color-text-primary)' }}>
-                                {formatCurrency(row.total_sales)}
-                              </p>
-                            </div>
-                            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--color-glass-border)' }}>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* Company donut */}
+                      <div>
+                        <h3 className="text-[15px] font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
+                          {t('제작사 점유율', '制作会社占有率')}
+                        </h3>
+                        <ResponsiveContainer width="100%" height={300}>
+                          <PieChart>
+                            <Pie
+                              data={companySummary.slice(0, 8).map((row, i) => ({
+                                name: row.company_name,
+                                value: row.total_sales,
+                                color: GENRE_COLORS[i % GENRE_COLORS.length],
+                              }))}
+                              dataKey="value" nameKey="name"
+                              cx="50%" cy="50%" innerRadius={55} outerRadius={100} paddingAngle={2}
+                            >
+                              {companySummary.slice(0, 8).map((_, idx) => (
+                                <Cell key={idx} fill={GENRE_COLORS[idx % GENRE_COLORS.length]} fillOpacity={0.85} />
+                              ))}
+                            </Pie>
+                            <ReTooltip {...darkTooltipStyle} formatter={(v: unknown) => [formatCurrency(Number(v ?? 0)), t('매출', '売上')]} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+
+                      {/* Company ranking bars */}
+                      <div>
+                        <h3 className="text-[15px] font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
+                          {t('제작사 랭킹', '制作会社ランキング')}
+                        </h3>
+                        <div className="space-y-3">
+                          {companySummary.slice(0, 10).map((row, i) => {
+                            const maxSales = companySummary[0]?.total_sales ?? 1;
+                            const barWidth = maxSales > 0 ? (row.total_sales / maxSales) * 100 : 0;
+                            const color = GENRE_COLORS[i % GENRE_COLORS.length];
+                            return (
                               <motion.div
-                                className="h-full rounded-full"
-                                style={{ background: 'linear-gradient(90deg, #6366f1, #a78bfa)' }}
-                                initial={{ width: 0 }}
-                                animate={{ width: `${barWidth}%` }}
-                                transition={{ duration: 0.6, delay: 0.1 + i * 0.05 }}
-                              />
-                            </div>
-                          </motion.div>
-                        );
-                      })}
+                                key={row.company_name}
+                                initial={{ opacity: 0, x: 16 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: i * 0.06 }}
+                                className="cursor-pointer group"
+                              >
+                                <div className="flex items-center gap-3 mb-1">
+                                  <span className="text-[12px] font-bold w-5 text-center" style={{ color: i < 3 ? color : 'var(--color-text-muted)' }}>
+                                    {i + 1}
+                                  </span>
+                                  <span className="text-[13px] font-medium flex-1 truncate" style={{ color: 'var(--color-text-primary)' }}>
+                                    {row.company_name}
+                                  </span>
+                                  <span className="text-[11px] shrink-0" style={{ color: 'var(--color-text-muted)' }}>
+                                    {row.title_count}{t('작품', '作品')}
+                                  </span>
+                                  <span className="text-[13px] font-bold shrink-0" style={{ color: 'var(--color-text-primary)' }}>
+                                    {formatCurrency(row.total_sales)}
+                                  </span>
+                                </div>
+                                <div className="ml-8 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--color-glass-border)' }}>
+                                  <motion.div
+                                    className="h-full rounded-full"
+                                    style={{ background: color }}
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${barWidth}%` }}
+                                    transition={{ duration: 0.7, delay: 0.1 + i * 0.06 }}
+                                  />
+                                </div>
+                              </motion.div>
+                            );
+                          })}
+                        </div>
+                      </div>
                     </div>
                   </motion.div>
                 )}
