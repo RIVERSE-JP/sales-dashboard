@@ -43,5 +43,12 @@ export async function POST(request: Request) {
     }
   }
 
+  // 업로드 후 Materialized View 갱신
+  try {
+    await supabaseServer.rpc('refresh_materialized_views');
+  } catch {
+    // MV 갱신 실패해도 업로드 결과는 반환
+  }
+
   return NextResponse.json({ inserted: totalInserted, updated: totalUpdated });
 }
