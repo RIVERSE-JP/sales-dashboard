@@ -6,7 +6,7 @@ import { supabaseServer } from '@/lib/supabase-server';
 export async function GET() {
   const { data, error } = await supabaseServer
     .from('production_companies')
-    .select('*, title_master(count)')
+    .select('*, titles(count)')
     .order('name', { ascending: true });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -14,7 +14,7 @@ export async function GET() {
   const result = (data ?? []).map((c: Record<string, unknown>) => ({
     id: c.id,
     name: c.name,
-    title_count: Array.isArray(c.title_master) ? ((c.title_master as Record<string, number>[])[0]?.count ?? 0) : 0,
+    title_count: Array.isArray(c.titles) ? ((c.titles as Record<string, number>[])[0]?.count ?? 0) : 0,
   }));
 
   return NextResponse.json(result);
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { error: updateError } = await supabaseServer
-      .from('title_master')
+      .from('titles')
       .update({ production_company_id: targetId })
       .eq('production_company_id', sourceId);
 
