@@ -7,8 +7,8 @@ function getSupabaseServer(): SupabaseClient {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) {
     // During build-time prerendering, env vars may not be available.
-    // Return a placeholder client — ISR will re-run at request time with real env vars.
-    return createClient('https://placeholder.supabase.co', 'placeholder');
+    // Throw so callers catch and return null (client SWR will retry).
+    throw new Error('Missing Supabase environment variables');
   }
   if (!_client) {
     _client = createClient(url, key);

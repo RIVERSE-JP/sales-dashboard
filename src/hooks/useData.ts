@@ -8,9 +8,11 @@ const fetcher = (url: string) => fetch(url).then(r => {
 
 const SWR_CONFIG = {
   revalidateOnFocus: false,
-  revalidateOnReconnect: false,
+  revalidateOnReconnect: true,      // 네트워크 복구 시 재시도
   dedupingInterval: 60000,
   keepPreviousData: true,
+  errorRetryCount: 3,               // 에러 시 3회 재시도
+  errorRetryInterval: 2000,         // 2초 간격
 };
 
 // ============================================================

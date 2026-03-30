@@ -258,8 +258,8 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
   const dailyTrend = useMemo<DailyTrendRow[]>(() => (dailyTrendRaw ?? []) as DailyTrendRow[], [dailyTrendRaw]);
   const weeklyTrend = useMemo<WeeklyTrendRow[]>(() => (weeklyTrendRaw ?? []) as WeeklyTrendRow[], [weeklyTrendRaw]);
 
-  const loading = !kpis && !monthlyTrendRaw && !initialData?.kpis;
-  const error = kpiError ? (kpiError instanceof Error ? kpiError.message : 'Failed to load data') : null;
+  const isError = !!kpiError;
+  const loading = !kpis && !isError && !initialData?.kpis;
 
   // Data freshness
   const [freshnessDate, setFreshnessDate] = useState('');
@@ -327,10 +327,10 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
   // genreTotal removed — ranking bars used instead of percentage
 
   // ---------- Error state ----------
-  if (error) {
+  if (isError && !kpis) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <p style={{ color: '#ef4444', fontSize: 14 }}>Error: {error}</p>
+        <p style={{ color: '#ef4444', fontSize: 14 }}>{t('데이터를 불러오지 못했습니다.', 'データの読み込みに失敗しました。')}</p>
         <button onClick={() => window.location.reload()} className="px-4 py-2 rounded-lg text-sm font-medium"
           style={{ background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', color: '#fff' }}>
           {t('재시도', 'リトライ')}
@@ -469,9 +469,23 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
       ) : !kpis ? (
         <div className="rounded-2xl p-12 flex flex-col items-center justify-center min-h-[300px]" style={GLASS_CARD}>
           <BookOpen size={48} style={{ color: 'var(--color-text-muted)' }} className="mb-4" />
-          <p style={{ color: 'var(--color-text-muted)', fontSize: 15 }}>
-            {t('데이터가 없습니다. 업로드 후 시작하세요.', 'データがありません。アップロードしてください。')}
+          <p style={{ color: 'var(--color-text-muted)', fontSize: 15 }} className="mb-4">
+            {isError
+              ? t('데이터를 불러오지 못했습니다.', 'データの読み込みに失敗しました。')
+              : t('데이터가 없습니다. 업로드 후 시작하세요.', 'データがありません。アップロードしてください。')}
           </p>
+          {isError && (
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
+              style={{
+                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                color: '#fff',
+              }}
+            >
+              {t('다시 시도', '再読み込み')}
+            </button>
+          )}
         </div>
       ) : (
         <div className="space-y-6">
