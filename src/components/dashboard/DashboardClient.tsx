@@ -1,14 +1,14 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip,
   ResponsiveContainer, PieChart, Pie, Cell,
 } from 'recharts';
 import {
   LayoutDashboard, TrendingUp, TrendingDown, AlertTriangle, Rocket,
-  Zap, ChevronRight, ChevronLeft, Activity, BarChart3, Globe, Layers, Building2,
+  Zap, ChevronRight, ChevronLeft, Activity, BarChart3,
   BookOpen,
 } from 'lucide-react';
 import {
@@ -53,7 +53,7 @@ interface DashboardClientProps {
 // ============================================================
 
 type TrendMode = 'daily' | 'weekly' | 'monthly';
-type TabId = 'status' | 'trend' | 'platform' | 'genre' | 'company';
+// TabId removed — tabs replaced with inline sections
 
 // ============================================================
 // Date helpers
@@ -174,13 +174,7 @@ function renderDonutLabel(props: {
 // Tab configuration
 // ============================================================
 
-const TABS: Array<{ id: TabId; labelKo: string; labelJa: string; icon: React.ReactNode }> = [
-  { id: 'status', labelKo: '현황', labelJa: '現況', icon: <Activity size={15} /> },
-  { id: 'trend', labelKo: '트렌드', labelJa: 'トレンド', icon: <BarChart3 size={15} /> },
-  { id: 'platform', labelKo: '플랫폼', labelJa: 'PF', icon: <Globe size={15} /> },
-  { id: 'genre', labelKo: '장르', labelJa: 'ジャンル', icon: <Layers size={15} /> },
-  { id: 'company', labelKo: '제작사', labelJa: '制作会社', icon: <Building2 size={15} /> },
-];
+// TABS removed — all sections shown inline on the page
 
 // ============================================================
 // Main Dashboard Page
@@ -197,7 +191,7 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
   const [activePreset, setActivePreset] = useState('thisMonth');
 
   // Tab
-  const [activeTab, setActiveTab] = useState<TabId>('status');
+  // activeTab removed — all sections shown inline
 
   // Trend mode
   const [trendMode, setTrendMode] = useState<TrendMode>('monthly');
@@ -609,155 +603,49 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
             </div>
           )}
 
-          {/* ===== TAB NAVIGATION ===== */}
-          <div className="rounded-2xl overflow-hidden" style={GLASS_CARD}>
-            {/* Tab bar */}
-            <div className="flex border-b" style={{ borderColor: 'var(--color-glass-border)' }}>
-              {TABS.map((tab) => {
-                const isActive = activeTab === tab.id;
-                return (
+          {/* ===== SECTIONS (no tabs, all inline) ===== */}
+
+          {/* ── 1. 현황: 매출 추이 ── */}
+          <div className="rounded-2xl p-6" style={GLASS_CARD}>
+            <div className="flex items-center justify-between mb-5 flex-wrap gap-2">
+              <h3 className="text-[15px] font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                {trendLabels[trendMode]} {t('매출 추이', '売上推移')}
+              </h3>
+              <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid var(--color-glass-border)' }}>
+                {(['daily', 'weekly', 'monthly'] as TrendMode[]).map((mode) => (
                   <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className="relative flex items-center gap-1.5 px-5 py-3.5 text-[13px] font-medium transition-colors"
-                    style={{ color: isActive ? 'var(--color-text-primary)' : 'var(--color-text-muted)' }}
+                    key={mode}
+                    onClick={() => setTrendMode(mode)}
+                    className="px-3 py-1.5 text-[12px] font-medium transition-all"
+                    style={{
+                      background: trendMode === mode ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'transparent',
+                      color: trendMode === mode ? '#fff' : 'var(--color-text-secondary)',
+                    }}
                   >
-                    {tab.icon}
-                    {t(tab.labelKo, tab.labelJa)}
-                    {isActive && (
-                      <motion.div
-                        layoutId="tab-indicator"
-                        className="absolute bottom-0 left-0 right-0 h-[2px]"
-                        style={{ background: 'linear-gradient(90deg, #6366f1, #8b5cf6)' }}
-                        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                      />
-                    )}
+                    {trendLabels[mode]}
                   </button>
-                );
-              })}
+                ))}
+              </div>
             </div>
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={trendChartData}>
+                <defs>
+                  <linearGradient id="execAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#6366f1" stopOpacity={0.25} />
+                    <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
+                <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={60} />
+                <ReTooltip content={<AreaChartTooltip fmtCurrency={formatCurrency} />} />
+                <Area type="monotone" dataKey="sales" stroke="#6366f1" strokeWidth={2.5} fill="url(#execAreaGrad)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
 
-            {/* Tab content */}
-            <div className="p-6">
-              <AnimatePresence mode="wait">
-                {/* ---- STATUS TAB ---- */}
-                {activeTab === 'status' && (
-                  <motion.div
-                    key="status"
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    {/* Trend mode toggle */}
-                    <div className="flex items-center justify-between mb-5 flex-wrap gap-2">
-                      <h3 className="text-[15px] font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                        {trendLabels[trendMode]} {t('매출 추이', '売上推移')}
-                      </h3>
-                      <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid var(--color-glass-border)' }}>
-                        {(['daily', 'weekly', 'monthly'] as TrendMode[]).map((mode) => (
-                          <button
-                            key={mode}
-                            onClick={() => setTrendMode(mode)}
-                            className="px-3 py-1.5 text-[12px] font-medium transition-all"
-                            style={{
-                              background: trendMode === mode ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'transparent',
-                              color: trendMode === mode ? '#fff' : 'var(--color-text-secondary)',
-                            }}
-                          >
-                            {trendLabels[mode]}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <ResponsiveContainer width="100%" height={340}>
-                      <AreaChart data={trendChartData}>
-                        <defs>
-                          <linearGradient id="execAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#6366f1" stopOpacity={0.25} />
-                            <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
-                        <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={60} />
-                        <ReTooltip content={<AreaChartTooltip fmtCurrency={formatCurrency} />} />
-                        <Area type="monotone" dataKey="sales" stroke="#6366f1" strokeWidth={2.5} fill="url(#execAreaGrad)" />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </motion.div>
-                )}
-
-                {/* ---- TREND TAB (Top Titles) ---- */}
-                {activeTab === 'trend' && (
-                  <motion.div
-                    key="trend"
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <h3 className="text-[15px] font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
-                      Top {Math.min(topTitles.length, 15)} {t('작품', 'タイトル')}
-                    </h3>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm min-w-[600px]">
-                        <thead>
-                          <tr style={{ borderBottom: '1px solid var(--color-table-border)' }}>
-                            <th className="text-left py-3 px-2 font-medium text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>#</th>
-                            <th className="text-left py-3 px-2 font-medium text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>{t('작품', 'タイトル')}</th>
-                            <th className="text-left py-3 px-2 font-medium text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>{t('플랫폼', 'PF')}</th>
-                            <th className="text-right py-3 px-2 font-medium text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>{t('총 매출', '累計売上')}</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {topTitles.slice(0, 15).map((title, idx) => (
-                            <motion.tr
-                              key={title.title_jp}
-                              initial={{ opacity: 0, x: -8 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: idx * 0.04 }}
-                              style={{ borderBottom: '1px solid var(--color-table-border-subtle)' }}
-                              className="cursor-pointer transition-colors hover:brightness-110"
-                              onClick={() => router.push(`/titles?highlight=${encodeURIComponent(title.title_jp)}`)}
-                            >
-                              <td className="py-3 px-2 font-bold text-[13px]" style={{ color: idx < 3 ? '#6366f1' : 'var(--color-text-muted)' }}>
-                                {idx + 1}
-                              </td>
-                              <td className="py-3 px-2" style={{ maxWidth: 250 }}>
-                                <p className="font-medium text-[13px] truncate" style={{ color: 'var(--color-text-primary)' }}>{title.title_jp}</p>
-                                {title.title_kr && <p className="text-[11px] truncate" style={{ color: 'var(--color-text-muted)' }}>{title.title_kr}</p>}
-                              </td>
-                              <td className="py-3 px-2">
-                                <div className="flex gap-1 flex-wrap">
-                                  {(title.channels ?? []).slice(0, 3).map((ch) => (
-                                    <PlatformBadge key={ch} name={ch} showName={false} size="sm" />
-                                  ))}
-                                  {(title.channels ?? []).length > 3 && (
-                                    <span className="text-[10px] px-1" style={{ color: 'var(--color-text-muted)' }}>+{title.channels.length - 3}</span>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="py-3 px-2 text-right font-bold text-[13px]" style={{ color: 'var(--color-text-primary)' }}>
-                                {formatCurrency(title.total_sales)}
-                              </td>
-                            </motion.tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </motion.div>
-                )}
-
-                {/* ---- PLATFORM TAB ---- */}
-                {activeTab === 'platform' && (
-                  <motion.div
-                    key="platform"
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
-                    transition={{ duration: 0.2 }}
-                  >
+          {/* ── 2. 플랫폼 ── */}
+          <div className="rounded-2xl p-6" style={GLASS_CARD}>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       {/* Donut */}
                       <div>
@@ -833,18 +721,10 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
                         </div>
                       </div>
                     </div>
-                  </motion.div>
-                )}
+          </div>
 
-                {/* ---- GENRE TAB ---- */}
-                {activeTab === 'genre' && (
-                  <motion.div
-                    key="genre"
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
-                    transition={{ duration: 0.2 }}
-                  >
+          {/* ── 3. 장르 ── */}
+          <div className="rounded-2xl p-6" style={GLASS_CARD}>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       {/* Genre donut */}
                       <div>
@@ -915,18 +795,10 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
                         </div>
                       </div>
                     </div>
-                  </motion.div>
-                )}
+          </div>
 
-                {/* ---- COMPANY TAB ---- */}
-                {activeTab === 'company' && (
-                  <motion.div
-                    key="company"
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
-                    transition={{ duration: 0.2 }}
-                  >
+          {/* ── 4. 제작사 ── */}
+          <div className="rounded-2xl p-6" style={GLASS_CARD}>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       {/* Company donut */}
                       <div>
@@ -1000,9 +872,58 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
                         </div>
                       </div>
                     </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+          </div>
+
+          {/* ── 5. 트렌드 작품 ── */}
+          <div className="rounded-2xl p-6" style={GLASS_CARD}>
+            <h3 className="text-[15px] font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
+              Top {Math.min(topTitles.length, 15)} {t('작품', 'タイトル')}
+            </h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[600px]">
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--color-table-border)' }}>
+                    <th className="text-left py-3 px-2 font-medium text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>#</th>
+                    <th className="text-left py-3 px-2 font-medium text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>{t('작품', 'タイトル')}</th>
+                    <th className="text-left py-3 px-2 font-medium text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>{t('플랫폼', 'PF')}</th>
+                    <th className="text-right py-3 px-2 font-medium text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>{t('총 매출', '累計売上')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {topTitles.slice(0, 15).map((title, idx) => (
+                    <motion.tr
+                      key={title.title_jp}
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.04 }}
+                      style={{ borderBottom: '1px solid var(--color-table-border-subtle)' }}
+                      className="cursor-pointer transition-colors hover:brightness-110"
+                      onClick={() => router.push(`/titles?highlight=${encodeURIComponent(title.title_jp)}`)}
+                    >
+                      <td className="py-3 px-2 font-bold text-[13px]" style={{ color: idx < 3 ? '#6366f1' : 'var(--color-text-muted)' }}>
+                        {idx + 1}
+                      </td>
+                      <td className="py-3 px-2" style={{ maxWidth: 250 }}>
+                        <p className="font-medium text-[13px] truncate" style={{ color: 'var(--color-text-primary)' }}>{title.title_jp}</p>
+                        {title.title_kr && <p className="text-[11px] truncate" style={{ color: 'var(--color-text-muted)' }}>{title.title_kr}</p>}
+                      </td>
+                      <td className="py-3 px-2">
+                        <div className="flex gap-1 flex-wrap">
+                          {(title.channels ?? []).slice(0, 3).map((ch) => (
+                            <PlatformBadge key={ch} name={ch} showName={false} size="sm" />
+                          ))}
+                          {(title.channels ?? []).length > 3 && (
+                            <span className="text-[10px] px-1" style={{ color: 'var(--color-text-muted)' }}>+{title.channels.length - 3}</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3 px-2 text-right font-bold text-[13px]" style={{ color: 'var(--color-text-primary)' }}>
+                        {formatCurrency(title.total_sales)}
+                      </td>
+                    </motion.tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
 
