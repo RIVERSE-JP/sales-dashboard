@@ -7,9 +7,10 @@ import {
   ResponsiveContainer, BarChart, Bar, Legend,
 } from 'recharts';
 import {
-  Monitor, TrendingUp, BarChart3, ChevronUp, ChevronDown, Minus,
+  Monitor, TrendingUp, BarChart3, ChevronUp, ChevronDown, ChevronRight, Minus,
   Activity, PieChart, X, Check, Hash, CalendarDays,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { usePlatformSummary, usePlatformDetail } from '@/hooks/useData';
 import { fetchPlatformDetail } from '@/lib/supabase';
 import { getPlatformColor, getPlatformBrand, getPlatformLogo } from '@/utils/platformConfig';
@@ -130,6 +131,7 @@ const TOP_N_OPTIONS = [5, 10, 20, 50];
 
 export default function PlatformsClient({ initialData }: PlatformsClientProps) {
   const { formatCurrency, t } = useApp();
+  const router = useRouter();
 
   // SWR data hooks (client-side fetch with server prefetch as fallback)
   const { data: platformSummaryRaw } = usePlatformSummary();
@@ -830,7 +832,12 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
                                 </thead>
                                 <tbody>
                                   {(detailData?.top_titles ?? []).slice(0, topN).map((title, idx) => (
-                                    <tr key={title.title_jp} style={{ borderBottom: '1px solid var(--color-table-border-subtle)' }}>
+                                    <tr
+                                      key={title.title_jp}
+                                      style={{ borderBottom: '1px solid var(--color-table-border-subtle)' }}
+                                      className="cursor-pointer transition-all hover:brightness-110"
+                                      onClick={() => router.push(`/titles?highlight=${encodeURIComponent(title.title_jp)}`)}
+                                    >
                                       <td className="py-3 px-2 font-bold" style={{ color: idx < 3 ? getPlatformColor(selectedPlatform) : 'var(--color-text-muted)' }}>
                                         {idx + 1}
                                       </td>
@@ -840,6 +847,9 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
                                       </td>
                                       <td className="py-3 px-2 text-right font-bold" style={{ color: 'var(--color-text-primary)' }}>
                                         {formatCurrency(title.total_sales)}
+                                      </td>
+                                      <td className="py-2 px-2">
+                                        <ChevronRight size={14} style={{ color: 'var(--color-text-muted)' }} />
                                       </td>
                                     </tr>
                                   ))}
