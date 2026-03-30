@@ -643,7 +643,7 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
                               transition={{ delay: idx * 0.04 }}
                               style={{ borderBottom: '1px solid var(--color-table-border-subtle)' }}
                               className="cursor-pointer transition-colors hover:brightness-110"
-                              onClick={() => router.push(`/titles?search=${encodeURIComponent(title.title_jp)}`)}
+                              onClick={() => router.push(`/titles?highlight=${encodeURIComponent(title.title_jp)}`)}
                             >
                               <td className="py-3 px-2 font-bold text-[13px]" style={{ color: idx < 3 ? '#6366f1' : 'var(--color-text-muted)' }}>
                                 {idx + 1}
