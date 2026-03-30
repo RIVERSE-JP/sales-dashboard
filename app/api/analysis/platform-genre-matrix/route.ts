@@ -3,6 +3,14 @@ import { supabaseServer } from '@/lib/supabase-server';
 
 export const revalidate = 300;
 
+/**
+ * GET /api/analysis/platform-genre-matrix
+ * 플랫폼x장르 매트릭스 데이터 조회 (각 플랫폼-장르 조합별 총매출)
+ * @param startDate — 조회 시작일 (YYYY-MM-DD, 선택)
+ * @param endDate — 조회 종료일 (YYYY-MM-DD, 선택)
+ * @returns PlatformGenreMatrixRow[] — { channel, genre_kr, total_sales }
+ * @cache revalidate 300초 (5분)
+ */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const startDate = searchParams.get('startDate');

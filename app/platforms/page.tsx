@@ -14,42 +14,11 @@ import { fetchPlatformSummary, fetchPlatformDetail } from '@/lib/supabase';
 import { getPlatformColor, getPlatformBrand, getPlatformLogo } from '@/utils/platformConfig';
 import { useApp } from '@/context/AppContext';
 import type { PlatformSummaryRow, PlatformDetailData } from '@/types';
-import DateRangePicker from '@/components/platforms/DateRangePicker';
+import DateRangePicker from '@/components/shared/DateRangePicker';
 import PlatformGenreMatrix from '@/components/platforms/PlatformGenreMatrix';
-import ParetoChart from '@/components/platforms/ParetoChart';
+import ParetoChart from '@/components/shared/ParetoChart';
 import HealthTrend from '@/components/platforms/HealthTrend';
-
-// ─── Shared styles ───────────────────────────────────────────
-const GLASS_CARD = {
-  background: 'var(--color-glass)',
-  backdropFilter: 'blur(12px)',
-  WebkitBackdropFilter: 'blur(12px)',
-  border: '1px solid var(--color-glass-border)',
-  borderRadius: '16px',
-} as const;
-
-const darkTooltipStyle = {
-  contentStyle: {
-    backgroundColor: 'var(--color-tooltip-bg)',
-    border: '1px solid var(--color-tooltip-border)',
-    borderRadius: '12px',
-    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.35)',
-    padding: '14px 18px',
-  },
-  labelStyle: { color: 'var(--color-tooltip-label)', fontWeight: 600, fontSize: '12px', marginBottom: '6px' },
-  itemStyle: { color: 'var(--color-tooltip-value)', fontWeight: 700, fontSize: '14px' },
-};
-
-// ─── Animation variants ─────────────────────────────────────
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.03 } },
-};
-
-const cardVariants = {
-  hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.2 } },
-};
+import { GLASS_CARD, darkTooltipStyle, containerVariants, cardVariants } from '@/lib/design-tokens';
 
 const platformCardContainer = {
   hidden: { opacity: 0 },

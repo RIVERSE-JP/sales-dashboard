@@ -3,6 +3,12 @@ import { supabaseServer } from '@/lib/supabase-server';
 
 export const revalidate = 300;
 
+/**
+ * GET /api/sales/title-summaries
+ * 작품별 매출 요약 조회 (get_title_summaries RPC, 실패 시 get_top_titles 폴백)
+ * @returns TitleSummaryRow[] — { title_jp, title_kr, channels, first_date, total_sales, day_count }
+ * @cache revalidate 300초 (5분)
+ */
 export async function GET() {
   // Try get_title_summaries first; fall back to get_top_titles(1000)
   const { data, error } = await supabaseServer.rpc('get_title_summaries');

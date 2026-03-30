@@ -3,6 +3,14 @@ import { supabaseServer } from '@/lib/supabase-server';
 
 export const revalidate = 300;
 
+/**
+ * GET /api/dashboard/top-titles
+ * 매출 상위 작품 목록 조회 (작품명, 채널, 총매출, 매출일수)
+ * @param limit — 조회 수 (기본 20)
+ * @param month — 특정 월 필터 (YYYY-MM, 선택)
+ * @returns TopTitleRow[] — { title_jp, title_kr, channels, total_sales, day_count }
+ * @cache revalidate 300초 (5분)
+ */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const p_limit = parseInt(searchParams.get('limit') || '20', 10);

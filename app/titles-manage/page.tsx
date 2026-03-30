@@ -8,7 +8,7 @@ import {
   ArrowUp, ArrowDown, Layers, Save, Loader2,
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
-import { GLASS_CARD } from '@/components/dashboard/shared';
+import { GLASS_CARD } from '@/lib/design-tokens';
 
 // ---------------------------------------------------------------------------
 // Types

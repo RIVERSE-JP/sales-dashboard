@@ -3,6 +3,13 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabase-server';
 
+/**
+ * POST /api/manage/sales/confirm
+ * 속보치(임시) 매출 데이터를 확정 처리 (is_preliminary = false)
+ * @body { ids: number[] } — 확정할 레코드 ID 배열
+ * @returns { confirmed: number } — 확정된 행 수
+ * @dynamic force-dynamic (캐시 없음)
+ */
 export async function POST(request: Request) {
   const body = await request.json();
   const { ids } = body;

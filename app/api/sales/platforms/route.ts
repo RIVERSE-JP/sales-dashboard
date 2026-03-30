@@ -3,6 +3,12 @@ import { supabaseServer } from '@/lib/supabase-server';
 
 export const revalidate = 3600;
 
+/**
+ * GET /api/sales/platforms
+ * 플랫폼 마스터 목록 조회 (매출 페이지용, sort_order 순)
+ * @returns Platform[] — 전체 플랫폼 목록
+ * @cache revalidate 3600초 (1시간)
+ */
 export async function GET() {
   const { data, error } = await supabaseServer
     .from('platforms')

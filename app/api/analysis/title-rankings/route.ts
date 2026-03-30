@@ -3,6 +3,17 @@ import { supabaseServer } from '@/lib/supabase-server';
 
 export const revalidate = 300;
 
+/**
+ * GET /api/analysis/title-rankings
+ * 작품 랭킹 조회 (현재 기간 vs 이전 기간 비교, 순위 변동 포함)
+ * @param currentStart — 현재 기간 시작일 (필수)
+ * @param currentEnd — 현재 기간 종료일 (필수)
+ * @param prevStart — 이전 기간 시작일 (필수)
+ * @param prevEnd — 이전 기간 종료일 (필수)
+ * @param limit — 결과 수 제한 (기본 50)
+ * @returns TitleRankingRow[] — { title_jp, title_kr, channels, current_sales, prev_sales, rank_change }
+ * @cache revalidate 300초 (5분)
+ */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const currentStart = searchParams.get('currentStart');

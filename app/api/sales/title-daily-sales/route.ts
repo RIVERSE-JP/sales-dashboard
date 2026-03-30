@@ -3,6 +3,13 @@ import { supabaseServer } from '@/lib/supabase-server';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * GET /api/sales/title-daily-sales
+ * 특정 작품의 일별 매출 조회 (날짜별 합산)
+ * @param title_jp — 작품 일본어명 (필수)
+ * @returns { sale_date, sales_amount }[] — 일별 매출 배열
+ * @dynamic force-dynamic (캐시 없음)
+ */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const titleJp = searchParams.get('title_jp');

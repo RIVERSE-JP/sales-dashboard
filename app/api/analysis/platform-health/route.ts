@@ -3,6 +3,14 @@ import { supabaseServer } from '@/lib/supabase-server';
 
 export const revalidate = 300;
 
+/**
+ * GET /api/analysis/platform-health
+ * 특정 플랫폼의 월별 건강도 지표 (월매출, 활성 작품 수, 매출 발생 일수, 일평균)
+ * @param channel — 플랫폼 채널명 (필수)
+ * @param months — 조회할 최근 개월 수 (기본 6)
+ * @returns PlatformHealthData — { monthly_health: PlatformHealthMonth[] }
+ * @cache revalidate 300초 (5분)
+ */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const channel = searchParams.get('channel');

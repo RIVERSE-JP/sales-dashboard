@@ -3,6 +3,13 @@ import { supabaseServer } from '@/lib/supabase-server';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * GET /api/sales/all
+ * 전체 매출 데이터 조회 (배치 1000건씩 로드, 최대 50000건)
+ * @param limit — 최대 조회 건수 (기본 10000, 최대 50000)
+ * @returns DailySale[] — 전체 매출 레코드 배열
+ * @dynamic force-dynamic (캐시 없음)
+ */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const limit = Math.min(parseInt(searchParams.get('limit') || '10000'), 50000);

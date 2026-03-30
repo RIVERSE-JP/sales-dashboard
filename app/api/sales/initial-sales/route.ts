@@ -3,6 +3,15 @@ import { supabaseServer } from '@/lib/supabase-server';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * GET /api/sales/initial-sales
+ * 초기 매출(런칭 후 D1~D8, W1~W12) 데이터 조회 (플랫폼/장르/런칭타입 필터)
+ * @param platform — 플랫폼 코드 (선택)
+ * @param genre — 장르 (선택)
+ * @param launchType — 런칭 타입 (선택)
+ * @returns InitialSale[] — 초기 매출 레코드 배열
+ * @dynamic force-dynamic (캐시 없음)
+ */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const platform = searchParams.get('platform');

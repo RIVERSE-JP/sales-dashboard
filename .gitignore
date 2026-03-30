@@ -34,3 +34,6 @@ icon/
 # Windows artifacts
 nul
 .next
+
+# Supabase temp files
+supabase/.temp/

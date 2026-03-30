@@ -1,112 +1,162 @@
 'use client';
 
 import { useApp } from '@/context/AppContext';
-import { motion } from 'framer-motion';
+import { GLASS_CARD } from '@/lib/design-tokens';
 
 interface DateRangePickerProps {
   startDate: string;
   endDate: string;
   onStartDateChange: (date: string) => void;
   onEndDateChange: (date: string) => void;
+  presets?: Array<{ label: string; getRange: () => [string, string] }>;
+  activePreset?: string;
+  onPresetChange?: (preset: string) => void;
 }
 
-type PresetKey = 'thisMonth' | 'lastMonth' | 'thisQuarter' | 'thisYear' | 'all' | 'last7' | 'last30' | 'last90';
-
-function getPresetDates(key: PresetKey): [string, string] {
+function getPresetDates(preset: string): { start: string; end: string } {
   const now = new Date();
-  const fmt = (d: Date) => d.toISOString().slice(0, 10);
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  const today = now.toISOString().slice(0, 10);
 
-  switch (key) {
-    case 'thisMonth':
-      return [fmt(new Date(now.getFullYear(), now.getMonth(), 1)), fmt(now)];
-    case 'lastMonth': {
-      const s = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const e = new Date(now.getFullYear(), now.getMonth(), 0);
-      return [fmt(s), fmt(e)];
+  switch (preset) {
+    case 'this_month':
+      return { start: `${y}-${String(m + 1).padStart(2, '0')}-01`, end: today };
+    case 'last_month': {
+      const lm = m === 0 ? 11 : m - 1;
+      const ly = m === 0 ? y - 1 : y;
+      const lastDay = new Date(ly, lm + 1, 0).getDate();
+      return {
+        start: `${ly}-${String(lm + 1).padStart(2, '0')}-01`,
+        end: `${ly}-${String(lm + 1).padStart(2, '0')}-${lastDay}`,
+      };
     }
-    case 'thisQuarter': {
-      const q = Math.floor(now.getMonth() / 3) * 3;
-      return [fmt(new Date(now.getFullYear(), q, 1)), fmt(now)];
+    case 'this_quarter': {
+      const qStart = Math.floor(m / 3) * 3;
+      return { start: `${y}-${String(qStart + 1).padStart(2, '0')}-01`, end: today };
     }
-    case 'thisYear':
-      return [fmt(new Date(now.getFullYear(), 0, 1)), fmt(now)];
+    case 'this_year':
+      return { start: `${y}-01-01`, end: today };
     case 'all':
-      return ['2020-01-01', fmt(now)];
-    case 'last7': {
-      const d = new Date(now);
-      d.setDate(d.getDate() - 6);
-      return [fmt(d), fmt(now)];
-    }
-    case 'last30': {
-      const d = new Date(now);
-      d.setDate(d.getDate() - 29);
-      return [fmt(d), fmt(now)];
-    }
-    case 'last90': {
-      const d = new Date(now);
-      d.setDate(d.getDate() - 89);
-      return [fmt(d), fmt(now)];
-    }
+      return { start: '', end: '' };
+    default:
+      return { start: '', end: '' };
   }
 }
 
-export default function DateRangePicker({ startDate, endDate, onStartDateChange, onEndDateChange }: DateRangePickerProps) {
+const DEFAULT_PRESETS = [
+  { key: 'this_month', labelKr: '이번달', labelJp: '今月' },
+  { key: 'last_month', labelKr: '지난달', labelJp: '先月' },
+  { key: 'this_quarter', labelKr: '이번분기', labelJp: '今四半期' },
+  { key: 'this_year', labelKr: '올해', labelJp: '今年' },
+  { key: 'all', labelKr: '전체', labelJp: '全期間' },
+];
+
+export default function DateRangePicker({
+  startDate,
+  endDate,
+  onStartDateChange,
+  onEndDateChange,
+  presets: customPresets,
+  activePreset,
+  onPresetChange,
+}: DateRangePickerProps) {
   const { t } = useApp();
 
-  const presets: { key: PresetKey; label: string }[] = [
-    { key: 'thisMonth', label: t('이번달', '今月') },
-    { key: 'lastMonth', label: t('지난달', '先月') },
-    { key: 'thisQuarter', label: t('이번분기', '今四半期') },
-    { key: 'thisYear', label: t('올해', '今年') },
-    { key: 'all', label: t('전체', '全期間') },
-    { key: 'last7', label: t('최근 7일', '直近7日') },
-    { key: 'last30', label: t('최근 30일', '直近30日') },
-    { key: 'last90', label: t('최근 90일', '直近90日') },
-  ];
+  const applyPreset = (key: string, getRange?: () => [string, string]) => {
+    if (getRange) {
+      const [s, e] = getRange();
+      onStartDateChange(s);
+      onEndDateChange(e);
+    } else {
+      const { start, end } = getPresetDates(key);
+      onStartDateChange(start);
+      onEndDateChange(end);
+    }
+    onPresetChange?.(key);
+  };
 
-  const handlePreset = (key: PresetKey) => {
-    const [s, e] = getPresetDates(key);
-    onStartDateChange(s);
-    onEndDateChange(e);
+  const isActive = (key: string, getRange?: () => [string, string]) => {
+    if (activePreset !== undefined) return activePreset === key;
+    if (getRange) {
+      const [s, e] = getRange();
+      return startDate === s && endDate === e;
+    }
+    const { start, end } = getPresetDates(key);
+    return startDate === start && endDate === end;
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: -8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25 }}
-      className="glass-card p-4 space-y-3"
+    <div
+      className="rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-wrap"
+      style={GLASS_CARD}
     >
-      <div className="flex flex-wrap items-center gap-3">
-        <label className="text-sm text-[var(--color-text-secondary)]">
-          {t('기간', '期間')}
-        </label>
+      <div className="flex items-center gap-2">
         <input
           type="date"
           value={startDate}
           onChange={(e) => onStartDateChange(e.target.value)}
-          className="rounded-lg px-3 py-1.5 text-sm bg-[var(--color-input-bg)] border border-[var(--color-input-border)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-blue)]"
+          className="rounded-lg px-3 py-1.5 text-sm"
+          style={{
+            background: 'var(--color-surface)',
+            border: '1px solid var(--color-glass-border)',
+            color: 'var(--color-text-primary)',
+          }}
         />
-        <span className="text-[var(--color-text-muted)]">~</span>
+        <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>~</span>
         <input
           type="date"
           value={endDate}
           onChange={(e) => onEndDateChange(e.target.value)}
-          className="rounded-lg px-3 py-1.5 text-sm bg-[var(--color-input-bg)] border border-[var(--color-input-border)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-blue)]"
+          className="rounded-lg px-3 py-1.5 text-sm"
+          style={{
+            background: 'var(--color-surface)',
+            border: '1px solid var(--color-glass-border)',
+            color: 'var(--color-text-primary)',
+          }}
         />
       </div>
-
-      <div className="flex flex-wrap gap-1.5">
-        {presets.map(({ key, label }) => (
-          <button
-            key={key}
-            onClick={() => handlePreset(key)}
-            className="px-3 py-1 text-xs rounded-full border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-glass-hover)] hover:border-[var(--color-glass-hover-border)] transition-colors"
-          >
-            {label}
-          </button>
-        ))}
+      <div className="flex gap-1.5 flex-wrap">
+        {customPresets
+          ? customPresets.map((p) => {
+              const active = isActive(p.label, p.getRange);
+              return (
+                <button
+                  key={p.label}
+                  onClick={() => applyPreset(p.label, p.getRange)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+                  style={{
+                    background: active
+                      ? 'linear-gradient(135deg, #3b82f6, #8b5cf6)'
+                      : 'var(--color-surface)',
+                    color: active ? '#fff' : 'var(--color-text-secondary)',
+                    border: active ? 'none' : '1px solid var(--color-glass-border)',
+                  }}
+                >
+                  {p.label}
+                </button>
+              );
+            })
+          : DEFAULT_PRESETS.map((p) => {
+              const active = isActive(p.key);
+              return (
+                <button
+                  key={p.key}
+                  onClick={() => applyPreset(p.key)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+                  style={{
+                    background: active
+                      ? 'linear-gradient(135deg, #3b82f6, #8b5cf6)'
+                      : 'var(--color-surface)',
+                    color: active ? '#fff' : 'var(--color-text-secondary)',
+                    border: active ? 'none' : '1px solid var(--color-glass-border)',
+                  }}
+                >
+                  {t(p.labelKr, p.labelJp)}
+                </button>
+              );
+            })}
       </div>
-    </motion.div>
+    </div>
   );
 }

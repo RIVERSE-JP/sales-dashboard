@@ -3,6 +3,13 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabase-server';
 
+/**
+ * GET /api/manage/titles/[id]/platforms
+ * 특정 작품의 플랫폼 가용 정보 조회 (플랫폼 코드/이름 포함)
+ * @param id — 작품 ID (URL 경로)
+ * @returns TitlePlatformAvailability[] (platforms 조인 포함)
+ * @dynamic force-dynamic (캐시 없음)
+ */
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -18,6 +25,13 @@ export async function GET(
   return NextResponse.json(data);
 }
 
+/**
+ * POST /api/manage/titles/[id]/platforms
+ * 작품에 플랫폼 가용 정보 추가
+ * @param id — 작품 ID (URL 경로)
+ * @body { platform_id, launch_date? } — 플랫폼 ID 및 런칭일
+ * @returns 생성된 가용 정보 레코드 (201)
+ */
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -46,6 +60,13 @@ export async function POST(
   return NextResponse.json(data, { status: 201 });
 }
 
+/**
+ * DELETE /api/manage/titles/[id]/platforms
+ * 작품의 특정 플랫폼 가용 정보 삭제
+ * @param id — 작품 ID (URL 경로)
+ * @body { platform_id } — 삭제할 플랫폼 ID
+ * @returns { deleted: 1 }
+ */
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

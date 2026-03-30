@@ -3,6 +3,12 @@ import { supabaseServer } from '@/lib/supabase-server';
 
 export const revalidate = 300;
 
+/**
+ * GET /api/dashboard/growth-alerts
+ * 매출 성장/하락 알림 조회 (이번달 vs 전월 비교, 하락폭 순 정렬 상위 30개)
+ * @returns GrowthAlertRow[] — { title_jp, title_kr, this_month, last_month, growth_pct }
+ * @cache revalidate 300초 (5분)
+ */
 export async function GET() {
   // RPC has type mismatch (numeric vs bigint), query directly instead
   const now = new Date();

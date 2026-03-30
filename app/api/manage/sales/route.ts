@@ -3,6 +3,13 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabase-server';
 
+/**
+ * PUT /api/manage/sales
+ * 개별 매출 레코드 수정 (변경 전/후 감사 로그 기록)
+ * @body { id, ...updates } — 수정할 필드
+ * @returns 수정된 매출 레코드
+ * @dynamic force-dynamic (캐시 없음)
+ */
 export async function PUT(request: Request) {
   const body = await request.json();
   const { id, ...updates } = body;
@@ -35,6 +42,12 @@ export async function PUT(request: Request) {
   return NextResponse.json(data);
 }
 
+/**
+ * DELETE /api/manage/sales
+ * 매출 레코드 삭제 (단건 또는 복수, 감사 로그 기록)
+ * @body { id: number } 또는 { ids: number[] }
+ * @returns { deleted: number }
+ */
 export async function DELETE(request: Request) {
   const body = await request.json();
   const ids: number[] = body.ids || (body.id ? [body.id] : []);

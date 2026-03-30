@@ -3,6 +3,14 @@ import { supabaseServer } from '@/lib/supabase-server';
 
 export const revalidate = 300;
 
+/**
+ * GET /api/analysis/period-kpis
+ * 특정 기간의 KPI 조회 (총매출, 활성 작품 수, 활성 플랫폼 수)
+ * @param startDate — 조회 시작일 (YYYY-MM-DD, 필수)
+ * @param endDate — 조회 종료일 (YYYY-MM-DD, 필수)
+ * @returns PeriodKPIData — { total_sales, active_titles, active_platforms }
+ * @cache revalidate 300초 (5분)
+ */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const startDate = searchParams.get('startDate');

@@ -3,6 +3,13 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabase-server';
 
+/**
+ * PUT /api/manage/titles/batch
+ * 작품 일괄 수정 (여러 작품에 동일 필드 업데이트, 감사 로그 기록)
+ * @body { ids: string[], updates: object } — 대상 ID 배열 및 수정 값
+ * @returns { updated: number }
+ * @dynamic force-dynamic (캐시 없음)
+ */
 export async function PUT(request: Request) {
   const body = await request.json();
   const { ids, updates } = body;

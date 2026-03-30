@@ -7,6 +7,22 @@ function escapeIlike(value: string): string {
   return value.replace(/[\\%_]/g, (ch) => '\\' + ch);
 }
 
+/**
+ * GET /api/manage/titles
+ * 작품 목록 페이지네이션 조회 (검색, 장르, 제작사, 상태, 포맷 필터 지원)
+ * @param search — 작품명 검색 (JP/KR, 선택)
+ * @param genre — 장르 ID 필터 (선택)
+ * @param company — 제작사 ID 필터 (선택)
+ * @param status — 연재 상태 필터 (선택)
+ * @param format — 콘텐츠 포맷 필터 (선택)
+ * @param active — 활성 여부 필터 (true/false, 선택)
+ * @param sortBy — 정렬 컬럼 (기본 created_at)
+ * @param sortDir — 정렬 방향 (기본 desc)
+ * @param page — 페이지 번호 (기본 1)
+ * @param pageSize — 페이지 크기 (기본 50, 최대 200)
+ * @returns { rows: Title[], count: number }
+ * @dynamic force-dynamic (캐시 없음)
+ */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const search = searchParams.get('search') || '';
@@ -48,6 +64,12 @@ export async function GET(request: Request) {
   return NextResponse.json({ rows: data, count });
 }
 
+/**
+ * POST /api/manage/titles
+ * 작품 생성 (감사 로그 기록)
+ * @body Title 필드 — { title_jp, title_kr, genre_id, production_company_id, ... }
+ * @returns 생성된 작품 레코드 (201)
+ */
 export async function POST(request: Request) {
   const body = await request.json();
 
@@ -69,6 +91,12 @@ export async function POST(request: Request) {
   return NextResponse.json(data, { status: 201 });
 }
 
+/**
+ * PUT /api/manage/titles
+ * 작품 정보 수정 (변경 전/후 감사 로그 기록)
+ * @body { id, ...updates } — 수정할 필드
+ * @returns 수정된 작품 레코드
+ */
 export async function PUT(request: Request) {
   const body = await request.json();
   const { id, ...updates } = body;
@@ -101,6 +129,12 @@ export async function PUT(request: Request) {
   return NextResponse.json(data);
 }
 
+/**
+ * DELETE /api/manage/titles
+ * 작품 삭제 (단건 또는 복수, 감사 로그 기록)
+ * @body { id: string } 또는 { ids: string[] }
+ * @returns { deleted: number }
+ */
 export async function DELETE(request: Request) {
   const body = await request.json();
   const ids: string[] = body.ids || (body.id ? [body.id] : []);

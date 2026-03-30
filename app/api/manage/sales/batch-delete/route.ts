@@ -3,6 +3,13 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabase-server';
 
+/**
+ * POST /api/manage/sales/batch-delete
+ * 매출 데이터 일괄 삭제 (필터 조건에 해당하는 레코드를 500건씩 배치 삭제)
+ * @body { startDate, endDate, dataSource, channel } — 최소 1개 필터 필수
+ * @returns { deleted: number } — 삭제된 행 수
+ * @dynamic force-dynamic (캐시 없음)
+ */
 export async function POST(request: Request) {
   const body = await request.json();
   const { startDate, endDate, dataSource, channel } = body;

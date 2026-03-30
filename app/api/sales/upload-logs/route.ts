@@ -3,6 +3,12 @@ import { supabaseServer } from '@/lib/supabase-server';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * GET /api/sales/upload-logs
+ * 최근 업로드 이력 조회 (최신순 20건)
+ * @returns UploadLog[] — 업로드 로그 배열
+ * @dynamic force-dynamic (캐시 없음)
+ */
 export async function GET() {
   const { data, error } = await supabaseServer
     .from('upload_logs')
@@ -14,6 +20,12 @@ export async function GET() {
   return NextResponse.json(data);
 }
 
+/**
+ * POST /api/sales/upload-logs
+ * 업로드 이력 기록
+ * @body { upload_type, source_file, row_count, status } — 업로드 정보
+ * @returns 생성된 업로드 로그 레코드
+ */
 export async function POST(request: Request) {
   const body = await request.json();
   const { upload_type, source_file, row_count, status } = body;
