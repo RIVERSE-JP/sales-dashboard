@@ -727,10 +727,14 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
                                   <span className="text-[12px] font-bold w-5 text-center" style={{ color: i < 3 ? pf.color : 'var(--color-text-muted)' }}>
                                     {i + 1}
                                   </span>
-                                  <div className="w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-bold"
-                                    style={{ background: brand.bgColor, color: brand.color, border: `1px solid ${brand.borderColor}` }}>
-                                    {brand.icon}
-                                  </div>
+                                  {brand.logo ? (
+                                    <img src={brand.logo} alt={pf.name} className="w-6 h-6 rounded-md object-contain" />
+                                  ) : (
+                                    <div className="w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-bold"
+                                      style={{ background: brand.bgColor, color: brand.color, border: `1px solid ${brand.borderColor}` }}>
+                                      {brand.icon}
+                                    </div>
+                                  )}
                                   <span className="text-[13px] font-medium flex-1 truncate" style={{ color: 'var(--color-text-primary)' }}>
                                     {brand.nameJP || pf.name}
                                   </span>
