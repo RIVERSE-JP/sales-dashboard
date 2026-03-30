@@ -6,6 +6,36 @@ import type {
   TitleMasterRow,
 } from '@/types';
 
+// ============================================================
+// Title normalization utilities (base_title grouping)
+// ============================================================
+
+/** 작품명에서 base_title 추출 (그룹화용) */
+export function extractBaseTitle(titleJp: string): string {
+  return titleJp
+    .replace(/（ノベル）|\(ノベル\)/g, '')
+    .replace(/（版面）|\(版面\)/g, '')
+    .replace(/（LDF）|\(LDF\)/g, '')
+    .replace(/\[完全版\]/g, '')
+    .replace(/【分冊版】/g, '')
+    .replace(/【特装版】/g, '')
+    .replace(/【連載版】/g, '')
+    .replace(/【完全版】/g, '')
+    .trim();
+}
+
+/** 상품 유형 추출 */
+export function extractProductType(titleJp: string): string {
+  if (/（ノベル）|\(ノベル\)/.test(titleJp)) return 'ノベル';
+  if (/（版面）|\(版面\)/.test(titleJp)) return '版面';
+  if (/（LDF）|\(LDF\)/.test(titleJp)) return 'LDF';
+  if (/【分冊版】/.test(titleJp)) return '分冊版';
+  if (/【特装版】/.test(titleJp)) return '特装版';
+  if (/【連載版】/.test(titleJp)) return '連載版';
+  if (/\[完全版\]|【完全版】/.test(titleJp)) return '完全版';
+  return 'オリジナル';
+}
+
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
 

@@ -215,6 +215,15 @@ export interface TitleMasterRow {
   is_active: boolean;
 }
 
+/** base_title로 그룹화된 작품 요약 */
+export interface GroupedTitle {
+  base_title: string;
+  product_type: string;
+  products: TitleSummaryRow[];
+  total_sales: number;
+  channels: string[];
+}
+
 /** 날짜 범위 (시작일~종료일) */
 export interface DateRange {
   startDate: string;
