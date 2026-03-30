@@ -4,11 +4,11 @@ import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip,
-  ResponsiveContainer, BarChart, Bar, Legend,
+  ResponsiveContainer, Legend,
 } from 'recharts';
 import {
   Monitor, TrendingUp, BarChart3, ChevronUp, ChevronDown, ChevronRight, Minus,
-  Activity, PieChart, X, Check, Hash, CalendarDays,
+  Activity, X, Check, Hash, CalendarDays,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { usePlatformSummary, usePlatformDetail } from '@/hooks/useData';
@@ -18,8 +18,7 @@ import { useApp } from '@/context/AppContext';
 import type { PlatformSummaryRow, PlatformDetailData } from '@/types';
 import DateRangePicker from '@/components/shared/DateRangePicker';
 import PlatformGenreMatrix from '@/components/platforms/PlatformGenreMatrix';
-import ParetoChart from '@/components/shared/ParetoChart';
-import HealthTrend from '@/components/platforms/HealthTrend';
+// ParetoChart, HealthTrend removed (tab system removed)
 import { GLASS_CARD, darkTooltipStyle, containerVariants, cardVariants } from '@/lib/design-tokens';
 
 // ============================================================
@@ -123,8 +122,7 @@ function RankChangeBadge({ change }: { change: number }) {
 }
 
 // ─── Detail tab names ────────────────────────────────────────
-const DETAIL_TABS = ['trend', 'titles', 'health', 'genre'] as const;
-type DetailTab = typeof DETAIL_TABS[number];
+// Detail tabs removed — content shown inline
 
 // ─── Top N options ───────────────────────────────────────────
 const TOP_N_OPTIONS = [5, 10, 20, 50];
@@ -162,7 +160,7 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
   const prevSummary: PlatformSummaryRow[] = platformSummary;
 
   // Detail tab
-  const [detailTab, setDetailTab] = useState<DetailTab>('trend');
+  // detailTab removed — content shown inline
 
   // Compare mode
   const [compareMode, setCompareMode] = useState(false);
@@ -228,23 +226,7 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
     });
   }, [platformSummary, prevSummary]);
 
-  // C4: New titles count from detail data
-  const newTitlesInfo = useMemo(() => {
-    if (!detailData?.top_titles || !detailData.monthly_trend) return null;
-    const now = new Date();
-    const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const lastMonth = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`;
-    const trendMonths = (detailData.monthly_trend ?? []).map((mt) => mt.month);
-    const firstMonth = trendMonths.length > 0 ? trendMonths[0] : '';
-
-    return {
-      totalTitles: detailData.top_titles.length,
-      currentMonth: thisMonth,
-      previousMonth: lastMonth,
-      firstDataMonth: firstMonth,
-    };
-  }, [detailData]);
+  // Title count shown inline in the list header
 
   // Compare chart data
   const compareChartData = useMemo(() => {
@@ -296,15 +278,7 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
       toggleComparePlatform(pf);
     } else {
       setSelectedPlatform(pf === selectedPlatform ? null : pf);
-      setDetailTab('trend');
     }
-  };
-
-  const detailTabLabels: Record<DetailTab, string> = {
-    trend: t('추이', '推移'),
-    titles: t('작품', 'タイトル'),
-    health: t('건강도', '健全性'),
-    genre: t('장르분석', 'ジャンル分析'),
   };
 
   return (
@@ -674,226 +648,108 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
                     </div>
                   )}
 
-                  {/* Tab bar */}
-                  <div className="flex gap-1 p-1 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)' }}>
-                    {DETAIL_TABS.map((tab) => (
-                      <button
-                        key={tab}
-                        onClick={() => setDetailTab(tab)}
-                        className="relative flex-1 px-3 py-2 text-xs font-medium rounded-lg cursor-pointer transition-colors"
-                        style={{
-                          background: 'transparent',
-                          border: 'none',
-                          color: detailTab === tab ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
-                        }}
-                      >
-                        {detailTab === tab && (
-                          <motion.div
-                            layoutId="detail-tab-indicator"
-                            className="absolute inset-0 rounded-lg"
-                            style={{
-                              background: `${getPlatformColor(selectedPlatform)}15`,
-                              border: `1px solid ${getPlatformColor(selectedPlatform)}30`,
-                            }}
-                            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                          />
-                        )}
-                        <span className="relative z-10">{detailTabLabels[tab]}</span>
-                      </button>
-                    ))}
-                  </div>
                 </div>
 
-                {/* Tab content */}
-                <div className="px-5 sm:px-6 pb-6">
-                  <AnimatePresence mode="wait">
-                    {/* ── Trend tab ── */}
-                    {detailTab === 'trend' && (
-                      <motion.div
-                        key="trend"
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: 10 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        {detailLoading ? (
-                          <ChartSkeleton height={300} />
-                        ) : filteredMonthlyTrend.length > 0 ? (
-                          <ResponsiveContainer width="100%" height={340}>
-                            <AreaChart data={filteredMonthlyTrend.map((d) => ({ label: d.month, sales: d.sales }))}>
-                              <defs>
-                                <linearGradient id="pfSingleGrad" x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="0%" stopColor={getPlatformColor(selectedPlatform)} stopOpacity={0.3} />
-                                  <stop offset="100%" stopColor={getPlatformColor(selectedPlatform)} stopOpacity={0} />
-                                </linearGradient>
-                              </defs>
-                              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
-                              <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
-                              <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={60} />
-                              <ReTooltip {...darkTooltipStyle} formatter={(v: unknown) => [formatCurrency(Number(v ?? 0)), t('매출', '売上')]} />
-                              <Area type="monotone" dataKey="sales" stroke={getPlatformColor(selectedPlatform)} strokeWidth={2.5} fill="url(#pfSingleGrad)" />
-                            </AreaChart>
-                          </ResponsiveContainer>
-                        ) : (
-                          <p className="text-center py-12" style={{ color: 'var(--color-text-muted)' }}>
-                            {t('데이터가 없습니다', 'データがありません')}
-                          </p>
-                        )}
-                      </motion.div>
+                {/* ===== 추이 그래프 + 작품 리스트 (탭 없이 연속 표시) ===== */}
+                <div className="px-5 sm:px-6 pb-6 space-y-6">
+                  {/* 매출 추이 */}
+                  <div>
+                    <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
+                      {t('월별 매출 추이', '月別売上推移')}
+                    </h3>
+                    {detailLoading ? (
+                      <ChartSkeleton height={300} />
+                    ) : filteredMonthlyTrend.length > 0 ? (
+                      <ResponsiveContainer width="100%" height={300}>
+                        <AreaChart data={filteredMonthlyTrend.map((d) => ({ label: d.month, sales: d.sales }))}>
+                          <defs>
+                            <linearGradient id="pfSingleGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor={getPlatformColor(selectedPlatform)} stopOpacity={0.3} />
+                              <stop offset="100%" stopColor={getPlatformColor(selectedPlatform)} stopOpacity={0} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
+                          <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
+                          <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={60} />
+                          <ReTooltip {...darkTooltipStyle} formatter={(v: unknown) => [formatCurrency(Number(v ?? 0)), t('매출', '売上')]} />
+                          <Area type="monotone" dataKey="sales" stroke={getPlatformColor(selectedPlatform)} strokeWidth={2.5} fill="url(#pfSingleGrad)" />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <p className="text-center py-8" style={{ color: 'var(--color-text-muted)' }}>
+                        {t('데이터가 없습니다', 'データがありません')}
+                      </p>
                     )}
+                  </div>
 
-                    {/* ── Titles tab ── */}
-                    {detailTab === 'titles' && (
-                      <motion.div
-                        key="titles"
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: 10 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        {detailLoading ? (
-                          <ChartSkeleton height={300} />
-                        ) : (detailData?.top_titles ?? []).length > 0 ? (
-                          <>
-                            {/* C5: Pareto */}
-                            <div className="mb-6">
-                              <div className="flex items-center gap-2 mb-3">
-                                <PieChart size={14} style={{ color: getPlatformColor(selectedPlatform) }} />
-                                <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                                  {t('매출 집중도 (파레토)', '売上集中度（パレート）')}
-                                </h3>
-                              </div>
-                              <ParetoChart
-                                titles={detailData?.top_titles ?? []}
-                                channel={selectedPlatform}
-                                topN={topN}
-                              />
-                            </div>
+                  {/* 서비스 중인 작품 리스트 */}
+                  {!detailLoading && (detailData?.top_titles ?? []).length > 0 && (
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                          {t('서비스 중인 작품', 'サービス中の作品')} ({(detailData?.top_titles ?? []).length})
+                        </h3>
+                        <select
+                          value={topN}
+                          onChange={(e) => setTopN(Number(e.target.value))}
+                          className="text-xs px-2 py-1.5 rounded-lg cursor-pointer outline-none"
+                          style={{
+                            background: 'var(--color-input-bg)',
+                            color: 'var(--color-text-secondary)',
+                            border: '1px solid var(--color-glass-border)',
+                          }}
+                        >
+                          {TOP_N_OPTIONS.map((n) => (
+                            <option key={n} value={n}>Top {n}</option>
+                          ))}
+                        </select>
+                      </div>
 
-                            {/* Top Titles bar + table */}
-                            <div className="flex items-center justify-between mb-4">
-                              <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                                Top {t('작품', 'タイトル')}
-                              </h3>
-                              {/* C8: Top N selector */}
-                              <select
-                                value={topN}
-                                onChange={(e) => setTopN(Number(e.target.value))}
-                                className="text-xs px-2 py-1.5 rounded-lg cursor-pointer outline-none"
-                                style={{
-                                  background: 'var(--color-input-bg)',
-                                  color: 'var(--color-text-secondary)',
-                                  border: '1px solid var(--color-glass-border)',
-                                }}
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm table-striped">
+                          <thead>
+                            <tr style={{ borderBottom: '1px solid var(--color-table-border)' }}>
+                              <th className="text-left py-3 px-2 font-medium" style={{ color: 'var(--color-text-secondary)' }}>#</th>
+                              <th className="text-left py-3 px-2 font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                                {t('작품', 'タイトル')}
+                              </th>
+                              <th className="text-right py-3 px-2 font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                                {t('매출', '売上')}
+                              </th>
+                              <th className="w-8"></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(detailData?.top_titles ?? []).slice(0, topN).map((title, idx) => (
+                              <motion.tr
+                                key={title.title_jp}
+                                initial={{ opacity: 0, x: -8 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: idx * 0.03 }}
+                                style={{ borderBottom: '1px solid var(--color-table-border-subtle)' }}
+                                className="cursor-pointer transition-all hover:brightness-110"
+                                onClick={() => router.push(`/titles?highlight=${encodeURIComponent(title.title_jp)}`)}
                               >
-                                {TOP_N_OPTIONS.map((n) => (
-                                  <option key={n} value={n}>Top {n}</option>
-                                ))}
-                              </select>
-                            </div>
-
-                            {/* C4: New titles info */}
-                            {newTitlesInfo && (
-                              <div className="flex items-center gap-4 mb-4 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-                                <span>{t('총 작품 수', '総タイトル数')}: <strong style={{ color: 'var(--color-text-primary)' }}>{newTitlesInfo.totalTitles}</strong></span>
-                              </div>
-                            )}
-
-                            <ResponsiveContainer width="100%" height={Math.max(200, (detailData?.top_titles ?? []).slice(0, topN).length * 40)}>
-                              <BarChart data={(detailData?.top_titles ?? []).slice(0, topN)} layout="vertical" margin={{ left: 120 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" horizontal={false} />
-                                <XAxis type="number" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatShort} />
-                                <YAxis
-                                  type="category"
-                                  dataKey="title_jp"
-                                  tick={{ fill: 'var(--color-text-secondary)', fontSize: 11 }}
-                                  axisLine={false}
-                                  tickLine={false}
-                                  width={120}
-                                  tickFormatter={(v: string) => v.length > 15 ? v.slice(0, 15) + '...' : v}
-                                />
-                                <ReTooltip {...darkTooltipStyle} formatter={(v: unknown) => [formatCurrency(Number(v ?? 0)), t('매출', '売上')]} />
-                                <Bar dataKey="total_sales" radius={[0, 6, 6, 0]} barSize={20} fill={getPlatformColor(selectedPlatform)} fillOpacity={0.8} />
-                              </BarChart>
-                            </ResponsiveContainer>
-
-                            <div className="mt-6 overflow-x-auto">
-                              <table className="w-full text-sm table-striped">
-                                <thead>
-                                  <tr style={{ borderBottom: '1px solid var(--color-table-border)' }}>
-                                    <th className="text-left py-3 px-2 font-medium" style={{ color: 'var(--color-text-secondary)' }}>#</th>
-                                    <th className="text-left py-3 px-2 font-medium" style={{ color: 'var(--color-text-secondary)' }}>
-                                      {t('작품', 'タイトル')}
-                                    </th>
-                                    <th className="text-right py-3 px-2 font-medium" style={{ color: 'var(--color-text-secondary)' }}>
-                                      {t('매출', '売上')}
-                                    </th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {(detailData?.top_titles ?? []).slice(0, topN).map((title, idx) => (
-                                    <tr
-                                      key={title.title_jp}
-                                      style={{ borderBottom: '1px solid var(--color-table-border-subtle)' }}
-                                      className="cursor-pointer transition-all hover:brightness-110"
-                                      onClick={() => router.push(`/titles?highlight=${encodeURIComponent(title.title_jp)}`)}
-                                    >
-                                      <td className="py-3 px-2 font-bold" style={{ color: idx < 3 ? getPlatformColor(selectedPlatform) : 'var(--color-text-muted)' }}>
-                                        {idx + 1}
-                                      </td>
-                                      <td className="py-3 px-2" style={{ maxWidth: '300px' }}>
-                                        <p className="font-medium truncate" title={title.title_jp} style={{ color: 'var(--color-text-primary)' }}>{title.title_jp}</p>
-                                        {title.title_kr && <p className="text-xs truncate" title={title.title_kr} style={{ color: 'var(--color-text-muted)' }}>{title.title_kr}</p>}
-                                      </td>
-                                      <td className="py-3 px-2 text-right font-bold" style={{ color: 'var(--color-text-primary)' }}>
-                                        {formatCurrency(title.total_sales)}
-                                      </td>
-                                      <td className="py-2 px-2">
-                                        <ChevronRight size={14} style={{ color: 'var(--color-text-muted)' }} />
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          </>
-                        ) : (
-                          <p className="text-center py-12" style={{ color: 'var(--color-text-muted)' }}>
-                            {t('데이터가 없습니다', 'データがありません')}
-                          </p>
-                        )}
-                      </motion.div>
-                    )}
-
-                    {/* ── Health tab ── */}
-                    {detailTab === 'health' && (
-                      <motion.div
-                        key="health"
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: 10 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <HealthTrend channel={selectedPlatform} months={6} />
-                      </motion.div>
-                    )}
-
-                    {/* ── Genre tab ── */}
-                    {detailTab === 'genre' && (
-                      <motion.div
-                        key="genre"
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: 10 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <p className="text-xs mb-4" style={{ color: 'var(--color-text-muted)' }}>
-                          {t('어떤 장르가 어떤 플랫폼에서 강한지 한눈에', 'どのジャンルがどのプラットフォームで強いか一目で確認')}
-                        </p>
-                        <PlatformGenreMatrix startDate={startDate} endDate={endDate} />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                                <td className="py-3 px-2 font-bold" style={{ color: idx < 3 ? getPlatformColor(selectedPlatform) : 'var(--color-text-muted)' }}>
+                                  {idx + 1}
+                                </td>
+                                <td className="py-3 px-2" style={{ maxWidth: '300px' }}>
+                                  <p className="font-medium truncate" title={title.title_jp} style={{ color: 'var(--color-text-primary)' }}>{title.title_jp}</p>
+                                  {title.title_kr && <p className="text-xs truncate" title={title.title_kr} style={{ color: 'var(--color-text-muted)' }}>{title.title_kr}</p>}
+                                </td>
+                                <td className="py-3 px-2 text-right font-bold" style={{ color: 'var(--color-text-primary)' }}>
+                                  {formatCurrency(title.total_sales)}
+                                </td>
+                                <td className="py-2 px-2">
+                                  <ChevronRight size={14} style={{ color: 'var(--color-text-muted)' }} />
+                                </td>
+                              </motion.tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             )}
