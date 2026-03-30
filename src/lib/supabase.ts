@@ -54,8 +54,8 @@ export async function fetchDailySalesPage(
   return apiFetch<{ rows: DailySale[]; count: number }>(`/api/sales/paginated?${params}`);
 }
 
-export async function fetchAllDailySales(): Promise<DailySale[]> {
-  return apiFetch<DailySale[]>('/api/sales/all');
+export async function fetchAllDailySales(limit = 10000): Promise<DailySale[]> {
+  return apiFetch<DailySale[]>(`/api/sales/all?limit=${limit}`);
 }
 
 // ============================================================
@@ -144,15 +144,21 @@ export function prefetchAllData() {
   if (_prefetchStarted) return;
   _prefetchStarted = true;
 
-  // Fire all fetches in parallel — don't await, let them warm server cache in background
+  // Stage 1: Critical KPIs first
   Promise.allSettled([
     fetchDashboardKPIs(),
     fetchMonthlyTrend(),
     fetchPlatformSummary(),
-    fetchTopTitles(20),
-    fetchTitleSummaries(),
-    fetchTitleMaster(),
   ]);
+
+  // Stage 2: Secondary data after 1s delay
+  setTimeout(() => {
+    Promise.allSettled([
+      fetchTopTitles(20),
+      fetchGrowthAlerts(),
+      fetchTitleSummaries(),
+    ]);
+  }, 1000);
 }
 
 export async function fetchTitleSummaries(): Promise<TitleSummaryRow[]> {

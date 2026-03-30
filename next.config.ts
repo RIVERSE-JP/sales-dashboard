@@ -1,8 +1,10 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  // @ alias is automatic in Next.js via tsconfig paths
-  // Code splitting is automatic per route
+  experimental: {
+    optimizePackageImports: ['lucide-react', 'recharts', 'framer-motion', '@radix-ui/react-dialog', '@radix-ui/react-select', '@radix-ui/react-tabs', '@radix-ui/react-tooltip', '@radix-ui/react-toggle-group', '@radix-ui/react-dropdown-menu'],
+  },
+  serverExternalPackages: ['exceljs'],
 };
 
 export default nextConfig;

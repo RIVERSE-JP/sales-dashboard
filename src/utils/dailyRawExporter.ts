@@ -2,7 +2,7 @@
  * Generates an Excel file matching the exact format of the
  * "[RVJP-RVKR] Weekly Report.xlsx" Daily_raw sheet.
  */
-import ExcelJS from 'exceljs';
+import type { Alignment, CellFormulaValue, FillPattern, Font } from 'exceljs';
 import { saveAs } from 'file-saver';
 import type { DailySale } from '@/types';
 
@@ -10,18 +10,18 @@ import type { DailySale } from '@/types';
 /*  Constants matching the original sheet                              */
 /* ------------------------------------------------------------------ */
 
-const HEADER_FILL: ExcelJS.FillPattern = {
+const HEADER_FILL: FillPattern = {
   type: 'pattern',
   pattern: 'solid',
   fgColor: { argb: 'FFD9E2F3' },
 };
 
-const FONT_DEFAULT: Partial<ExcelJS.Font> = {
+const FONT_DEFAULT: Partial<Font> = {
   name: 'Arial',
   size: 10,
 };
 
-const HEADER_ALIGNMENT: Partial<ExcelJS.Alignment> = {
+const HEADER_ALIGNMENT: Partial<Alignment> = {
   horizontal: 'center',
   vertical: 'middle',
 };
@@ -44,6 +44,7 @@ const HEADERS = [
 export async function generateDailyRawExcel(
   dailySales: DailySale[],
 ): Promise<void> {
+  const ExcelJS = (await import('exceljs')).default;
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet('Daily_raw');
 
@@ -56,7 +57,7 @@ export async function generateDailyRawExcel(
   row1.getCell(6).value = {
     formula: `SUBTOTAL(9,F3:F${lastDataRow})`,
     result: undefined,
-  } as ExcelJS.CellFormulaValue;
+  } as CellFormulaValue;
   row1.getCell(6).font = { ...FONT_DEFAULT };
   row1.getCell(6).numFmt = '[$¥]#,##0';
 

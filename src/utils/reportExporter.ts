@@ -2,7 +2,7 @@
  * Report Exporter — generates Excel/CSV files in various report formats.
  * The "Weekly Report" format matches the original [RVJP-RVKR] Weekly Report.xlsx layout.
  */
-import ExcelJS from 'exceljs';
+import type { CellFormulaValue, FillPattern } from 'exceljs';
 import { saveAs } from 'file-saver';
 import type { DailySale } from '@/types';
 
@@ -25,6 +25,7 @@ export async function generateWeeklyReport(
   data: DailySale[],
   options: ReportOptions,
 ): Promise<void> {
+  const ExcelJS = (await import('exceljs')).default;
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet('Daily_raw');
 
@@ -43,7 +44,7 @@ export async function generateWeeklyReport(
   row1.getCell(6).value = {
     formula: `SUBTOTAL(9,F3:F${lastDataRow})`,
     result: undefined,
-  } as ExcelJS.CellFormulaValue;
+  } as CellFormulaValue;
   row1.getCell(6).numFmt = '#,##0';
 
   // ---------- Row 2: Headers ----------
@@ -76,16 +77,16 @@ export async function generateWeeklyReport(
   headerRow.height = 20;
 
   // ---------- Row 3+: Data rows ----------
-  const altFill: ExcelJS.FillPattern = {
+  const altFill: FillPattern = {
     type: 'pattern',
     pattern: 'solid',
     fgColor: { argb: 'FFD9E2F3' },
   };
-  const thinBorder: Partial<ExcelJS.Borders> = {
-    top: { style: 'thin', color: { argb: 'FFB4C6E7' } },
-    bottom: { style: 'thin', color: { argb: 'FFB4C6E7' } },
-    left: { style: 'thin', color: { argb: 'FFB4C6E7' } },
-    right: { style: 'thin', color: { argb: 'FFB4C6E7' } },
+  const thinBorder = {
+    top: { style: 'thin' as const, color: { argb: 'FFB4C6E7' } },
+    bottom: { style: 'thin' as const, color: { argb: 'FFB4C6E7' } },
+    left: { style: 'thin' as const, color: { argb: 'FFB4C6E7' } },
+    right: { style: 'thin' as const, color: { argb: 'FFB4C6E7' } },
   };
 
   data.forEach((row, idx) => {
@@ -169,6 +170,7 @@ export async function generatePlatformReport(
     platformMap.set(row.channel, entry);
   });
 
+  const ExcelJS = (await import('exceljs')).default;
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet('Platform Performance');
 
@@ -228,6 +230,7 @@ export async function generateTitleReport(
     titleMap.set(row.title_jp, entry);
   });
 
+  const ExcelJS = (await import('exceljs')).default;
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet('Title Performance');
 
