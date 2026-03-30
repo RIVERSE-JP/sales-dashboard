@@ -134,11 +134,22 @@ function parseDailyRawSheet(wb: XLSX.WorkBook): DailyRawRow[] {
       continue;
     }
 
-    const channel = String(row[3] ?? '').trim();
+    let channel = String(row[3] ?? '').trim();
     if (!channel) {
       skipped.push({ row: excelRowNum, reason: 'empty channel' });
       continue;
     }
+    // 채널명 정규화 (대소문자 통일)
+    const CHANNEL_NORMALIZE: Record<string, string> = {
+      'piccoma': 'Piccoma',
+      'cmoa': 'CMOA',
+      'mechacomic': 'Mechacomic',
+      'renta': 'Renta',
+      'dmm': 'DMM',
+      'u-next': 'U-NEXT',
+      'ebookjapan': 'ebookjapan',
+    };
+    channel = CHANNEL_NORMALIZE[channel.toLowerCase()] ?? CHANNEL_NORMALIZE[channel] ?? channel;
 
     const dateStr = excelDateToString(row[4]);
     if (!dateStr) {
@@ -185,8 +196,17 @@ async function seedDailySales(): Promise<void> {
 
   log(`Sheets: ${wb.SheetNames.join(', ')}`);
 
-  const rows = parseDailyRawSheet(wb);
-  log(`Parsed ${rows.length} valid rows from Daily_raw`);
+  const rawRows = parseDailyRawSheet(wb);
+  log(`Parsed ${rawRows.length} valid rows from Daily_raw`);
+
+  // 같은 배치 내 중복 키 제거 (마지막 값 유지)
+  const deduped = new Map<string, typeof rawRows[0]>();
+  for (const row of rawRows) {
+    const key = `${row.title_jp}|${row.channel}|${row.sale_date}`;
+    deduped.set(key, row);
+  }
+  const rows = Array.from(deduped.values());
+  log(`After dedup: ${rows.length} unique rows (${rawRows.length - rows.length} duplicates removed)`);
 
   if (rows.length === 0) {
     log('No rows to insert. Skipping.');
