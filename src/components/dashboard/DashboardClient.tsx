@@ -15,7 +15,7 @@ import {
   useDashboardKPIs, useMonthlyTrend, usePlatformSummary,
   useTopTitles, useGrowthAlerts, usePeriodKpis,
   useGenreSummary, useCompanySummary,
-  useDailyTrend, useWeeklyTrend,
+  useDailyTrend, useWeeklyTrend, useTitleMaster,
 } from '@/hooks/useData';
 import { getPlatformColor, getPlatformBrand, PLATFORM_BRANDS } from '@/utils/platformConfig';
 import { PlatformBadge } from '@/components/PlatformBadge';
@@ -218,6 +218,28 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
   const { data: companySummaryRaw } = useCompanySummary(sd, ed);
   const { data: dailyTrendRaw } = useDailyTrend(sd, ed);
   const { data: weeklyTrendRaw } = useWeeklyTrend(sd, ed);
+  const { data: titleMasterRaw } = useTitleMaster();
+
+  // Title metadata map (title_jp → { genre, company })
+  const titleMetaMap = useMemo(() => {
+    const map = new Map<string, { genre: string; company: string }>();
+    if (titleMasterRaw && Array.isArray(titleMasterRaw)) {
+      for (const t of titleMasterRaw) {
+        map.set(t.title_jp, {
+          genre: t.production_companies?.name ? '' : '',
+          company: '',
+        });
+        // Try nested join data
+        const genre = (t as Record<string, unknown>).genres;
+        const company = (t as Record<string, unknown>).production_companies;
+        map.set(t.title_jp, {
+          genre: genre && typeof genre === 'object' && 'name_kr' in (genre as Record<string, unknown>) ? String((genre as Record<string, unknown>).name_kr) : '',
+          company: company && typeof company === 'object' && 'name' in (company as Record<string, unknown>) ? String((company as Record<string, unknown>).name) : '',
+        });
+      }
+    }
+    return map;
+  }, [titleMasterRaw]);
 
   // Use SWR data, fall back to server-prefetched initialData
   const kpis = (kpisRaw ?? initialData?.kpis) as KPIData | undefined;
@@ -885,6 +907,8 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
                   <tr style={{ borderBottom: '1px solid var(--color-table-border)' }}>
                     <th className="text-left py-3 px-2 font-medium text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>#</th>
                     <th className="text-left py-3 px-2 font-medium text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>{t('작품', 'タイトル')}</th>
+                    <th className="text-left py-3 px-2 font-medium text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>{t('장르', 'ジャンル')}</th>
+                    <th className="text-left py-3 px-2 font-medium text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>{t('제작사', '制作会社')}</th>
                     <th className="text-left py-3 px-2 font-medium text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>{t('플랫폼', 'PF')}</th>
                     <th className="text-right py-3 px-2 font-medium text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>{t('총 매출', '累計売上')}</th>
                   </tr>
@@ -903,9 +927,19 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
                       <td className="py-3 px-2 font-bold text-[13px]" style={{ color: idx < 3 ? '#6366f1' : 'var(--color-text-muted)' }}>
                         {idx + 1}
                       </td>
-                      <td className="py-3 px-2" style={{ maxWidth: 250 }}>
+                      <td className="py-3 px-2" style={{ maxWidth: 220 }}>
                         <p className="font-medium text-[13px] truncate" style={{ color: 'var(--color-text-primary)' }}>{title.title_jp}</p>
                         {title.title_kr && <p className="text-[11px] truncate" style={{ color: 'var(--color-text-muted)' }}>{title.title_kr}</p>}
+                      </td>
+                      <td className="py-3 px-2">
+                        <span className="text-[11px]" style={{ color: 'var(--color-text-secondary)' }}>
+                          {titleMetaMap.get(title.title_jp)?.genre || '-'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-2">
+                        <span className="text-[11px] truncate block max-w-[100px]" title={titleMetaMap.get(title.title_jp)?.company || ''} style={{ color: 'var(--color-text-secondary)' }}>
+                          {titleMetaMap.get(title.title_jp)?.company || '-'}
+                        </span>
                       </td>
                       <td className="py-3 px-2">
                         <div className="flex gap-1 flex-wrap">

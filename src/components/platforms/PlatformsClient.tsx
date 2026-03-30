@@ -11,7 +11,7 @@ import {
   Activity, X, Check, Hash, CalendarDays,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { usePlatformSummary, usePlatformDetail, usePlatformSummaryForPeriod } from '@/hooks/useData';
+import { usePlatformSummary, usePlatformDetail, usePlatformSummaryForPeriod, useTitleMaster } from '@/hooks/useData';
 import { fetchPlatformDetail } from '@/lib/supabase';
 import { getPlatformColor, getPlatformBrand, getPlatformLogo } from '@/utils/platformConfig';
 import { useApp } from '@/context/AppContext';
@@ -130,6 +130,21 @@ const TOP_N_OPTIONS = [5, 10, 20, 50];
 export default function PlatformsClient({ initialData }: PlatformsClientProps) {
   const { formatCurrency, t } = useApp();
   const router = useRouter();
+  const { data: titleMasterRaw } = useTitleMaster();
+  const titleMetaMap = useMemo(() => {
+    const map = new Map<string, { genre: string; company: string }>();
+    if (titleMasterRaw && Array.isArray(titleMasterRaw)) {
+      for (const tm of titleMasterRaw) {
+        const g = (tm as Record<string, unknown>).genres;
+        const c = (tm as Record<string, unknown>).production_companies;
+        map.set(tm.title_jp, {
+          genre: g && typeof g === 'object' && 'name_kr' in (g as Record<string, unknown>) ? String((g as Record<string, unknown>).name_kr) : '',
+          company: c && typeof c === 'object' && 'name' in (c as Record<string, unknown>) ? String((c as Record<string, unknown>).name) : '',
+        });
+      }
+    }
+    return map;
+  }, [titleMasterRaw]);
 
   // SWR data hooks (client-side fetch with server prefetch as fallback)
   const { data: platformSummaryRaw } = usePlatformSummary();
@@ -746,6 +761,12 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
                               <th className="text-left py-3 px-2 font-medium" style={{ color: 'var(--color-text-secondary)' }}>
                                 {t('작품', 'タイトル')}
                               </th>
+                              <th className="text-left py-3 px-2 font-medium text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                                {t('장르', 'ジャンル')}
+                              </th>
+                              <th className="text-left py-3 px-2 font-medium text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                                {t('제작사', '制作会社')}
+                              </th>
                               <th className="text-right py-3 px-2 font-medium" style={{ color: 'var(--color-text-secondary)' }}>
                                 {t('매출', '売上')}
                               </th>
@@ -766,9 +787,19 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
                                 <td className="py-3 px-2 font-bold" style={{ color: idx < 3 ? getPlatformColor(selectedPlatform) : 'var(--color-text-muted)' }}>
                                   {idx + 1}
                                 </td>
-                                <td className="py-3 px-2" style={{ maxWidth: '300px' }}>
+                                <td className="py-3 px-2" style={{ maxWidth: '220px' }}>
                                   <p className="font-medium truncate" title={title.title_jp} style={{ color: 'var(--color-text-primary)' }}>{title.title_jp}</p>
                                   {title.title_kr && <p className="text-xs truncate" title={title.title_kr} style={{ color: 'var(--color-text-muted)' }}>{title.title_kr}</p>}
+                                </td>
+                                <td className="py-3 px-2">
+                                  <span className="text-[11px]" style={{ color: 'var(--color-text-secondary)' }}>
+                                    {titleMetaMap.get(title.title_jp)?.genre || '-'}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-2">
+                                  <span className="text-[11px] truncate block max-w-[80px]" title={titleMetaMap.get(title.title_jp)?.company || ''} style={{ color: 'var(--color-text-secondary)' }}>
+                                    {titleMetaMap.get(title.title_jp)?.company || '-'}
+                                  </span>
                                 </td>
                                 <td className="py-3 px-2 text-right font-bold" style={{ color: 'var(--color-text-primary)' }}>
                                   {formatCurrency(title.total_sales)}
