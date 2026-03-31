@@ -193,26 +193,30 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
   // Derived filter options
   // ============================================================
 
-  // 장르 목록: 실제 작품에 사용되는 장르만 (masterMap에서 추출) + 미분류
+  // 장르/제작사 목록: 매출 데이터가 있는 작품(titles = summaries)의 것만 표시
+  const titleJpSet = useMemo(() => new Set(titles.map(t => t.title_jp)), [titles]);
+
   const genres = useMemo<Array<{ id: number; name: string }>>(() => {
     const genreSet = new Set<string>();
     let hasUnclassified = false;
-    for (const [, m] of masterMap) {
+    for (const [titleJp, m] of masterMap) {
+      if (!titleJpSet.has(titleJp)) continue; // 매출 없는 작품 제외
       if (m.genre_name) genreSet.add(m.genre_name);
       else hasUnclassified = true;
     }
     const list = Array.from(genreSet).sort().map((name, i) => ({ id: i + 1, name }));
     if (hasUnclassified) list.push({ id: 9999, name: '미분류' });
     return list;
-  }, [masterMap]);
+  }, [masterMap, titleJpSet]);
 
   const companies = useMemo(() => {
     const set = new Set<string>();
-    for (const [, m] of masterMap) {
+    for (const [titleJp, m] of masterMap) {
+      if (!titleJpSet.has(titleJp)) continue; // 매출 없는 작품 제외
       if (m.company_name) set.add(m.company_name);
     }
     return Array.from(set).sort();
-  }, [masterMap]);
+  }, [masterMap, titleJpSet]);
 
   const platforms = useMemo(() => {
     const set = new Set<string>();
