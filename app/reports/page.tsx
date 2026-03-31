@@ -5,13 +5,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   FileText, Search, Download, Loader2, Calendar,
   CheckSquare, Square, X, ChevronDown, ChevronUp,
-  BarChart3, BookOpen, Globe, Settings2,
+  BarChart3,
 } from 'lucide-react';
 import { fetchAllDailySales } from '@/lib/supabase';
 import {
   generateWeeklyReport,
-  generatePlatformReport,
-  generateTitleReport,
   generateCSV,
 } from '@/utils/reportExporter';
 import type { DailySale } from '@/types';
@@ -29,28 +27,6 @@ const GLASS_CARD = {
   border: '1px solid var(--color-glass-border)',
   borderRadius: '16px',
 } as const;
-
-// ============================================================
-// Report type definitions
-// ============================================================
-
-type ReportType = 'weekly' | 'platform' | 'title' | 'custom';
-
-interface ReportTypeDef {
-  id: ReportType;
-  ko: string;
-  ja: string;
-  desc_ko: string;
-  desc_ja: string;
-  icon: typeof FileText;
-}
-
-const REPORT_TYPES: ReportTypeDef[] = [
-  { id: 'weekly', ko: 'Weekly Report', ja: 'Weekly Report', desc_ko: '원본 형식 그대로', desc_ja: '元フォーマット', icon: FileText },
-  { id: 'platform', ko: '플랫폼 성과', ja: 'プラットフォーム成果', desc_ko: '플랫폼별 매출 요약', desc_ja: 'PF別売上サマリー', icon: Globe },
-  { id: 'title', ko: '작품별 성과', ja: 'タイトル別成果', desc_ko: '작품별 매출 랭킹', desc_ja: 'タイトル別売上ランキング', icon: BookOpen },
-  { id: 'custom', ko: '커스텀', ja: 'カスタム', desc_ko: '섹션 직접 선택', desc_ja: 'セクション選択', icon: Settings2 },
-];
 
 // ============================================================
 // Date preset helpers
@@ -124,8 +100,6 @@ export default function ReportsPage() {
   const [platformOpen, setPlatformOpen] = useState(false);
   const [titleOpen, setTitleOpen] = useState(false);
 
-  // Report type
-  const [reportType, setReportType] = useState<ReportType>('weekly');
   const [downloading, setDownloading] = useState(false);
 
   // Unique values
@@ -201,11 +175,11 @@ export default function ReportsPage() {
     });
   };
 
-  const toggleTitle = (t: string) => {
+  const toggleTitle = (titleJp: string) => {
     setSelectedTitles((prev) => {
       const next = new Set(prev);
-      if (next.has(t)) next.delete(t);
-      else next.add(t);
+      if (next.has(titleJp)) next.delete(titleJp);
+      else next.add(titleJp);
       return next;
     });
   };
@@ -221,18 +195,7 @@ export default function ReportsPage() {
       titles: selectedTitles.size > 0 ? [...selectedTitles] : undefined,
     };
     try {
-      switch (reportType) {
-        case 'weekly':
-        case 'custom':
-          await generateWeeklyReport(filteredData, opts);
-          break;
-        case 'platform':
-          await generatePlatformReport(filteredData, opts);
-          break;
-        case 'title':
-          await generateTitleReport(filteredData, opts);
-          break;
-      }
+      await generateWeeklyReport(filteredData, opts);
     } catch (err) {
       console.error('Download error:', err);
     }
@@ -255,9 +218,10 @@ export default function ReportsPage() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+      className="max-w-5xl mx-auto"
     >
       {/* Header */}
-      <div className="flex items-center gap-3 mb-8">
+      <div className="flex items-center gap-3 mb-6">
         <div className="w-11 h-11 rounded-xl flex items-center justify-center page-icon-glow">
           <FileText size={20} color="white" />
         </div>
@@ -303,107 +267,74 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* Main layout: left panel + right preview */}
-      <div className="flex flex-col lg:flex-row gap-4">
+      {/* Single column layout */}
+      <div className="space-y-4">
 
-        {/* ---- Left: Condition Panel ---- */}
-        <div className="w-full lg:w-[380px] lg:shrink-0 space-y-4">
+        {/* Date range */}
+        <div className="rounded-2xl p-4" style={GLASS_CARD}>
+          <h3 className="text-xs font-semibold tracking-wider uppercase mb-3" style={{ color: 'var(--color-text-muted)' }}>
+            <Calendar size={12} className="inline mr-1.5 -mt-0.5" />
+            {t('기간 선택', '期間選択')}
+          </h3>
 
-          {/* Report type selection */}
-          <div className="rounded-2xl p-4" style={GLASS_CARD}>
-            <h3 className="text-xs font-semibold tracking-wider uppercase mb-3" style={{ color: 'var(--color-text-muted)' }}>
-              {t('리포트 유형', 'レポートタイプ')}
-            </h3>
-            <div className="grid grid-cols-2 gap-2">
-              {REPORT_TYPES.map((rt) => {
-                const active = reportType === rt.id;
-                return (
-                  <button
-                    key={rt.id}
-                    onClick={() => setReportType(rt.id)}
-                    className="flex flex-col items-start gap-1 p-3 rounded-xl text-left cursor-pointer transition-all"
-                    style={{
-                      background: active ? 'rgba(59, 111, 246, 0.12)' : 'var(--color-glass)',
-                      border: active ? '1px solid rgba(59, 111, 246, 0.4)' : '1px solid var(--color-glass-border)',
-                    }}
-                  >
-                    <div className="flex items-center gap-2">
-                      <rt.icon size={14} style={{ color: active ? '#3B6FF6' : 'var(--color-text-muted)' }} />
-                      <span className="text-xs font-semibold" style={{ color: active ? '#3B6FF6' : 'var(--color-text-primary)' }}>
-                        {t(rt.ko, rt.ja)}
-                      </span>
-                    </div>
-                    <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
-                      {t(rt.desc_ko, rt.desc_ja)}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+          {/* Presets */}
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {DATE_PRESETS.map((p) => (
+              <button
+                key={p.key}
+                onClick={() => applyPreset(p.key)}
+                className="px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer transition-all"
+                style={{
+                  background: 'var(--color-glass)',
+                  border: '1px solid var(--color-glass-border)',
+                  color: 'var(--color-text-secondary)',
+                }}
+              >
+                {t(p.ko, p.ja)}
+              </button>
+            ))}
           </div>
 
-          {/* Date range */}
-          <div className="rounded-2xl p-4" style={GLASS_CARD}>
-            <h3 className="text-xs font-semibold tracking-wider uppercase mb-3" style={{ color: 'var(--color-text-muted)' }}>
-              <Calendar size={12} className="inline mr-1.5 -mt-0.5" />
-              {t('기간 선택', '期間選択')}
-            </h3>
-
-            {/* Presets */}
-            <div className="flex flex-wrap gap-1.5 mb-3">
-              {DATE_PRESETS.map((p) => (
-                <button
-                  key={p.key}
-                  onClick={() => applyPreset(p.key)}
-                  className="px-2.5 py-1 rounded-lg text-[11px] font-medium cursor-pointer transition-all"
-                  style={{
-                    background: 'var(--color-glass)',
-                    border: '1px solid var(--color-glass-border)',
-                    color: 'var(--color-text-secondary)',
-                  }}
-                >
-                  {t(p.ko, p.ja)}
-                </button>
-              ))}
+          <div className="grid grid-cols-2 gap-3 max-w-md">
+            <div>
+              <label className="text-[11px] font-medium block mb-1" style={{ color: 'var(--color-text-secondary)' }}>
+                {t('시작일', '開始日')}
+              </label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full px-2.5 py-2 rounded-xl text-sm outline-none"
+                style={{
+                  background: 'var(--color-input-bg)',
+                  border: '1px solid var(--color-input-border)',
+                  color: 'var(--color-text-primary)',
+                  colorScheme,
+                }}
+              />
             </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-[11px] font-medium block mb-1" style={{ color: 'var(--color-text-secondary)' }}>
-                  {t('시작일', '開始日')}
-                </label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full px-2.5 py-2 rounded-xl text-sm outline-none"
-                  style={{
-                    background: 'var(--color-input-bg)',
-                    border: '1px solid var(--color-input-border)',
-                    color: 'var(--color-text-primary)',
-                    colorScheme,
-                  }}
-                />
-              </div>
-              <div>
-                <label className="text-[11px] font-medium block mb-1" style={{ color: 'var(--color-text-secondary)' }}>
-                  {t('종료일', '終了日')}
-                </label>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full px-2.5 py-2 rounded-xl text-sm outline-none"
-                  style={{
-                    background: 'var(--color-input-bg)',
-                    border: '1px solid var(--color-input-border)',
-                    color: 'var(--color-text-primary)',
-                    colorScheme,
-                  }}
-                />
-              </div>
+            <div>
+              <label className="text-[11px] font-medium block mb-1" style={{ color: 'var(--color-text-secondary)' }}>
+                {t('종료일', '終了日')}
+              </label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full px-2.5 py-2 rounded-xl text-sm outline-none"
+                style={{
+                  background: 'var(--color-input-bg)',
+                  border: '1px solid var(--color-input-border)',
+                  color: 'var(--color-text-primary)',
+                  colorScheme,
+                }}
+              />
             </div>
           </div>
+        </div>
+
+        {/* Platform & Title filters side by side */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
           {/* Platform filter */}
           <div className="rounded-2xl p-4" style={GLASS_CARD}>
@@ -412,7 +343,7 @@ export default function ReportsPage() {
               className="flex items-center justify-between w-full cursor-pointer"
             >
               <h3 className="text-xs font-semibold tracking-wider uppercase" style={{ color: 'var(--color-text-muted)' }}>
-                {t('플랫폼', 'プラットフォーム')}
+                {t('플랫폼 선택', 'プラットフォーム選択')}
                 {selectedPlatforms.size > 0 && (
                   <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(59,111,246,0.15)', color: '#3B6FF6' }}>
                     {selectedPlatforms.size}
@@ -421,6 +352,28 @@ export default function ReportsPage() {
               </h3>
               {platformOpen ? <ChevronUp size={14} color="var(--color-text-muted)" /> : <ChevronDown size={14} color="var(--color-text-muted)" />}
             </button>
+
+            {/* Selected tags */}
+            {!platformOpen && selectedPlatforms.size > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {[...selectedPlatforms].map((p) => (
+                  <span
+                    key={p}
+                    className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full"
+                    style={{ background: 'rgba(59,111,246,0.12)', color: '#3B6FF6' }}
+                  >
+                    {p}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); togglePlatform(p); }}
+                      className="cursor-pointer"
+                      style={{ border: 'none', background: 'transparent', color: '#3B6FF6', padding: 0 }}
+                    >
+                      <X size={10} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
 
             <AnimatePresence>
               {platformOpen && (
@@ -483,6 +436,33 @@ export default function ReportsPage() {
               {titleOpen ? <ChevronUp size={14} color="var(--color-text-muted)" /> : <ChevronDown size={14} color="var(--color-text-muted)" />}
             </button>
 
+            {/* Selected tags when collapsed */}
+            {!titleOpen && selectedTitles.size > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {[...selectedTitles].slice(0, 5).map((titleJp) => (
+                  <span
+                    key={titleJp}
+                    className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full"
+                    style={{ background: 'rgba(59,111,246,0.12)', color: '#3B6FF6' }}
+                  >
+                    {titleJp.length > 15 ? titleJp.slice(0, 15) + '...' : titleJp}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); toggleTitle(titleJp); }}
+                      className="cursor-pointer"
+                      style={{ border: 'none', background: 'transparent', color: '#3B6FF6', padding: 0 }}
+                    >
+                      <X size={10} />
+                    </button>
+                  </span>
+                ))}
+                {selectedTitles.size > 5 && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(59,111,246,0.08)', color: '#3B6FF6' }}>
+                    +{selectedTitles.size - 5}
+                  </span>
+                )}
+              </div>
+            )}
+
             <AnimatePresence>
               {titleOpen && (
                 <motion.div
@@ -494,15 +474,15 @@ export default function ReportsPage() {
                   {/* Selected tags */}
                   {selectedTitles.size > 0 && (
                     <div className="flex flex-wrap gap-1.5 mt-3 mb-2">
-                      {[...selectedTitles].map((t) => (
+                      {[...selectedTitles].map((titleJp) => (
                         <span
-                          key={t}
+                          key={titleJp}
                           className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full"
                           style={{ background: 'rgba(59,111,246,0.12)', color: '#3B6FF6' }}
                         >
-                          {t.length > 20 ? t.slice(0, 20) + '...' : t}
+                          {titleJp.length > 20 ? titleJp.slice(0, 20) + '...' : titleJp}
                           <button
-                            onClick={(e) => { e.stopPropagation(); toggleTitle(t); }}
+                            onClick={(e) => { e.stopPropagation(); toggleTitle(titleJp); }}
                             className="cursor-pointer"
                             style={{ border: 'none', background: 'transparent', color: '#3B6FF6', padding: 0 }}
                           >
@@ -567,130 +547,126 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        {/* ---- Right: Preview Area ---- */}
-        <div className="flex-1 min-w-0 space-y-4">
+        {/* Summary stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: t('데이터 건수', 'データ件数'), value: filteredData.length.toLocaleString(), suffix: t('건', '件') },
+            { label: t('총 매출', '総売上'), value: formatCurrency(totalSales), suffix: '' },
+            { label: t('작품 수', 'タイトル数'), value: String(uniqueTitles), suffix: '' },
+            { label: t('플랫폼 수', 'PF数'), value: String(uniquePlatforms), suffix: '' },
+          ].map((stat) => (
+            <div key={stat.label} className="rounded-2xl p-4" style={GLASS_CARD}>
+              <p className="text-[10px] font-medium uppercase tracking-wider mb-1" style={{ color: 'var(--color-text-muted)' }}>
+                {stat.label}
+              </p>
+              <p className="text-lg font-bold" style={{ color: 'var(--color-text-primary)' }}>
+                {stat.value}
+                {stat.suffix && <span className="text-xs font-normal ml-1" style={{ color: 'var(--color-text-muted)' }}>{stat.suffix}</span>}
+              </p>
+            </div>
+          ))}
+        </div>
 
-          {/* Summary stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[
-              { label: t('데이터 건수', 'データ件数'), value: filteredData.length.toLocaleString(), suffix: t('건', '件') },
-              { label: t('총 매출', '総売上'), value: formatCurrency(totalSales), suffix: '' },
-              { label: t('작품 수', 'タイトル数'), value: String(uniqueTitles), suffix: '' },
-              { label: t('플랫폼 수', 'PF数'), value: String(uniquePlatforms), suffix: '' },
-            ].map((stat) => (
-              <div key={stat.label} className="rounded-2xl p-4" style={GLASS_CARD}>
-                <p className="text-[10px] font-medium uppercase tracking-wider mb-1" style={{ color: 'var(--color-text-muted)' }}>
-                  {stat.label}
-                </p>
-                <p className="text-lg font-bold" style={{ color: 'var(--color-text-primary)' }}>
-                  {stat.value}
-                  {stat.suffix && <span className="text-xs font-normal ml-1" style={{ color: 'var(--color-text-muted)' }}>{stat.suffix}</span>}
-                </p>
+        {/* Mobile download buttons */}
+        <div className="flex sm:hidden gap-2">
+          <motion.button
+            whileTap={{ scale: 0.96 }}
+            onClick={handleCSVDownload}
+            disabled={filteredData.length === 0}
+            className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold cursor-pointer"
+            style={{
+              ...GLASS_CARD,
+              opacity: filteredData.length === 0 ? 0.4 : 1,
+              color: 'var(--color-text-secondary)',
+            }}
+          >
+            <Download size={14} />
+            CSV
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.96 }}
+            onClick={handleExcelDownload}
+            disabled={downloading || filteredData.length === 0}
+            className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold cursor-pointer btn-gradient"
+            style={{ opacity: downloading || filteredData.length === 0 ? 0.5 : 1 }}
+          >
+            {downloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+            Excel
+          </motion.button>
+        </div>
+
+        {/* Preview table */}
+        {loadingData ? (
+          <div className="rounded-2xl p-6 animate-pulse" style={GLASS_CARD}>
+            <div className="h-4 w-48 rounded skeleton-shimmer mb-6" />
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="flex gap-4 py-3">
+                <div className="h-4 flex-1 rounded skeleton-shimmer" />
+                <div className="h-4 w-20 rounded skeleton-shimmer" />
+                <div className="h-4 w-24 rounded skeleton-shimmer" />
               </div>
             ))}
           </div>
-
-          {/* Mobile download buttons */}
-          <div className="flex sm:hidden gap-2">
-            <motion.button
-              whileTap={{ scale: 0.96 }}
-              onClick={handleCSVDownload}
-              disabled={filteredData.length === 0}
-              className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold cursor-pointer"
-              style={{
-                ...GLASS_CARD,
-                opacity: filteredData.length === 0 ? 0.4 : 1,
-                color: 'var(--color-text-secondary)',
-              }}
-            >
-              <Download size={14} />
-              CSV
-            </motion.button>
-            <motion.button
-              whileTap={{ scale: 0.96 }}
-              onClick={handleExcelDownload}
-              disabled={downloading || filteredData.length === 0}
-              className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold cursor-pointer btn-gradient"
-              style={{ opacity: downloading || filteredData.length === 0 ? 0.5 : 1 }}
-            >
-              {downloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
-              Excel
-            </motion.button>
-          </div>
-
-          {/* Preview table */}
-          {loadingData ? (
-            <div className="rounded-2xl p-6 animate-pulse" style={GLASS_CARD}>
-              <div className="h-4 w-48 rounded skeleton-shimmer mb-6" />
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="flex gap-4 py-3">
-                  <div className="h-4 flex-1 rounded skeleton-shimmer" />
-                  <div className="h-4 w-20 rounded skeleton-shimmer" />
-                  <div className="h-4 w-24 rounded skeleton-shimmer" />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-2xl p-4 overflow-x-auto" style={GLASS_CARD}>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-secondary)' }}>
-                  <BarChart3 size={14} className="inline mr-1.5 -mt-0.5" />
-                  {t('미리보기', 'プレビュー')}
-                  <span className="ml-2 text-xs font-normal" style={{ color: 'var(--color-text-muted)' }}>
-                    ({t(`상위 ${Math.min(filteredData.length, 100)}건`, `上位${Math.min(filteredData.length, 100)}件`)})
-                  </span>
-                </h3>
-                {filteredData.length > 100 && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(251,191,36,0.12)', color: '#fbbf24' }}>
-                    {t(`전체 ${filteredData.length.toLocaleString()}건 중 100건 표시`, `全${filteredData.length.toLocaleString()}件中100件表示`)}
-                  </span>
-                )}
-              </div>
-
-              {filteredData.length === 0 ? (
-                <div className="text-center py-16">
-                  <FileText size={40} style={{ color: 'var(--color-text-subtle)', margin: '0 auto 12px' }} />
-                  <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-                    {t('조건에 맞는 데이터가 없습니다', '条件に一致するデータがありません')}
-                  </p>
-                  <p className="text-xs mt-1" style={{ color: 'var(--color-text-subtle)' }}>
-                    {t('필터 조건을 변경해 보세요', 'フィルター条件を変更してください')}
-                  </p>
-                </div>
-              ) : (
-                <table className="w-full text-sm min-w-[650px] table-striped">
-                  <thead>
-                    <tr style={{ borderBottom: '1px solid var(--color-table-border)' }}>
-                      <th className="py-2.5 px-2 text-left text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>{t('날짜', '日付')}</th>
-                      <th className="py-2.5 px-2 text-left text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>{t('작품', 'タイトル')}</th>
-                      <th className="py-2.5 px-2 text-left text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>PF</th>
-                      <th className="py-2.5 px-2 text-right text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>{t('매출', '売上')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {previewData.map((row, idx) => (
-                      <tr key={`${row.id}-${idx}`} style={{ borderBottom: '1px solid var(--color-table-border-subtle)' }} className="hover:bg-[var(--color-glass)] transition-colors">
-                        <td className="py-2.5 px-2 font-mono text-xs" style={{ color: 'var(--color-text-secondary)' }}>{row.sale_date}</td>
-                        <td className="py-2.5 px-2" style={{ maxWidth: '250px' }}>
-                          <p className="text-xs font-medium truncate" title={row.title_jp} style={{ color: 'var(--color-text-primary)' }}>{row.title_jp}</p>
-                          {row.title_kr && (
-                            <p className="text-[10px] truncate" title={row.title_kr} style={{ color: 'var(--color-text-muted)' }}>{row.title_kr}</p>
-                          )}
-                        </td>
-                        <td className="py-2.5 px-2">
-                          <PlatformBadge name={row.channel} showName={false} size="sm" />
-                        </td>
-                        <td className="py-2.5 px-2 text-right font-mono font-semibold text-xs" style={{ color: 'var(--color-text-primary)' }}>
-                          {formatCurrency(row.sales_amount)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+        ) : (
+          <div className="rounded-2xl p-4 overflow-x-auto" style={GLASS_CARD}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-secondary)' }}>
+                <BarChart3 size={14} className="inline mr-1.5 -mt-0.5" />
+                {t('미리보기', 'プレビュー')}
+                <span className="ml-2 text-xs font-normal" style={{ color: 'var(--color-text-muted)' }}>
+                  ({t(`상위 ${Math.min(filteredData.length, 100)}건`, `上位${Math.min(filteredData.length, 100)}件`)})
+                </span>
+              </h3>
+              {filteredData.length > 100 && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(251,191,36,0.12)', color: '#fbbf24' }}>
+                  {t(`전체 ${filteredData.length.toLocaleString()}건 중 100건 표시`, `全${filteredData.length.toLocaleString()}件中100件表示`)}
+                </span>
               )}
             </div>
-          )}
-        </div>
+
+            {filteredData.length === 0 ? (
+              <div className="text-center py-16">
+                <FileText size={40} style={{ color: 'var(--color-text-subtle)', margin: '0 auto 12px' }} />
+                <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+                  {t('조건에 맞는 데이터가 없습니다', '条件に一致するデータがありません')}
+                </p>
+                <p className="text-xs mt-1" style={{ color: 'var(--color-text-subtle)' }}>
+                  {t('필터 조건을 변경해 보세요', 'フィルター条件を変更してください')}
+                </p>
+              </div>
+            ) : (
+              <table className="w-full text-sm min-w-[650px] table-striped">
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--color-table-border)' }}>
+                    <th className="py-2.5 px-2 text-left text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>{t('날짜', '日付')}</th>
+                    <th className="py-2.5 px-2 text-left text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>{t('작품', 'タイトル')}</th>
+                    <th className="py-2.5 px-2 text-left text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>PF</th>
+                    <th className="py-2.5 px-2 text-right text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>{t('매출', '売上')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {previewData.map((row, idx) => (
+                    <tr key={`${row.id}-${idx}`} style={{ borderBottom: '1px solid var(--color-table-border-subtle)' }} className="hover:bg-[var(--color-glass)] transition-colors">
+                      <td className="py-2.5 px-2 font-mono text-xs" style={{ color: 'var(--color-text-secondary)' }}>{row.sale_date}</td>
+                      <td className="py-2.5 px-2" style={{ maxWidth: '250px' }}>
+                        <p className="text-xs font-medium truncate" title={row.title_jp} style={{ color: 'var(--color-text-primary)' }}>{row.title_jp}</p>
+                        {row.title_kr && (
+                          <p className="text-[10px] truncate" title={row.title_kr} style={{ color: 'var(--color-text-muted)' }}>{row.title_kr}</p>
+                        )}
+                      </td>
+                      <td className="py-2.5 px-2">
+                        <PlatformBadge name={row.channel} showName={false} size="sm" />
+                      </td>
+                      <td className="py-2.5 px-2 text-right font-mono font-semibold text-xs" style={{ color: 'var(--color-text-primary)' }}>
+                        {formatCurrency(row.sales_amount)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
       </div>
     </motion.div>
   );
