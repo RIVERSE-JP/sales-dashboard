@@ -124,8 +124,9 @@ export function useTitleRankings(currentStart: string, currentEnd: string, prevS
 // Sales / Titles
 // ============================================================
 
-export function useTitleSummaries() {
-  return useSWR('/api/sales/title-summaries', fetcher, SWR_CONFIG);
+export function useTitleSummaries(start?: string, end?: string) {
+  const params = start && end ? `?start=${start}&end=${end}` : '';
+  return useSWR(`/api/sales/title-summaries${params}`, fetcher, SWR_CONFIG);
 }
 
 export function useTitleMaster() {

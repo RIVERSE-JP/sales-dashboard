@@ -585,7 +585,7 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
                     <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={60} />
-                    <ReTooltip content={({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string }) => {
+                    <ReTooltip content={({ active, payload, label }: any) => {
                       if (!active || !payload) return null;
                       const sorted = [...payload].sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
                       return (

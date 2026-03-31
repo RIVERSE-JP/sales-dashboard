@@ -1,8 +1,8 @@
 'use client';
 
-import { Suspense, useState, useEffect, useCallback } from 'react';
+import { Suspense, useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,
@@ -16,7 +16,6 @@ import {
   ChevronRight,
   Menu,
   X,
-  Clock,
 } from 'lucide-react';
 import { SWRConfig } from 'swr';
 import { AppProvider, useApp } from '@/context/AppContext';
@@ -69,23 +68,12 @@ const mobileNavItems: NavItem[] = [
 ];
 
 // Period presets
-const periodPresets = [
-  { ko: '이번달', ja: '今月', value: 'this_month' },
-  { ko: '3개월', ja: '3ヶ月', value: '3months' },
-  { ko: '올해', ja: '今年', value: 'this_year' },
-] as const;
+// periodPresets removed — each page has its own date selector
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-function useCurrentTime() {
-  const [now, setNow] = useState(new Date());
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 60_000);
-    return () => clearInterval(id);
-  }, []);
-  return now;
-}
+// useCurrentTime removed — header clock removed
 
 function ToggleButton({
   active,
@@ -119,31 +107,12 @@ function ToggleButton({
 function LayoutInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const now = useCurrentTime();
   const { lang, setLang, currency, setCurrency, theme, setTheme, t } = useApp();
 
   const sidebarWidth = collapsed ? 72 : 260;
   const isLight = theme === 'light';
-
-  // Period filter state from URL
-  const activePeriod = searchParams.get('period') ?? '';
-
-  const setPeriod = useCallback(
-    (value: string) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (activePeriod === value) {
-        params.delete('period');
-      } else {
-        params.set('period', value);
-      }
-      const qs = params.toString();
-      router.push(pathname + (qs ? `?${qs}` : ''));
-    },
-    [activePeriod, pathname, router, searchParams]
-  );
 
   return (
     <div
@@ -501,71 +470,8 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
               </span>
             </div>
 
-            <div className="ml-auto flex items-center gap-3">
-              {/* Period preset buttons */}
-              <div className="hidden sm:flex items-center gap-1.5">
-                {periodPresets.map((preset) => (
-                  <button
-                    key={preset.value}
-                    onClick={() => setPeriod(preset.value)}
-                    className="px-2.5 py-1 text-[11px] font-semibold rounded-md transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue"
-                    style={{
-                      background: activePeriod === preset.value
-                        ? 'var(--color-accent-blue, #3b82f6)'
-                        : isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.06)',
-                      color: activePeriod === preset.value
-                        ? '#ffffff'
-                        : 'var(--color-text-muted)',
-                      border: '1px solid',
-                      borderColor: activePeriod === preset.value
-                        ? 'transparent'
-                        : isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)',
-                    }}
-                  >
-                    {t(preset.ko, preset.ja)}
-                  </button>
-                ))}
-              </div>
-
-              {/* Date/time badge */}
-              <div
-                className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg"
-                style={
-                  isLight
-                    ? {
-                        background: '#f0f0f5',
-                        border: '1px solid #e2e2ea',
-                      }
-                    : {
-                        background: 'rgba(255, 255, 255, 0.04)',
-                        border: '1px solid rgba(255, 255, 255, 0.06)',
-                      }
-                }
-              >
-                <Clock size={12} style={{ color: 'var(--color-text-muted)' }} />
-                <span
-                  className="text-xs font-medium"
-                  style={{ color: 'var(--color-text-secondary)' }}
-                >
-                  {now.toLocaleDateString(lang === 'ko' ? 'ko-KR' : 'ja-JP', { month: 'short', day: 'numeric', weekday: 'short' })}
-                  {' '}
-                  {now.toLocaleTimeString(lang === 'ko' ? 'ko-KR' : 'ja-JP', { hour: '2-digit', minute: '2-digit' })}
-                </span>
-              </div>
-
-              {/* Live indicator with pulse */}
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-2 h-2 rounded-full pulse-live"
-                  style={{
-                    background: 'linear-gradient(135deg, #10b981, #3b82f6)',
-                  }}
-                />
-                <span className="text-xs font-medium" style={{ color: 'var(--color-text-muted)' }}>
-                  Live
-                </span>
-              </div>
-            </div>
+            {/* 글로벌 헤더 버튼 제거 — 각 페이지에서 기간 선택 */}
+            <div className="ml-auto" />
           </div>
           {/* Animated gradient border at bottom */}
           <div
