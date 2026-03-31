@@ -416,7 +416,7 @@ export default function DataPage() {
             {t('데이터 관리', 'データ管理')}
           </h1>
           <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-            {t('매출 데이터 열람, 작품 마스터, 마스터 설정 관리', '売上データ閲覧・作品マスター・マスター設定管理')}
+            {t('매출 원본, 작품 정보, 기본 설정 관리', '売上データ・作品情報・基本設定管理')}
           </p>
         </div>
         {activeTab === 'sales' && (
@@ -439,9 +439,9 @@ export default function DataPage() {
       {/* Tabs */}
       <div className="flex gap-1 mb-6 p-1 rounded-xl" style={{ background: 'var(--color-glass)', border: '1px solid var(--color-glass-border)' }}>
         {([
-          { key: 'sales' as const, label: t('매출 데이터', '売上データ') },
-          { key: 'titles' as const, label: t('작품 마스터', '作品マスター') },
-          { key: 'settings' as const, label: t('마스터 설정', 'マスター設定') },
+          { key: 'sales' as const, label: t('매출 원본', '売上データ') },
+          { key: 'titles' as const, label: t('작품 정보', '作品情報') },
+          { key: 'settings' as const, label: t('기본 설정', '基本設定') },
         ]).map((tab) => (
           <button
             key={tab.key}

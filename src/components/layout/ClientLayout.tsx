@@ -43,7 +43,7 @@ const navGroups: NavGroup[] = [
     items: [
       { to: '/dashboard', ko: '매출 대시보드', ja: '売上ダッシュボード', icon: LayoutDashboard },
       { to: '/titles', ko: '작품별 매출', ja: 'タイトル別売上', icon: BookOpen },
-      { to: '/platforms', ko: '플랫폼별 매출', ja: 'プラットフォーム別売上', icon: Globe },
+      { to: '/platforms', ko: '플랫폼별 매출 분석', ja: 'プラットフォーム別売上分析', icon: Globe },
     ],
   },
   {
@@ -496,7 +496,7 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
               <span style={{ color: 'var(--color-text-secondary)' }}>
                 {(() => {
                   const item = allNavItems.find((n) => pathname.startsWith(n.to));
-                  return item ? (lang === 'ko' ? item.ko : item.ja) : t('경영 브리핑', '経営ブリーフィング');
+                  return item ? (lang === 'ko' ? item.ko : item.ja) : t('매출 현황', '売上現況');
                 })()}
               </span>
             </div>

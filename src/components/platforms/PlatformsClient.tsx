@@ -7,7 +7,7 @@ import {
   ResponsiveContainer, Legend,
 } from 'recharts';
 import {
-  Monitor, TrendingUp, BarChart3, ChevronUp, ChevronDown, ChevronRight, Minus,
+  Monitor, TrendingUp, BarChart3, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Minus,
   Activity, X, Check, Hash, CalendarDays,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -16,7 +16,7 @@ import { fetchPlatformDetail } from '@/lib/supabase';
 import { getPlatformColor, getPlatformBrand, getPlatformLogo } from '@/utils/platformConfig';
 import { useApp } from '@/context/AppContext';
 import type { PlatformSummaryRow, PlatformDetailData } from '@/types';
-import DateRangePicker from '@/components/shared/DateRangePicker';
+// DateRangePicker replaced with inline month navigator
 import PlatformGenreMatrix from '@/components/platforms/PlatformGenreMatrix';
 // ParetoChart, HealthTrend removed (tab system removed)
 import { GLASS_CARD, darkTooltipStyle, containerVariants, cardVariants } from '@/lib/design-tokens';
@@ -340,36 +340,70 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
         <div className="w-11 h-11 rounded-xl flex items-center justify-center page-icon-glow">
           <Monitor size={20} color="white" />
         </div>
-        <div>
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-            {t('플랫폼 분석', 'プラットフォーム分析')}
-          </h1>
-          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
             {t('플랫폼별 매출 분석', 'プラットフォーム別売上分析')}
-          </p>
+          </h1>
+        </div>
+
+        {/* 월 네비게이터 + 프리셋 (매출 대시보드와 동일) */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1 rounded-xl px-1 py-1" style={{ background: 'var(--color-glass)', border: '1px solid var(--color-glass-border)' }}>
+            <button
+              onClick={() => {
+                const d = new Date(startDate);
+                d.setMonth(d.getMonth() - 1);
+                const y = d.getFullYear(), m = d.getMonth();
+                setStartDate(`${y}-${String(m + 1).padStart(2, '0')}-01`);
+                setEndDate(new Date(y, m + 1, 0).toISOString().slice(0, 10));
+              }}
+              className="p-1.5 rounded-lg transition-colors hover:brightness-125"
+              style={{ color: 'var(--color-text-secondary)' }}
+            ><ChevronLeft size={16} /></button>
+            <span className="text-[14px] font-bold px-3 min-w-[130px] text-center" style={{ color: 'var(--color-text-primary)' }}>
+              {(() => { const d = new Date(startDate); return `${d.getFullYear()}${t('년', '年')} ${d.getMonth() + 1}${t('월', '月')}`; })()}
+            </span>
+            <button
+              onClick={() => {
+                const d = new Date(startDate);
+                d.setMonth(d.getMonth() + 1);
+                const y = d.getFullYear(), m = d.getMonth();
+                setStartDate(`${y}-${String(m + 1).padStart(2, '0')}-01`);
+                const last = new Date(y, m + 1, 0), today = new Date();
+                setEndDate(last > today ? today.toISOString().slice(0, 10) : last.toISOString().slice(0, 10));
+              }}
+              className="p-1.5 rounded-lg transition-colors hover:brightness-125"
+              style={{ color: 'var(--color-text-secondary)' }}
+            ><ChevronRight size={16} /></button>
+          </div>
+          {[
+            { id: 'thisMonth', ko: '이번달', ja: '今月' },
+            { id: 'lastMonth', ko: '지난달', ja: '先月' },
+            { id: 'thisYear', ko: '올해', ja: '今年' },
+            { id: 'all', ko: '전체', ja: '全体' },
+          ].map((p) => (
+            <button key={p.id} onClick={() => {
+              const now = new Date();
+              if (p.id === 'thisMonth') { setStartDate(`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`); setEndDate(now.toISOString().slice(0,10)); }
+              else if (p.id === 'lastMonth') { const lm = new Date(now.getFullYear(), now.getMonth()-1, 1); setStartDate(`${lm.getFullYear()}-${String(lm.getMonth()+1).padStart(2,'0')}-01`); setEndDate(new Date(lm.getFullYear(), lm.getMonth()+1, 0).toISOString().slice(0,10)); }
+              else if (p.id === 'thisYear') { setStartDate(`${now.getFullYear()}-01-01`); setEndDate(now.toISOString().slice(0,10)); }
+              else { setStartDate('2025-03-01'); setEndDate(now.toISOString().slice(0,10)); }
+            }}
+              className="px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all"
+              style={{ background: 'var(--color-glass)', color: 'var(--color-text-secondary)', border: '1px solid var(--color-glass-border)' }}
+            >{t(p.ko, p.ja)}</button>
+          ))}
         </div>
       </div>
 
-      {/* C1: Date Range + Compare toggle */}
+      {/* Compare toggle */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="rounded-2xl p-4 mb-6"
-        style={GLASS_CARD}
+        className="flex items-center gap-3 mb-6"
       >
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div>
-            <p className="text-xs font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>
-              {t('기간 선택', '期間選択')}
-            </p>
-            <DateRangePicker
-              startDate={startDate}
-              endDate={endDate}
-              onStartDateChange={setStartDate}
-              onEndDateChange={setEndDate}
-            />
-          </div>
+        <div>
           <button
             onClick={() => {
               setCompareMode(!compareMode);

@@ -360,7 +360,7 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
         </div>
         <div className="min-w-0">
           <h1 className="text-xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-            {t('경영 브리핑', '経営ブリーフィング')}
+            {t('매출 현황', '売上現況')}
           </h1>
         </div>
 
