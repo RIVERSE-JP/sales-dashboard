@@ -12,7 +12,7 @@ export const revalidate = 300;
 export async function GET() {
   const { data, error } = await supabaseServer
     .from('titles')
-    .select('*, production_companies(name)')
+    .select('*, production_companies(name), genres(name_jp, name_kr)')
     .eq('is_active', true);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
