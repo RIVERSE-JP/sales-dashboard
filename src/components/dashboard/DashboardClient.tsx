@@ -360,45 +360,62 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
           {/* 월 선택 네비게이션 */}
           <div className="flex items-center gap-1 rounded-xl px-1 py-1" style={{ background: 'var(--color-glass)', border: '1px solid var(--color-glass-border)' }}>
-            <button
-              onClick={() => {
-                const d = new Date(startDate);
-                d.setMonth(d.getMonth() - 1);
-                const y = d.getFullYear();
-                const m = d.getMonth();
-                setStartDate(`${y}-${String(m + 1).padStart(2, '0')}-01`);
-                const lastDay = new Date(y, m + 1, 0);
-                setEndDate(lastDay.toISOString().slice(0, 10));
-                setActivePreset('custom');
-              }}
-              className="p-1.5 rounded-lg transition-colors hover:brightness-125"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <span className="text-[14px] font-bold px-3 min-w-[140px] text-center" style={{ color: 'var(--color-text-primary)' }}>
-              {(() => {
-                const d = new Date(startDate);
-                return `${d.getFullYear()}${t('년', '年')} ${d.getMonth() + 1}${t('월', '月')}`;
-              })()}
-            </span>
-            <button
-              onClick={() => {
-                const d = new Date(startDate);
-                d.setMonth(d.getMonth() + 1);
-                const y = d.getFullYear();
-                const m = d.getMonth();
-                setStartDate(`${y}-${String(m + 1).padStart(2, '0')}-01`);
-                const lastDay = new Date(y, m + 1, 0);
-                const today = new Date();
-                setEndDate(lastDay > today ? today.toISOString().slice(0, 10) : lastDay.toISOString().slice(0, 10));
-                setActivePreset('custom');
-              }}
-              className="p-1.5 rounded-lg transition-colors hover:brightness-125"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
-              <ChevronRight size={16} />
-            </button>
+            {(() => {
+              // 데이터가 있는 최소/최대 월 계산
+              const minMonth = monthlyTrend.length > 0 ? monthlyTrend[0].month : '2025-03';
+              const maxMonth = monthlyTrend.length > 0 ? monthlyTrend[monthlyTrend.length - 1].month : new Date().toISOString().slice(0, 7);
+              const currentMonth = startDate.slice(0, 7);
+              const canGoPrev = currentMonth > minMonth;
+              const canGoNext = currentMonth < maxMonth;
+
+              return (
+                <>
+                  <button
+                    onClick={() => {
+                      if (!canGoPrev) return;
+                      const d = new Date(startDate);
+                      d.setMonth(d.getMonth() - 1);
+                      const y = d.getFullYear();
+                      const m = d.getMonth();
+                      setStartDate(`${y}-${String(m + 1).padStart(2, '0')}-01`);
+                      const lastDay = new Date(y, m + 1, 0);
+                      setEndDate(lastDay.toISOString().slice(0, 10));
+                      setActivePreset('custom');
+                    }}
+                    className="p-1.5 rounded-lg transition-colors"
+                    style={{ color: canGoPrev ? 'var(--color-text-secondary)' : 'var(--color-text-subtle)', cursor: canGoPrev ? 'pointer' : 'default', opacity: canGoPrev ? 1 : 0.3 }}
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                  <span className="text-[14px] font-bold px-3 min-w-[140px] text-center" style={{ color: 'var(--color-text-primary)' }}>
+                    {(() => {
+                      if (activePreset === 'all') return t('전체 기간', '全期間');
+                      if (activePreset === 'thisYear') return `${new Date().getFullYear()}${t('년', '年')}`;
+                      const d = new Date(startDate);
+                      return `${d.getFullYear()}${t('년', '年')} ${d.getMonth() + 1}${t('월', '月')}`;
+                    })()}
+                  </span>
+                  <button
+                    onClick={() => {
+                      if (!canGoNext) return;
+                      const d = new Date(startDate);
+                      d.setMonth(d.getMonth() + 1);
+                      const y = d.getFullYear();
+                      const m = d.getMonth();
+                      setStartDate(`${y}-${String(m + 1).padStart(2, '0')}-01`);
+                      const lastDay = new Date(y, m + 1, 0);
+                      const today = new Date();
+                      setEndDate(lastDay > today ? today.toISOString().slice(0, 10) : lastDay.toISOString().slice(0, 10));
+                      setActivePreset('custom');
+                    }}
+                    className="p-1.5 rounded-lg transition-colors"
+                    style={{ color: canGoNext ? 'var(--color-text-secondary)' : 'var(--color-text-subtle)', cursor: canGoNext ? 'pointer' : 'default', opacity: canGoNext ? 1 : 0.3 }}
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                </>
+              );
+            })()}
           </div>
 
           {/* 프리셋 버튼 */}
@@ -425,7 +442,9 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
                   setStartDate(`${now.getFullYear()}-01-01`);
                   setEndDate(now.toISOString().slice(0, 10));
                 } else {
-                  setStartDate('2020-01-01');
+                  // 전체: 데이터가 있는 최소 월부터
+                  const minM = monthlyTrend.length > 0 ? monthlyTrend[0].month : '2025-03';
+                  setStartDate(`${minM}-01`);
                   setEndDate(now.toISOString().slice(0, 10));
                 }
               }}
@@ -470,9 +489,17 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatusKPICard
               label={(() => {
-                const d = new Date(startDate);
-                const monthLabel = `${d.getMonth() + 1}${t('월 매출', '月売上')}`;
-                return monthLabel;
+                if (activePreset === 'all') return t('전체 매출', '全期間売上');
+                if (activePreset === 'thisYear') {
+                  const sy = new Date(startDate);
+                  return `${sy.getFullYear()}${t('년 매출', '年売上')}`;
+                }
+                const sd2 = new Date(startDate);
+                const ed2 = new Date(endDate);
+                if (sd2.getMonth() === ed2.getMonth() && sd2.getFullYear() === ed2.getFullYear()) {
+                  return `${sd2.getFullYear()}.${sd2.getMonth() + 1}${t('월 매출', '月売上')}`;
+                }
+                return `${startDate.slice(2, 7)}~${endDate.slice(2, 7)} ${t('매출', '売上')}`;
               })()}
               value={kpis.this_month_sales}
               formatter={formatCurrency}
