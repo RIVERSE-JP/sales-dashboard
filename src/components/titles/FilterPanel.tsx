@@ -55,7 +55,11 @@ const SALES_PRESET_LABELS: Record<SalesPreset, [string, string]> = {
 const SORT_OPTIONS = [
   { value: 'sales_desc', ko: '매출 높은순', ja: '売上高い順' },
   { value: 'sales_asc', ko: '매출 낮은순', ja: '売上低い順' },
-  { value: 'name_asc', ko: '이름순', ja: '名前順' },
+  { value: 'title_jp', ko: '작품명 (JP)', ja: 'タイトル名 (JP)' },
+  { value: 'title_kr', ko: '작품명 (KR)', ja: 'タイトル名 (KR)' },
+  { value: 'genre', ko: '장르별', ja: 'ジャンル別' },
+  { value: 'company', ko: '제작사별', ja: '制作会社別' },
+  { value: 'platforms', ko: '플랫폼 수', ja: 'プラットフォーム数' },
   { value: 'newest', ko: '최신순', ja: '新しい順' },
 ];
 

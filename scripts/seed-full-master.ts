@@ -117,11 +117,48 @@ async function main() {
     const category = SHEET_CATEGORY[sheetName];
     let count = 0;
 
+    // 헤더에서 컬럼 위치 자동 감지
+    const headerRow = data[1] as unknown[] | undefined;
+    const colIdx: Record<string, number> = {};
+    if (headerRow) {
+      for (let c = 0; c < headerRow.length; c++) {
+        const h = String(headerRow[c] || '').replace(/\n/g, ' ').trim();
+        if (h.includes('作品名(JP)') || h.includes('JPタイトル(仮)') || (h.includes('作品名') && !h.includes('KR'))) colIdx.title_jp = c;
+        if (h.includes('作品名(KR)') || h === '作品名(KR)') colIdx.title_kr = c;
+        if (h === '管理事項') colIdx.management = c;
+        if (h === '制作会社' && !colIdx.company) colIdx.company = c;
+        if (h === '流通会社') colIdx.distribution = c;
+        if (h === '形式') colIdx.format = c;
+        if (h === '作画' && !colIdx.illustrator) colIdx.illustrator = c;
+        if (h.includes('作画') && h.includes('ヨミ')) colIdx.illustrator_yomi = c;
+        if (h === '脚色' && !colIdx.screenwriter) colIdx.screenwriter = c;
+        if (h.includes('脚色') && h.includes('ヨミ')) colIdx.screenwriter_yomi = c;
+        if (h === '原作' && !colIdx.original_author) colIdx.original_author = c;
+        if (h.includes('原作') && h.includes('ヨミ')) colIdx.original_author_yomi = c;
+        if (h === 'ジャンル') colIdx.genre = c;
+        if (h === 'レーベル') colIdx.label = c;
+        if (h.includes('連載') && h.includes('曜日')) colIdx.serial_day = c;
+        if (h.includes('コピーライト')) colIdx.copyright = c;
+        if (h.includes('作品紹介')) colIdx.synopsis = c;
+        if (h.includes('配信範囲') || h.includes('提供範囲')) colIdx.distribution_scope = c;
+        if (h.includes('連載状況')) colIdx.serial_status = c;
+        if (h.includes('最新話') || h === '話数') colIdx.episode_count = c;
+      }
+    }
+    const g = (col: string) => colIdx[col] ?? -1;
+    const getVal = (row: unknown[], col: string): string | null => {
+      const idx = g(col);
+      if (idx < 0 || !row[idx]) return null;
+      return String(row[idx]).trim() || null;
+    };
+    console.log(`  ${sheetName}: title_jp=Col${g('title_jp')}, genre=Col${g('genre')}, company=Col${g('company')}`);
+
     for (let i = 2; i < data.length; i++) {
       const row = data[i];
-      if (!row || !row[2]) continue;
-      const title_jp = String(row[2]).trim();
-      if (!title_jp || title_jp === '作品名(JP)') continue;
+      const titleCol = g('title_jp');
+      if (!row || titleCol < 0 || !row[titleCol]) continue;
+      const title_jp = String(row[titleCol]).trim();
+      if (!title_jp || title_jp === '作品名(JP)' || title_jp === 'JPタイトル(仮)') continue;
 
       const platforms: Array<{ code: string; launch_date: string | null }> = [];
       for (const [colStr, code] of Object.entries(PLATFORM_COL_MAP)) {
@@ -132,31 +169,31 @@ async function main() {
 
       allTitles.push({
         title_jp,
-        title_kr: row[3] ? String(row[3]).trim() : null,
-        management_type: row[4] ? String(row[4]).trim() : null,
-        company: row[5] ? String(row[5]).trim() : null,
-        distribution_company: row[6] ? String(row[6]).trim() : null,
-        content_format: normalizeFormat(row[7]),
-        illustrator: row[8] ? String(row[8]).trim() : null,
-        illustrator_yomi: row[9] ? String(row[9]).trim() : null,
-        screenwriter: row[10] ? String(row[10]).trim() : null,
-        screenwriter_yomi: row[11] ? String(row[11]).trim() : null,
-        original_author: row[12] ? String(row[12]).trim() : null,
-        original_author_yomi: row[13] ? String(row[13]).trim() : null,
-        genre_jp: row[15] ? String(row[15]).trim() : null,
-        label_name: row[16] ? String(row[16]).trim() : null,
-        serial_day_of_week: row[17] ? String(row[17]).trim() : null,
-        copyright_text: row[18] ? String(row[18]).trim() : null,
-        synopsis: row[19] ? String(row[19]).trim() : null,
-        distribution_scope: row[20] ? String(row[20]).trim() : null,
-        exclusive_conv_date: parseDate(row[21]),
-        nonexclusive_conv_date: parseDate(row[22]),
-        latest_episode_count: parseNum(row[23]) as number | null,
-        serial_status: normalizeStatus(row[24]),
-        return_schedule_date: parseDate(row[25]),
-        always_free_chapters: parseFreeChapters(row[26]),
-        fixed_paid_chapters: parseNum(row[27]) as number | null,
-        rental_price_incl: parseNum(row[28]),
+        title_kr: getVal(row, 'title_kr'),
+        management_type: getVal(row, 'management'),
+        company: getVal(row, 'company'),
+        distribution_company: getVal(row, 'distribution'),
+        content_format: normalizeFormat(row[g('format')] ?? null),
+        illustrator: getVal(row, 'illustrator'),
+        illustrator_yomi: getVal(row, 'illustrator_yomi'),
+        screenwriter: getVal(row, 'screenwriter'),
+        screenwriter_yomi: getVal(row, 'screenwriter_yomi'),
+        original_author: getVal(row, 'original_author'),
+        original_author_yomi: getVal(row, 'original_author_yomi'),
+        genre_jp: getVal(row, 'genre'),
+        label_name: getVal(row, 'label'),
+        serial_day_of_week: getVal(row, 'serial_day'),
+        copyright_text: getVal(row, 'copyright'),
+        synopsis: getVal(row, 'synopsis'),
+        distribution_scope: getVal(row, 'distribution_scope'),
+        exclusive_conv_date: null,
+        nonexclusive_conv_date: null,
+        latest_episode_count: g('episode_count') >= 0 ? parseNum(row[g('episode_count')]) as number | null : null,
+        serial_status: g('serial_status') >= 0 ? normalizeStatus(row[g('serial_status')]) : null,
+        return_schedule_date: null,
+        always_free_chapters: 0,
+        fixed_paid_chapters: null,
+        rental_price_incl: null,
         purchase_price_excl: parseNum(row[29]),
         purchase_price_incl: parseNum(row[30]),
         contract_start_date: parseDate(row[31]),

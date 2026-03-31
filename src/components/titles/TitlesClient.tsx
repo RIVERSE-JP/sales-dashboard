@@ -148,6 +148,11 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
 
   // Sort state
   const [sortBy, setSortBy] = useState('sales_desc');
+  const [sortKey, setSortKey] = useState<string>('sales');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+
+  // Pagination state
+  const [displayCount, setDisplayCount] = useState(60);
 
   // Compare mode (B5)
   const [compareMode, setCompareMode] = useState(false);
@@ -301,18 +306,45 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
       }
     }
 
-    // Sort
-    if (sortBy === 'sales_desc') result.sort((a, b) => b.total_sales - a.total_sales);
-    else if (sortBy === 'sales_asc') result.sort((a, b) => a.total_sales - b.total_sales);
-    else if (sortBy === 'name_asc') result.sort((a, b) => a.base_title.localeCompare(b.base_title));
-    else if (sortBy === 'newest') result.sort((a, b) => {
-      const aDate = a.products[0]?.first_date ?? '';
-      const bDate = b.products[0]?.first_date ?? '';
-      return bDate.localeCompare(aDate);
+    // Sort using sortKey + sortDir
+    const dir = sortDir === 'asc' ? 1 : -1;
+    result = [...result].sort((a, b) => {
+      const mainA = a.products.find(p => p.product_type === 'オリジナル') ?? a.products[0];
+      const mainB = b.products.find(p => p.product_type === 'オリジナル') ?? b.products[0];
+      switch (sortKey) {
+        case 'sales':
+          return (a.total_sales - b.total_sales) * dir;
+        case 'title_jp':
+          return a.base_title.localeCompare(b.base_title, 'ja') * dir;
+        case 'title_kr': {
+          const krA = mainA?.title_kr ?? '';
+          const krB = mainB?.title_kr ?? '';
+          return krA.localeCompare(krB, 'ko') * dir;
+        }
+        case 'genre': {
+          const gA = mainA?.genre_name ?? '';
+          const gB = mainB?.genre_name ?? '';
+          return gA.localeCompare(gB, 'ja') * dir;
+        }
+        case 'company': {
+          const cA = mainA?.company_name ?? '';
+          const cB = mainB?.company_name ?? '';
+          return cA.localeCompare(cB, 'ja') * dir;
+        }
+        case 'platforms':
+          return (a.channels.length - b.channels.length) * dir;
+        case 'newest': {
+          const aDate = mainA?.first_date ?? '';
+          const bDate = mainB?.first_date ?? '';
+          return aDate.localeCompare(bDate) * dir;
+        }
+        default:
+          return (a.total_sales - b.total_sales) * dir;
+      }
     });
 
     return result;
-  }, [groupedTitles, searchQuery, serialStatusTab, selectedGenre, selectedCompany, selectedPlatform, selectedStatus, selectedFormat, salesPreset, sortBy]);
+  }, [groupedTitles, searchQuery, serialStatusTab, selectedGenre, selectedCompany, selectedPlatform, selectedStatus, selectedFormat, salesPreset, sortKey, sortDir]);
 
   // ============================================================
   // Detail loading
@@ -375,6 +407,34 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
     setSalesPreset('all');
     setSerialStatusTab('all');
   };
+
+  // Sync dropdown sortBy → sortKey/sortDir
+  const handleSortByChange = useCallback((value: string) => {
+    setSortBy(value);
+    setDisplayCount(60);
+    switch (value) {
+      case 'sales_desc': setSortKey('sales'); setSortDir('desc'); break;
+      case 'sales_asc': setSortKey('sales'); setSortDir('asc'); break;
+      case 'title_jp': setSortKey('title_jp'); setSortDir('asc'); break;
+      case 'title_kr': setSortKey('title_kr'); setSortDir('asc'); break;
+      case 'genre': setSortKey('genre'); setSortDir('asc'); break;
+      case 'company': setSortKey('company'); setSortDir('asc'); break;
+      case 'platforms': setSortKey('platforms'); setSortDir('desc'); break;
+      case 'newest': setSortKey('newest'); setSortDir('desc'); break;
+      default: setSortKey('sales'); setSortDir('desc');
+    }
+  }, []);
+
+  // Column header click handler
+  const handleColumnSort = useCallback((key: string) => {
+    setDisplayCount(60);
+    if (sortKey === key) {
+      setSortDir(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(key);
+      setSortDir(key === 'title_jp' || key === 'title_kr' || key === 'genre' || key === 'company' ? 'asc' : 'desc');
+    }
+  }, [sortKey]);
 
   const selectedTitleInfo = useMemo(
     () => enrichedTitles.find((t) => t.title_jp === selectedTitle),
@@ -759,155 +819,224 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
         serialStatusTab={serialStatusTab}
         setSerialStatusTab={setSerialStatusTab}
         sortBy={sortBy}
-        setSortBy={setSortBy}
+        setSortBy={handleSortByChange}
         onReset={resetFilters}
         filteredCount={filteredGrouped.length}
         totalCount={groupedTitles.length}
       />
 
-      {/* Title List */}
+      {/* Title Table */}
       {loading ? (
         <ListSkeleton />
+      ) : filteredGrouped.length === 0 ? (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="flex flex-col items-center justify-center py-20"
+        >
+          <motion.div
+            animate={{ y: [0, -8, 0] }}
+            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+          >
+            <BookOpen size={48} color="var(--color-text-muted)" strokeWidth={1.2} />
+          </motion.div>
+          <p className="mt-4 text-sm font-medium" style={{ color: 'var(--color-text-muted)' }}>
+            {t('해당하는 작품이 없습니다', '該当するタイトルがありません')}
+          </p>
+          <p className="text-xs mt-1" style={{ color: 'var(--color-text-muted)', opacity: 0.6 }}>
+            {t('필터를 조정해 보세요', 'フィルターを調整してみてください')}
+          </p>
+        </motion.div>
       ) : (
-        <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-2">
-          {filteredGrouped.slice(0, 50).map((group, idx) => {
-            // For compare mode, use the main product's title_jp
-            const mainProduct = group.products.find(p => p.product_type === 'オリジナル') ?? group.products[0];
-            const mainTitleJP = mainProduct?.title_jp ?? group.base_title;
-            const isCompareSelected = compareList.includes(mainTitleJP);
-            const mainTitle = mainProduct;
-            const nonOriginalTypes = group.products
-              .map(p => p.product_type)
-              .filter(t => t !== 'オリジナル');
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
+        >
+          <div className="overflow-x-auto rounded-2xl" style={GLASS_CARD}>
+            <table className="w-full" style={{ minWidth: 800 }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--color-glass-border)' }}>
+                  {[
+                    { key: '', label: '#', sortable: false, className: 'w-12 text-center' },
+                    ...(compareMode ? [{ key: '__compare', label: '', sortable: false, className: 'w-10' }] : []),
+                    { key: 'title_jp', label: t('작품명', 'タイトル'), sortable: true, className: 'text-left' },
+                    { key: 'genre', label: t('장르', 'ジャンル'), sortable: true, className: 'text-left w-28' },
+                    { key: 'company', label: t('제작사', '制作会社'), sortable: true, className: 'text-left w-32' },
+                    { key: 'platforms', label: t('플랫폼', 'PF'), sortable: true, className: 'text-center w-32' },
+                    { key: 'sales', label: t('매출', '売上'), sortable: true, className: 'text-right w-36' },
+                  ].map((col) => (
+                    <th
+                      key={col.key || 'rank'}
+                      className={`px-3 py-3 text-xs font-semibold whitespace-nowrap ${col.className ?? ''} ${col.sortable ? 'cursor-pointer select-none hover:opacity-80' : ''}`}
+                      style={{
+                        color: col.sortable && sortKey === col.key ? 'var(--color-accent-blue, #818cf8)' : 'var(--color-text-secondary)',
+                        background: 'var(--color-glass)',
+                      }}
+                      onClick={() => col.sortable && handleColumnSort(col.key)}
+                    >
+                      <span className="inline-flex items-center gap-1">
+                        {col.label}
+                        {col.sortable && sortKey === col.key && (
+                          <span className="text-[10px]">{sortDir === 'asc' ? '▲' : '▼'}</span>
+                        )}
+                      </span>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filteredGrouped.slice(0, displayCount).map((group, idx) => {
+                  const mainProduct = group.products.find(p => p.product_type === 'オリジナル') ?? group.products[0];
+                  const mainTitleJP = mainProduct?.title_jp ?? group.base_title;
+                  const isCompareSelected = compareList.includes(mainTitleJP);
+                  const mainTitle = mainProduct;
+                  const nonOriginalTypes = group.products
+                    .map(p => p.product_type)
+                    .filter(t => t !== 'オリジナル');
 
-            return (
-              <motion.div
-                key={group.base_title}
-                variants={{
-                  hidden: { opacity: 0, y: 12 },
-                  show: { opacity: 1, y: 0, transition: { duration: 0.25, delay: idx * 0.05 } },
-                }}
-                whileHover={{ x: 2 }}
-                className="rounded-2xl cursor-pointer transition-all relative overflow-hidden group"
-                style={{
-                  ...GLASS_CARD,
-                  borderLeft: isCompareSelected ? '3px solid var(--color-accent-blue, #818cf8)' : '3px solid transparent',
-                }}
-                onClick={() => {
-                  if (compareMode) {
-                    toggleCompare(mainTitleJP);
-                  } else {
-                    loadTitleDetail(mainTitleJP, group);
-                  }
-                }}
-              >
-                {/* Hover border slide-in */}
-                <div
-                  className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-2xl transition-all duration-300 origin-top scale-y-0 group-hover:scale-y-100"
-                  style={{ background: 'var(--color-accent-blue, #818cf8)' }}
-                />
-
-                <div className="flex items-center gap-4 px-5 py-4">
-                  {/* B5: Checkbox in compare mode */}
-                  {compareMode && (
-                    <div className="shrink-0">
-                      {isCompareSelected ? (
-                        <CheckSquare size={18} color="#818cf8" />
-                      ) : (
-                        <Square size={18} color="var(--color-text-muted)" />
-                      )}
-                    </div>
-                  )}
-
-                  {/* Rank number - large, grey */}
-                  <div className="shrink-0 w-10 text-center">
-                    <span className="text-lg font-bold" style={{ color: 'var(--color-text-muted)', opacity: 0.5 }}>
-                      {idx + 1}
-                    </span>
-                  </div>
-
-                  {/* Title info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-bold truncate" title={group.base_title} style={{ color: 'var(--color-text-primary)' }}>
-                        {group.base_title}
-                      </p>
-                      {/* New badge - blue pill */}
-                      {mainTitle?.isNew && (
-                        <span className="shrink-0 px-2 py-0.5 rounded-full text-[9px] font-bold" style={{ background: '#3b82f620', color: '#3b82f6' }}>
-                          NEW
+                  return (
+                    <tr
+                      key={group.base_title}
+                      className="transition-colors cursor-pointer"
+                      style={{
+                        borderBottom: '1px solid var(--color-glass-border)',
+                        borderLeft: isCompareSelected ? '3px solid var(--color-accent-blue, #818cf8)' : '3px solid transparent',
+                      }}
+                      onClick={() => {
+                        if (compareMode) {
+                          toggleCompare(mainTitleJP);
+                        } else {
+                          loadTitleDetail(mainTitleJP, group);
+                        }
+                      }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--color-glass)'; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                    >
+                      {/* # */}
+                      <td className="px-3 py-3 text-center">
+                        <span className="text-sm font-bold" style={{ color: 'var(--color-text-muted)', opacity: 0.5 }}>
+                          {idx + 1}
                         </span>
+                      </td>
+
+                      {/* Compare checkbox */}
+                      {compareMode && (
+                        <td className="px-2 py-3">
+                          <div className="shrink-0">
+                            {isCompareSelected ? (
+                              <CheckSquare size={16} color="#818cf8" />
+                            ) : (
+                              <Square size={16} color="var(--color-text-muted)" />
+                            )}
+                          </div>
+                        </td>
                       )}
-                      {/* Product type badges for multi-product groups */}
-                      {group.products.length > 1 && nonOriginalTypes.length > 0 && (
-                        <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full"
-                          style={{ background: 'rgba(139,92,246,0.1)', color: '#8B5CF6' }}>
-                          {nonOriginalTypes.join('+')}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      {mainTitle?.title_kr && (
-                        <p className="text-xs truncate" title={mainTitle.title_kr} style={{ color: 'var(--color-text-muted)' }}>{mainTitle.title_kr}</p>
-                      )}
-                      {/* Platform logo badges */}
-                      <div className="flex gap-1 shrink-0 ml-1">
-                        {group.channels.slice(0, 4).map((p) => (
-                          <PlatformBadge key={p} name={p} showName={false} size="sm" />
-                        ))}
-                        {group.channels.length > 4 && (
-                          <span className="text-[10px] px-1 py-0.5 rounded-full font-medium" style={{ color: 'var(--color-text-muted)' }}>
-                            +{group.channels.length - 4}
+
+                      {/* Title */}
+                      <td className="px-3 py-3">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-sm font-bold truncate" title={group.base_title} style={{ color: 'var(--color-text-primary)' }}>
+                                {group.base_title}
+                              </span>
+                              {mainTitle?.isNew && (
+                                <span className="shrink-0 px-1.5 py-0.5 rounded-full text-[9px] font-bold" style={{ background: '#3b82f620', color: '#3b82f6' }}>
+                                  NEW
+                                </span>
+                              )}
+                              {group.products.length > 1 && nonOriginalTypes.length > 0 && (
+                                <span className="shrink-0 text-[9px] px-1.5 py-0.5 rounded-full"
+                                  style={{ background: 'rgba(139,92,246,0.1)', color: '#8B5CF6' }}>
+                                  {nonOriginalTypes.join('+')}
+                                </span>
+                              )}
+                            </div>
+                            {mainTitle?.title_kr && (
+                              <p className="text-[11px] truncate mt-0.5" title={mainTitle.title_kr} style={{ color: 'var(--color-text-muted)' }}>
+                                {mainTitle.title_kr}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Genre */}
+                      <td className="px-3 py-3">
+                        {mainTitle?.genre_name && (
+                          <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'var(--color-glass)', color: 'var(--color-text-secondary)' }}>
+                            {mainTitle.genre_name}
                           </span>
                         )}
-                      </div>
-                    </div>
-                  </div>
+                      </td>
 
-                  {/* Right side: Sales + Change */}
-                  <div className="shrink-0 text-right">
-                    <p className="text-base font-bold" style={{ color: 'var(--color-text-primary)' }}>
-                      {formatCurrency(group.total_sales)}
-                    </p>
-                    {/* B9: Rank change badge - use main product's rank */}
-                    {mainTitle?.rank_change !== undefined && mainTitle.rank_change !== 0 && (
-                      <span
-                        className="inline-flex items-center gap-0.5 mt-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold"
-                        style={{
-                          background: mainTitle.rank_change > 0 ? '#22c55e15' : '#ef444415',
-                          color: mainTitle.rank_change > 0 ? '#22c55e' : '#ef4444',
-                        }}
-                      >
-                        {mainTitle.rank_change > 0 ? '▲' : '▼'}{Math.abs(mainTitle.rank_change)}
-                      </span>
-                    )}
-                    {mainTitle?.rank_change === 0 && (
-                      <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>-</span>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
-          {filteredGrouped.length === 0 && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="flex flex-col items-center justify-center py-20"
-            >
-              <motion.div
-                animate={{ y: [0, -8, 0] }}
-                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                      {/* Company */}
+                      <td className="px-3 py-3">
+                        {mainTitle?.company_name && (
+                          <span className="text-xs truncate block" style={{ color: 'var(--color-text-secondary)' }}>
+                            {mainTitle.company_name}
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Platforms */}
+                      <td className="px-3 py-3">
+                        <div className="flex gap-1 justify-center flex-wrap">
+                          {group.channels.slice(0, 4).map((p) => (
+                            <PlatformBadge key={p} name={p} showName={false} size="sm" />
+                          ))}
+                          {group.channels.length > 4 && (
+                            <span className="text-[10px] px-1 py-0.5 rounded-full font-medium" style={{ color: 'var(--color-text-muted)' }}>
+                              +{group.channels.length - 4}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Sales */}
+                      <td className="px-3 py-3 text-right">
+                        <p className="text-sm font-bold" style={{ color: 'var(--color-text-primary)' }}>
+                          {formatCurrency(group.total_sales)}
+                        </p>
+                        {mainTitle?.rank_change !== undefined && mainTitle.rank_change !== 0 && (
+                          <span
+                            className="inline-flex items-center gap-0.5 mt-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold"
+                            style={{
+                              background: mainTitle.rank_change > 0 ? '#22c55e15' : '#ef444415',
+                              color: mainTitle.rank_change > 0 ? '#22c55e' : '#ef4444',
+                            }}
+                          >
+                            {mainTitle.rank_change > 0 ? '▲' : '▼'}{Math.abs(mainTitle.rank_change)}
+                          </span>
+                        )}
+                        {mainTitle?.rank_change === 0 && (
+                          <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>-</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Show more button */}
+          {displayCount < filteredGrouped.length && (
+            <div className="flex justify-center mt-4">
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => setDisplayCount(prev => prev + 60)}
+                className="px-6 py-2.5 rounded-xl text-sm font-medium cursor-pointer transition-all"
+                style={{
+                  ...GLASS_CARD,
+                  color: 'var(--color-text-secondary)',
+                }}
               >
-                <BookOpen size={48} color="var(--color-text-muted)" strokeWidth={1.2} />
-              </motion.div>
-              <p className="mt-4 text-sm font-medium" style={{ color: 'var(--color-text-muted)' }}>
-                {t('해당하는 작품이 없습니다', '該当するタイトルがありません')}
-              </p>
-              <p className="text-xs mt-1" style={{ color: 'var(--color-text-muted)', opacity: 0.6 }}>
-                {t('필터를 조정해 보세요', 'フィルターを調整してみてください')}
-              </p>
-            </motion.div>
+                {t('더 보기', 'もっと見る')} ({Math.min(displayCount + 60, filteredGrouped.length) - displayCount}{t('개 더', '件追加')})
+              </motion.button>
+            </div>
           )}
         </motion.div>
       )}
