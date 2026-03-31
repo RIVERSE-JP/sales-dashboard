@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, ChevronUp, ChevronDown, Trash2, X, Merge, AlertTriangle } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
+import { verifyPassword } from '@/utils/auth';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -271,6 +272,7 @@ function PlatformTab() {
   }
 
   async function handleSave() {
+    if (!verifyPassword(t)) return;
     setSaving(true);
     try {
       if (editing) {
@@ -296,6 +298,7 @@ function PlatformTab() {
   }
 
   async function handleDelete(p: Platform) {
+    if (!verifyPassword(t)) return;
     try {
       await fetchJSON(`/api/manage/platforms?id=${p.id}`, { method: 'DELETE' });
       await load();
@@ -305,6 +308,7 @@ function PlatformTab() {
   }
 
   async function handleToggle(p: Platform) {
+    if (!verifyPassword(t)) return;
     try {
       await fetchJSON('/api/manage/platforms', {
         method: 'PUT',
@@ -318,6 +322,7 @@ function PlatformTab() {
   }
 
   async function handleReorder(p: Platform, direction: 'up' | 'down') {
+    if (!verifyPassword(t)) return;
     const idx = platforms.findIndex((x) => x.id === p.id);
     const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
     if (swapIdx < 0 || swapIdx >= platforms.length) return;
@@ -554,6 +559,7 @@ function GenreTab() {
   }
 
   async function handleSave() {
+    if (!verifyPassword(t)) return;
     setSaving(true);
     try {
       if (editing) {
@@ -579,6 +585,7 @@ function GenreTab() {
   }
 
   async function handleDelete(g: Genre) {
+    if (!verifyPassword(t)) return;
     try {
       await fetchJSON(`/api/manage/genres?id=${g.id}`, { method: 'DELETE' });
       await load();
@@ -748,6 +755,7 @@ function CompanyTab() {
   }
 
   async function handleSave() {
+    if (!verifyPassword(t)) return;
     setSaving(true);
     try {
       if (editing) {
@@ -773,6 +781,7 @@ function CompanyTab() {
   }
 
   async function handleDelete(c: Company) {
+    if (!verifyPassword(t)) return;
     try {
       await fetchJSON(`/api/manage/companies?id=${c.id}`, { method: 'DELETE' });
       await load();
@@ -782,6 +791,7 @@ function CompanyTab() {
   }
 
   async function handleMerge() {
+    if (!verifyPassword(t)) return;
     if (mergeSelection.length !== 2) return;
     const [sourceId, targetId] = mergeSelection;
     try {

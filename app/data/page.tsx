@@ -12,6 +12,7 @@ import type { DailySale } from '@/types';
 import { getPlatformBrand } from '@/utils/platformConfig';
 import { PlatformBadge } from '@/components/PlatformBadge';
 import { useApp } from '@/context/AppContext';
+import { verifyPassword, resetPasswordSession } from '@/utils/auth';
 import dynamic from 'next/dynamic';
 
 const TitleMasterTab = dynamic(() => import('@/components/data/TitleMasterTab'), { ssr: false });
@@ -143,6 +144,8 @@ const PAGE_SIZE = 50;
 export default function DataPage() {
   const { formatCurrency, t, theme } = useApp();
 
+  useEffect(() => { return () => resetPasswordSession(); }, []);
+
   // Tab state
   const [activeTab, setActiveTab] = useState<'sales' | 'titles' | 'settings'>('sales');
 
@@ -266,6 +269,7 @@ export default function DataPage() {
   // ---- Delete selected ----
   const handleDeleteSelected = () => {
     if (selectedIds.size === 0) return;
+    if (!verifyPassword(t)) return;
     setConfirmDialog({
       message: t(`${selectedIds.size}건을 삭제하시겠습니까?`, `${selectedIds.size}件を削除しますか？`),
       onConfirm: async () => {
@@ -299,6 +303,7 @@ export default function DataPage() {
   };
 
   const saveEdit = async () => {
+    if (!verifyPassword(t)) return;
     if (editingId === null) return;
     const newAmount = parseInt(editValue.replace(/[^0-9-]/g, ''), 10);
     if (isNaN(newAmount)) { cancelEdit(); return; }
@@ -322,6 +327,7 @@ export default function DataPage() {
 
   // ---- Confirm sokuhochi ----
   const handleConfirm = (ids: number[]) => {
+    if (!verifyPassword(t)) return;
     setConfirmDialog({
       message: t(`${ids.length}건을 확정 처리하시겠습니까?`, `${ids.length}件を確定しますか？`),
       onConfirm: async () => {
@@ -346,6 +352,7 @@ export default function DataPage() {
   // @ts-expect-error reserved for future use
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleBatchDelete = (filter: { startDate?: string; endDate?: string; dataSource?: string; channel?: string }) => {
+    if (!verifyPassword(t)) return;
     setConfirmDialog({
       message: t('이 조건에 해당하는 데이터를 모두 삭제하시겠습니까?', 'この条件に該当するデータを全て削除しますか？'),
       onConfirm: async () => {
