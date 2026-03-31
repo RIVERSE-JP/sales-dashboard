@@ -786,9 +786,32 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
             {/* 1. Daily Sales Trend (일별 매출 추이) — replaces TitleLifecycle */}
             {dailyChartData.length > 0 && (
               <motion.div variants={cardVariants} className="rounded-2xl p-6" style={GLASS_CARD}>
-                <h2 className="text-base font-semibold mb-6" style={{ color: 'var(--color-text-primary)' }}>
+                <h2 className="text-base font-semibold mb-3" style={{ color: 'var(--color-text-primary)' }}>
                   {t('매출 라이프사이클', '売上ライフサイクル')}
                 </h2>
+
+                {/* 마커 정보 — 차트 위에 HTML로 표시 */}
+                <div className="flex gap-4 mb-4 flex-wrap">
+                  {firstSaleDay && (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.3)' }}>
+                      <span className="w-3 h-3 rounded-full shrink-0" style={{ background: '#34d399' }} />
+                      <div>
+                        <span className="text-[12px] font-bold" style={{ color: '#34d399' }}>{t('서비스 시작', 'サービス開始')}</span>
+                        <span className="text-[11px] ml-2" style={{ color: 'var(--color-text-secondary)' }}>{firstSaleDay.label}</span>
+                      </div>
+                    </div>
+                  )}
+                  {peakDay && peakDay.sales > 0 && (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)' }}>
+                      <span className="w-3 h-3 rounded-full shrink-0" style={{ background: '#fbbf24' }} />
+                      <div>
+                        <span className="text-[12px] font-bold" style={{ color: '#f59e0b' }}>{t('최고 매출', '最高売上')}</span>
+                        <span className="text-[11px] ml-2" style={{ color: 'var(--color-text-secondary)' }}>{peakDay.label} · {formatCurrency(peakDay.sales)}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <ResponsiveContainer width="100%" height={300}>
                   <AreaChart data={dailyChartData}>
                     <defs>
@@ -802,33 +825,11 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                     <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={60} />
                     <ReTooltip content={renderTooltip} />
                     <Area type="monotone" dataKey="sales" name={t('매출', '売上')} stroke="#34d399" strokeWidth={2} fill="url(#dailyTrendGrad)" />
-                    {/* First sale marker */}
                     {firstSaleDay && (
-                      <ReferenceDot x={firstSaleDay.label} y={firstSaleDay.sales} r={7} fill="#34d399" stroke="#fff" strokeWidth={3}>
-                        <g>
-                          <rect x={-55} y={-52} width={110} height={38} rx={8} fill="#34d399" fillOpacity={0.15} stroke="#34d399" strokeWidth={1} />
-                          <text x={0} y={-32} textAnchor="middle" fill="#34d399" fontSize={11} fontWeight={700}>
-                            📍 {t('서비스 시작', 'サービス開始')}
-                          </text>
-                          <text x={0} y={-18} textAnchor="middle" fill="#34d399" fontSize={10}>
-                            {firstSaleDay.label}
-                          </text>
-                        </g>
-                      </ReferenceDot>
+                      <ReferenceDot x={firstSaleDay.label} y={firstSaleDay.sales} r={6} fill="#34d399" stroke="#fff" strokeWidth={2} />
                     )}
-                    {/* Peak day marker */}
                     {peakDay && peakDay.sales > 0 && peakDay.label !== firstSaleDay?.label && (
-                      <ReferenceDot x={peakDay.label} y={peakDay.sales} r={7} fill="#fbbf24" stroke="#fff" strokeWidth={3}>
-                        <g>
-                          <rect x={-55} y={-52} width={110} height={38} rx={8} fill="#fbbf24" fillOpacity={0.15} stroke="#fbbf24" strokeWidth={1} />
-                          <text x={0} y={-32} textAnchor="middle" fill="#f59e0b" fontSize={11} fontWeight={700}>
-                            🏆 {t('최고 매출', '最高売上')}
-                          </text>
-                          <text x={0} y={-18} textAnchor="middle" fill="#f59e0b" fontSize={10}>
-                            {formatCurrency(peakDay.sales)}
-                          </text>
-                        </g>
-                      </ReferenceDot>
+                      <ReferenceDot x={peakDay.label} y={peakDay.sales} r={6} fill="#fbbf24" stroke="#fff" strokeWidth={2} />
                     )}
                   </AreaChart>
                 </ResponsiveContainer>
