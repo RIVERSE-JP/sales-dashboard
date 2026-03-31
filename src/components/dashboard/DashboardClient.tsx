@@ -294,30 +294,13 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
   // 데이터가 없으면 로딩 (에러 중에도 재시도 대기하므로 로딩 유지)
   const loading = !kpis;
 
-  // Data freshness
-  const [freshnessDate, setFreshnessDate] = useState('');
+  // Data freshness — simplified
   const [hasPreliminary, setHasPreliminary] = useState(false);
-
-  const lastDataDate = useMemo(() => {
-    if (freshnessDate) return freshnessDate;
-    if (monthlyTrend.length > 0) return monthlyTrend[monthlyTrend.length - 1].month;
-    return '';
-  }, [freshnessDate, monthlyTrend]);
-
   useEffect(() => {
-    async function checkFreshness() {
-      try {
-        const res = await fetch('/api/sales/paginated?page=1&pageSize=1&sortBy=sale_date&sortDir=desc');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.rows?.[0]) {
-            setFreshnessDate(data.rows[0].sale_date);
-            setHasPreliminary(data.rows[0].is_preliminary === true);
-          }
-        }
-      } catch { /* non-critical */ }
-    }
-    checkFreshness();
+    fetch('/api/sales/paginated?page=1&pageSize=1&sortBy=sale_date&sortDir=desc')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.rows?.[0]?.is_preliminary) setHasPreliminary(true); })
+      .catch(() => {});
   }, []);
 
   // ---------- Derived data ----------
@@ -375,19 +358,14 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
         <div className="w-11 h-11 rounded-xl flex items-center justify-center page-icon-glow">
           <LayoutDashboard size={22} color="white" />
         </div>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
             {t('경영 브리핑', '経営ブリーフィング')}
           </h1>
-          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-            {lastDataDate
-              ? `${lastDataDate} ${t('기준', '基準')}`
-              : t('실시간 매출 개요', 'リアルタイム売上概要')}
-          </p>
         </div>
 
-        {/* Date selector + badges */}
-        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+        {/* Date selector — 제목 바로 옆 */}
+        <div className="flex items-center gap-2 flex-wrap">
           {/* 월 선택 네비게이션 */}
           <div className="flex items-center gap-1 rounded-xl px-1 py-1" style={{ background: 'var(--color-glass)', border: '1px solid var(--color-glass-border)' }}>
             {(() => {
