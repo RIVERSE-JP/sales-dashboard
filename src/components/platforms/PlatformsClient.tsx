@@ -585,7 +585,20 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
                     <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={60} />
-                    <ReTooltip {...darkTooltipStyle} formatter={(v: unknown, name: unknown) => [formatCurrency(Number(v ?? 0)), String(name)]} />
+                    <ReTooltip content={({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string }) => {
+                      if (!active || !payload) return null;
+                      const sorted = [...payload].sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
+                      return (
+                        <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-glass-border)', borderRadius: 12, padding: '10px 14px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
+                          <p style={{ color: 'var(--color-text-secondary)', fontSize: 12, marginBottom: 6 }}>{label}</p>
+                          {sorted.map((entry) => (
+                            <p key={entry.name} style={{ color: entry.color, fontSize: 13, fontWeight: 600 }}>
+                              {t(getPlatformBrand(entry.name).nameKR, getPlatformBrand(entry.name).nameJP) || entry.name}: {formatCurrency(entry.value)}
+                            </p>
+                          ))}
+                        </div>
+                      );
+                    }} />
                     <Legend
                       wrapperStyle={{ fontSize: 12, color: 'var(--color-text-secondary)' }}
                       formatter={(value: string) => {
