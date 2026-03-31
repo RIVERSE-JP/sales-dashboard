@@ -694,6 +694,19 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
             </ResponsiveContainer>
           </div>
 
+          {/* ===== AI INSIGHT PANEL ===== */}
+          <InsightPanel
+            kpis={kpis}
+            yoyChange={null}
+            growthAlerts={growthAlerts}
+            platformSummary={platformSummary}
+            goalRate={null}
+            genreSummary={genreSummary}
+            companySummary={companySummary}
+            topTitles={topTitles}
+            dailyTrend={dailyTrend}
+          />
+
           {/* ── 2. 플랫폼 ── */}
           <div className="rounded-2xl p-6" style={GLASS_CARD}>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -989,14 +1002,6 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
             </div>
           </div>
 
-          {/* ===== INSIGHT PANEL ===== */}
-          <InsightPanel
-            kpis={kpis}
-            yoyChange={null}
-            growthAlerts={growthAlerts}
-            platformSummary={platformSummary}
-            goalRate={null}
-          />
         </div>
       )}
     </motion.div>
