@@ -507,15 +507,19 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
       date: d.date,
       sales: d.sales,
     }));
-    const firstSaleDay = dailyChartData.find((d) => d.sales > 0);
     const peakDay = dailyChartData.length > 0
       ? dailyChartData.reduce((max, d) => d.sales > max.sales ? d : max, dailyChartData[0])
       : null;
-    // 완결일 마커
-    const mainTitle = selectedGroup?.products.find(p => p.product_type === 'オリジナル') ?? selectedGroup?.products[0];
-    const masterInfo = mainTitle ? masterMap.get(mainTitle.title_jp) : null;
+
+    // 마스터 데이터에서 서비스 시작일/완결일
+    const mainTitleForMarker = selectedGroup?.products.find(p => p.product_type === 'オリジナル') ?? selectedGroup?.products[0];
+    const masterInfo = mainTitleForMarker ? masterMap.get(mainTitleForMarker.title_jp) : null;
+    const serviceLaunchDate = (masterInfo as Record<string, unknown> | undefined)?.service_launch_date as string | null;
     const completionDate = (masterInfo as Record<string, unknown> | undefined)?.completion_date as string | null;
-    const completionDay = completionDate ? dailyChartData.find(d => d.date === completionDate) ?? (completionDate ? { label: completionDate.slice(5), date: completionDate, sales: 0 } : null) : null;
+
+    // 차트 데이터 범위 안에 있을 때만 점 표시
+    const launchDay = serviceLaunchDate ? dailyChartData.find(d => d.date === serviceLaunchDate) : null;
+    const completionDay = completionDate ? dailyChartData.find(d => d.date === completionDate) : null;
 
     // === 2. Trend chart: product-type lines + period toggle ===
     const hasMultipleProducts = selectedGroup != null && selectedGroup.products.length > 1;
@@ -797,8 +801,8 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
 
                 {/* 마커 정보 — 차트 위에 HTML로 표시 */}
                 <div className="flex gap-3 mb-4 flex-wrap">
-                  {firstSaleDay && (
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg cursor-default" style={{ background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.3)' }} title={`${firstSaleDay.label} · ${formatCurrency(firstSaleDay.sales)}`}>
+                  {launchDay && (
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg cursor-default" style={{ background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.3)' }} title={`${serviceLaunchDate} · ${formatCurrency(launchDay.sales)}`}>
                       <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: '#34d399' }} />
                       <span className="text-[12px] font-semibold" style={{ color: '#34d399' }}>{t('서비스 시작', 'サービス開始')}</span>
                     </div>
@@ -830,10 +834,10 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                     <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={60} />
                     <ReTooltip content={renderTooltip} />
                     <Area type="monotone" dataKey="sales" name={t('매출', '売上')} stroke="#34d399" strokeWidth={2} fill="url(#dailyTrendGrad)" />
-                    {firstSaleDay && (
-                      <ReferenceDot x={firstSaleDay.label} y={firstSaleDay.sales} r={6} fill="#34d399" stroke="#fff" strokeWidth={2} />
+                    {launchDay && (
+                      <ReferenceDot x={launchDay.label} y={launchDay.sales} r={6} fill="#34d399" stroke="#fff" strokeWidth={2} />
                     )}
-                    {peakDay && peakDay.sales > 0 && peakDay.label !== firstSaleDay?.label && (
+                    {peakDay && peakDay.sales > 0 && peakDay.label !== launchDay?.label && (
                       <ReferenceDot x={peakDay.label} y={peakDay.sales} r={6} fill="#fbbf24" stroke="#fff" strokeWidth={2} />
                     )}
                     {completionDay && completionDay.label && (
