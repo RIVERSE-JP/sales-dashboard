@@ -39,3 +39,18 @@ export async function POST(request: Request) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
 }
+
+/**
+ * DELETE /api/sales/upload-logs
+ * 모든 업로드 이력 삭제
+ * @returns { ok: true }
+ */
+export async function DELETE() {
+  const { error } = await supabaseServer
+    .from('upload_logs')
+    .delete()
+    .neq('id', '00000000-0000-0000-0000-000000000000');
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ ok: true });
+}
