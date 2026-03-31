@@ -41,8 +41,8 @@ const navGroups: NavGroup[] = [
   {
     label: { ko: '분석', ja: '分析' },
     items: [
-      { to: '/dashboard', ko: '매출 대시보드', ja: '売上ダッシュボード', icon: LayoutDashboard },
-      { to: '/titles', ko: '작품별 매출', ja: 'タイトル別売上', icon: BookOpen },
+      { to: '/dashboard', ko: '매출 현황', ja: '売上現況', icon: LayoutDashboard },
+      { to: '/titles', ko: '작품별 매출 분석', ja: 'タイトル別売上分析', icon: BookOpen },
       { to: '/platforms', ko: '플랫폼별 매출 분석', ja: 'プラットフォーム別売上分析', icon: Globe },
     ],
   },
@@ -61,7 +61,7 @@ const allNavItems = navGroups.flatMap((g) => g.items);
 
 // Mobile bottom nav (5 items)
 const mobileNavItems: NavItem[] = [
-  { to: '/dashboard', ko: '브리핑', ja: 'ブリーフ', icon: LayoutDashboard },
+  { to: '/dashboard', ko: '매출현황', ja: '売上', icon: LayoutDashboard },
   { to: '/titles', ko: '작품', ja: 'タイトル', icon: BookOpen },
   { to: '/platforms', ko: '플랫폼', ja: 'PF', icon: Globe },
   { to: '/data', ko: '데이터', ja: 'データ', icon: Database },

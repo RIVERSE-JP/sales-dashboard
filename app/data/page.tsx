@@ -413,7 +413,7 @@ export default function DataPage() {
         </div>
         <div className="flex-1">
           <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-            {t('데이터 관리', 'データ管理')}
+            {t('데이터베이스 관리', 'データベース管理')}
           </h1>
           <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
             {t('매출 원본, 작품 정보, 기본 설정 관리', '売上データ・作品情報・基本設定管理')}

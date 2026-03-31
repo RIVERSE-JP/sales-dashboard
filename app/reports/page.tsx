@@ -229,7 +229,7 @@ export default function ReportsPage() {
         </div>
         <div className="flex-1">
           <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-            {t('리포트 빌더', 'レポートビルダー')}
+            {t('리포트 다운로드', 'レポートダウンロード')}
           </h1>
           <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
             {t('조건 설정 후 리포트 다운로드', '条件設定後レポートダウンロード')}

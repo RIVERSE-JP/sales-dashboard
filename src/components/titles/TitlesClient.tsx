@@ -957,7 +957,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
             <BookOpen size={20} color="white" />
           </div>
           <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-            {t('작품 분석', 'タイトル分析')}
+            {t('작품별 매출 분석', 'タイトル別売上分析')}
           </h1>
           {/* B5: Compare mode toggle */}
           <motion.button
