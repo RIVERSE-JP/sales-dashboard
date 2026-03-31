@@ -283,7 +283,15 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
                     <Link
                       key={item.to}
                       href={item.to}
-                      onClick={() => setMobileOpen(false)}
+                      onClick={(e) => {
+                        setMobileOpen(false);
+                        // 같은 페이지면 강제 리셋 (상세→목록으로 돌아감)
+                        if (pathname.startsWith(item.to)) {
+                          e.preventDefault();
+                          router.push(item.to);
+                          router.refresh();
+                        }
+                      }}
                       className="group relative flex items-center rounded-xl transition-all duration-200"
                       style={{
                         padding: collapsed ? '10px 0' : '10px 12px',
@@ -611,6 +619,13 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
             <Link
               key={item.to}
               href={item.to}
+              onClick={(e) => {
+                if (pathname.startsWith(item.to)) {
+                  e.preventDefault();
+                  router.push(item.to);
+                  router.refresh();
+                }
+              }}
               className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg transition-colors duration-150"
               style={{
                 minWidth: '48px',
