@@ -733,7 +733,7 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
                   {/* 서비스 중인 작품 리스트 */}
                   {!detailLoading && (detailData?.top_titles ?? []).length > 0 && (
                     <div>
-                      <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3 mb-4 flex-wrap">
                         <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
                           {t('서비스 중인 작품', 'サービス中の作品')} ({(detailData?.top_titles ?? []).length})
                         </h3>

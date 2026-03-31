@@ -679,9 +679,9 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
 
           {/* ── 1. 현황: 매출 추이 ── */}
           <div className="rounded-2xl p-6" style={GLASS_CARD}>
-            <div className="flex items-center justify-between mb-5 flex-wrap gap-2">
+            <div className="flex items-center gap-3 mb-5 flex-wrap">
               <h3 className="text-[15px] font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                {trendLabels[trendMode]} {t('매출 추이', '売上推移')}
+                {t('매출 추이', '売上推移')}
               </h3>
               <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid var(--color-glass-border)' }}>
                 {(['daily', 'weekly', 'monthly'] as TrendMode[]).map((mode) => (

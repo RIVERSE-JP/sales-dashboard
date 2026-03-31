@@ -100,7 +100,7 @@ export function PlatformTimeSeries({ titleJP, t }: PlatformTimeSeriesProps) {
 
   return (
     <motion.div variants={cardVariants} className="rounded-2xl p-6" style={GLASS_CARD}>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center gap-3 mb-4 flex-wrap">
         <div className="flex items-center gap-2">
           <Layers size={16} color="var(--color-text-secondary)" />
           <h2 className="text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>
