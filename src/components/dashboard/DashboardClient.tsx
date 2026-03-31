@@ -187,7 +187,18 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
   // activeTab removed — all sections shown inline
 
   // Trend mode
-  const [trendMode, setTrendMode] = useState<TrendMode>('monthly');
+  // 기간에 따라 자동 전환: 한 달이면 일별, 그 외 월별
+  const isOneMonth = useMemo(() => {
+    const s = new Date(startDate);
+    const e = new Date(endDate);
+    return s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear();
+  }, [startDate, endDate]);
+  const [trendModeOverride, setTrendModeOverride] = useState<TrendMode | null>(null);
+  // 기간 변경 시 자동 전환 리셋
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { setTrendModeOverride(null); }, [startDate, endDate]);
+  const trendMode: TrendMode = trendModeOverride ?? (isOneMonth ? 'daily' : 'monthly');
+  const setTrendMode = (mode: TrendMode) => setTrendModeOverride(mode);
 
   // salesGoal removed — replaced with period-based KPIs
 
@@ -211,7 +222,12 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
 
   const { data: monthlyTrendRaw } = useMonthlyTrend();
   const { data: platformSummaryRaw } = usePlatformSummaryForPeriod(startDate, endDate);
-  const { data: topTitlesRaw } = useTopTitles(20);
+  // Top titles: 기간 파라미터 전달 (월 선택 시 해당 월)
+  const selectedMonth = useMemo(() => {
+    if (activePreset === 'all' || activePreset === 'thisYear') return undefined;
+    return startDate.slice(0, 7); // YYYY-MM
+  }, [activePreset, startDate]);
+  const { data: topTitlesRaw } = useTopTitles(20, selectedMonth);
   const { data: growthAlertsRaw } = useGrowthAlerts();
   const { data: genreSummaryRaw } = useGenreSummary(sd, ed);
   const { data: companySummaryRaw } = useCompanySummary(sd, ed);
@@ -300,11 +316,18 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
   // ---------- Derived data ----------
   // yoyChange, goalRate removed — replaced with period-based KPIs
 
+  // 월별 추이를 선택 기간으로 필터링
+  const filteredMonthlyTrend = useMemo(() => {
+    const startM = startDate.slice(0, 7);
+    const endM = endDate.slice(0, 7);
+    return monthlyTrend.filter(r => r.month >= startM && r.month <= endM);
+  }, [monthlyTrend, startDate, endDate]);
+
   const trendChartData = useMemo(() => {
     if (trendMode === 'daily') return dailyTrend.map(r => ({ label: r.day.length >= 10 ? r.day.slice(5) : r.day, sales: r.total_sales }));
-    if (trendMode === 'weekly') return weeklyTrend.map(r => ({ label: r.week, sales: r.total_sales }));
-    return monthlyTrend.map(r => ({ label: r.month.length >= 7 ? r.month.slice(2) : r.month, sales: r.total_sales }));
-  }, [trendMode, dailyTrend, weeklyTrend, monthlyTrend]);
+    if (trendMode === 'weekly') return weeklyTrend.map(r => ({ label: r.week.length >= 10 ? r.week.slice(5) : r.week, sales: r.total_sales }));
+    return filteredMonthlyTrend.map(r => ({ label: r.month.length >= 7 ? r.month.slice(2) : r.month, sales: r.total_sales }));
+  }, [trendMode, dailyTrend, weeklyTrend, filteredMonthlyTrend]);
 
   const pieData = platformSummary.map(r => ({ name: r.channel, value: r.total_sales, color: getPlatformColor(r.channel) }));
   const platformBarData = platformSummary.slice(0, 8).map(r => ({ name: r.channel, sales: r.total_sales, color: getPlatformColor(r.channel) }));
@@ -919,7 +942,7 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
           {/* ── 5. 트렌드 작품 ── */}
           <div className="rounded-2xl p-6" style={GLASS_CARD}>
             <h3 className="text-[15px] font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
-              Top {Math.min(topTitles.length, 15)} {t('작품', 'タイトル')}
+              Top {Math.min(topTitles.length, 20)} {t('작품', 'タイトル')}
             </h3>
             <div className="overflow-x-auto">
               <table className="w-full text-sm min-w-[600px]">
@@ -934,7 +957,7 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {topTitles.slice(0, 15).map((title, idx) => (
+                  {topTitles.slice(0, 20).map((title, idx) => (
                     <motion.tr
                       key={title.title_jp}
                       initial={{ opacity: 0, x: -8 }}
