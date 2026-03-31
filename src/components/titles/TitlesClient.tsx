@@ -951,36 +951,36 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
     >
       {/* Header */}
-      <div className="flex items-center gap-3 mb-8">
-        <div className="w-11 h-11 rounded-xl flex items-center justify-center page-icon-glow">
-          <BookOpen size={20} color="white" />
-        </div>
-        <div className="flex-1">
+      <div className="mb-8">
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-xl flex items-center justify-center page-icon-glow">
+            <BookOpen size={20} color="white" />
+          </div>
           <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
             {t('작품 분석', 'タイトル分析')}
           </h1>
-          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-            {t('작품별 매출 분석 및 트렌드', '作品別の売上分析・トレンド')}
-          </p>
+          {/* B5: Compare mode toggle */}
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => {
+              setCompareMode((prev) => !prev);
+              if (compareMode) { setCompareList([]); setShowCompare(false); }
+            }}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium cursor-pointer transition-all"
+            style={{
+              ...GLASS_CARD,
+              background: compareMode ? 'var(--color-accent-blue, #818cf8)' : 'var(--color-glass)',
+              color: compareMode ? '#fff' : 'var(--color-text-secondary)',
+            }}
+          >
+            <GitCompare size={14} />
+            {t('초동 매출 비교', '初動売上比較')}
+          </motion.button>
         </div>
-        {/* B5: Compare mode toggle */}
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => {
-            setCompareMode((prev) => !prev);
-            if (compareMode) { setCompareList([]); setShowCompare(false); }
-          }}
-          className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium cursor-pointer transition-all"
-          style={{
-            ...GLASS_CARD,
-            background: compareMode ? 'var(--color-accent-blue, #818cf8)' : 'var(--color-glass)',
-            color: compareMode ? '#fff' : 'var(--color-text-secondary)',
-          }}
-        >
-          <GitCompare size={14} />
-          {t('비교 모드', '比較モード')}
-        </motion.button>
+        <p className="text-sm mt-1 ml-14" style={{ color: 'var(--color-text-muted)' }}>
+          {t('작품별 매출 분석 및 트렌드', '作品別の売上分析・トレンド')}
+        </p>
       </div>
 
       {/* B5: Compare bar */}
@@ -1017,7 +1017,12 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
 
       {/* B5: Compare chart overlay */}
       {showCompare && compareList.length >= 2 && (
-        <CompareChart selectedTitles={compareList} onClose={() => setShowCompare(false)} t={t} />
+        <CompareChart
+          selectedTitles={compareList}
+          onClose={() => setShowCompare(false)}
+          t={t}
+          launchDates={new Map(compareList.map((titleJP) => [titleJP, masterMap.get(titleJP)?.service_launch_date ?? null]))}
+        />
       )}
 
       {/* Filter Panel (B1, B2, B6) */}

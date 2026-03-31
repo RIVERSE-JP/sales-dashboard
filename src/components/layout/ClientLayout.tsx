@@ -8,7 +8,7 @@ import {
   LayoutDashboard,
   BookOpen,
   Globe,
-  Rocket,
+
   Database,
   Upload,
   Settings,
@@ -51,7 +51,6 @@ const navGroups: NavGroup[] = [
     items: [
       { to: '/titles', ko: '작품 매출 현황', ja: 'タイトル売上', icon: BookOpen },
       { to: '/platforms', ko: '플랫폼 성과', ja: 'プラットフォーム', icon: Globe },
-      { to: '/initial-sales', ko: '초동매출 비교', ja: '初動売上比較', icon: Rocket },
       { to: '/titles-manage', ko: '작품 관리', ja: 'タイトル管理', icon: Settings },
     ],
   },
