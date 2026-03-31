@@ -94,6 +94,7 @@ export default function ReportsPage() {
   // Filters
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [activePreset, setActivePreset] = useState('');
   const [selectedPlatforms, setSelectedPlatforms] = useState<Set<string>>(new Set());
   const [selectedTitles, setSelectedTitles] = useState<Set<string>>(new Set());
   const [titleSearch, setTitleSearch] = useState('');
@@ -163,6 +164,7 @@ export default function ReportsPage() {
     const { start, end } = getDatePreset(key);
     setStartDate(start);
     setEndDate(end);
+    setActivePreset(key);
   }, []);
 
   // Toggle helpers
@@ -285,9 +287,9 @@ export default function ReportsPage() {
                 onClick={() => applyPreset(p.key)}
                 className="px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer transition-all"
                 style={{
-                  background: 'var(--color-glass)',
-                  border: '1px solid var(--color-glass-border)',
-                  color: 'var(--color-text-secondary)',
+                  background: activePreset === p.key ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'var(--color-glass)',
+                  border: `1px solid ${activePreset === p.key ? 'transparent' : 'var(--color-glass-border)'}`,
+                  color: activePreset === p.key ? '#fff' : 'var(--color-text-secondary)',
                 }}
               >
                 {t(p.ko, p.ja)}
@@ -303,7 +305,7 @@ export default function ReportsPage() {
               <input
                 type="date"
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                onChange={(e) => { setStartDate(e.target.value); setActivePreset(''); }}
                 className="w-full px-2.5 py-2 rounded-xl text-sm outline-none"
                 style={{
                   background: 'var(--color-input-bg)',
@@ -320,7 +322,7 @@ export default function ReportsPage() {
               <input
                 type="date"
                 value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
+                onChange={(e) => { setEndDate(e.target.value); setActivePreset(''); }}
                 className="w-full px-2.5 py-2 rounded-xl text-sm outline-none"
                 style={{
                   background: 'var(--color-input-bg)',
