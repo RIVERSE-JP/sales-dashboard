@@ -12,7 +12,7 @@ import {
   BookOpen,
 } from 'lucide-react';
 import {
-  useMonthlyTrend, usePlatformSummary,
+  useMonthlyTrend, usePlatformSummaryForPeriod,
   useTopTitles, useGrowthAlerts, usePeriodKpis,
   useGenreSummary, useCompanySummary,
   useDailyTrend, useWeeklyTrend, useTitleMaster,
@@ -210,7 +210,7 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
   const { data: prevPeriodKpis } = usePeriodKpis(prevMonth.start, prevMonth.end);
 
   const { data: monthlyTrendRaw } = useMonthlyTrend();
-  const { data: platformSummaryRaw } = usePlatformSummary();
+  const { data: platformSummaryRaw } = usePlatformSummaryForPeriod(startDate, endDate);
   const { data: topTitlesRaw } = useTopTitles(20);
   const { data: growthAlertsRaw } = useGrowthAlerts();
   const { data: genreSummaryRaw } = useGenreSummary(sd, ed);
