@@ -960,7 +960,7 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
                     <th className="text-left py-3 px-2 font-medium text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>{t('장르', 'ジャンル')}</th>
                     <th className="text-left py-3 px-2 font-medium text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>{t('제작사', '制作会社')}</th>
                     <th className="text-left py-3 px-2 font-medium text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>{t('플랫폼', 'PF')}</th>
-                    <th className="text-right py-3 px-2 font-medium text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>{t('총 매출', '累計売上')}</th>
+                    <th className="text-right py-3 px-2 font-medium text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>{t('해당 기간 매출', '期間売上')}</th>
                   </tr>
                 </thead>
                 <tbody>
