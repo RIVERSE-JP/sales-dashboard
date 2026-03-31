@@ -12,7 +12,7 @@ import {
   BookOpen,
 } from 'lucide-react';
 import {
-  useDashboardKPIs, useMonthlyTrend, usePlatformSummary,
+  useMonthlyTrend, usePlatformSummary,
   useTopTitles, useGrowthAlerts, usePeriodKpis,
   useGenreSummary, useCompanySummary,
   useDailyTrend, useWeeklyTrend, useTitleMaster,
@@ -23,7 +23,7 @@ import { useApp } from '@/context/AppContext';
 import { useRouter } from 'next/navigation';
 import type {
   KPIData, MonthlyTrendRow, PlatformSummaryRow, TopTitleRow, GrowthAlertRow,
-  GenreSalesRow, CompanySalesRow, DailyTrendRow, WeeklyTrendRow,
+  GenreSalesRow, CompanySalesRow, DailyTrendRow, WeeklyTrendRow, PeriodKPIData,
 } from '@/types';
 
 import StatusKPICard from '@/components/dashboard/StatusKPICard';
@@ -69,14 +69,7 @@ function getThisMonthRange(): { start: string; end: string } {
   };
 }
 
-function getYoYRange(start: string, end: string): { start: string; end: string } {
-  if (!start || !end) return { start: '', end: '' };
-  const s = new Date(start);
-  const e = new Date(end);
-  s.setFullYear(s.getFullYear() - 1);
-  e.setFullYear(e.getFullYear() - 1);
-  return { start: s.toISOString().slice(0, 10), end: e.toISOString().slice(0, 10) };
-}
+// YoY removed — replaced with period-based MoM comparison
 
 // ============================================================
 // Loading skeletons
@@ -196,20 +189,26 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
   // Trend mode
   const [trendMode, setTrendMode] = useState<TrendMode>('monthly');
 
-  // Sales goal
-  const [salesGoal] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('dashboard_sales_goal');
-      if (saved) return parseInt(saved, 10);
-    }
-    return 0;
-  });
+  // salesGoal removed — replaced with period-based KPIs
 
   // SWR data hooks (client-side fetch with server prefetch as fallback)
   const sd = startDate || undefined;
   const ed = endDate || undefined;
 
-  const { data: kpisRaw } = useDashboardKPIs();
+  // KPI: 선택 기간 기반 (날짜 변경 시 자동 갱신)
+  const { data: periodKpisRaw } = usePeriodKpis(startDate, endDate);
+  // 전월 계산
+  const prevMonth = useMemo(() => {
+    const d = new Date(startDate);
+    const pm = new Date(d.getFullYear(), d.getMonth() - 1, 1);
+    const pmEnd = new Date(d.getFullYear(), d.getMonth(), 0);
+    return {
+      start: `${pm.getFullYear()}-${String(pm.getMonth() + 1).padStart(2, '0')}-01`,
+      end: pmEnd.toISOString().slice(0, 10),
+    };
+  }, [startDate]);
+  const { data: prevPeriodKpis } = usePeriodKpis(prevMonth.start, prevMonth.end);
+
   const { data: monthlyTrendRaw } = useMonthlyTrend();
   const { data: platformSummaryRaw } = usePlatformSummary();
   const { data: topTitlesRaw } = useTopTitles(20);
@@ -241,12 +240,23 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
     return map;
   }, [titleMasterRaw]);
 
-  // Use SWR data, fall back to server-prefetched initialData
-  const kpis = (kpisRaw ?? initialData?.kpis) as KPIData | undefined;
+  // 선택 기간의 KPI 데이터
+  const periodKpis = periodKpisRaw as PeriodKPIData | undefined;
 
-  // YoY
-  const yoyRange = useMemo(() => startDate && endDate ? getYoYRange(startDate, endDate) : null, [startDate, endDate]);
-  const { data: yoyKpis } = usePeriodKpis(yoyRange?.start ?? '', yoyRange?.end ?? '');
+  // kpis를 periodKpis 기반으로 재구성 (기존 KPIData 형식 호환)
+  const kpis = useMemo(() => {
+    if (!periodKpis) return initialData?.kpis as KPIData | undefined;
+    const prevTotal = (prevPeriodKpis as PeriodKPIData | undefined)?.total_sales ?? 0;
+    const momChange = prevTotal > 0 ? ((periodKpis.total_sales - prevTotal) / prevTotal) * 100 : 0;
+    return {
+      total_sales: periodKpis.total_sales,
+      this_month_sales: periodKpis.total_sales,
+      last_month_sales: prevTotal,
+      mom_change: Math.round(momChange * 10) / 10,
+      active_titles: periodKpis.active_titles,
+      active_platforms: periodKpis.active_platforms,
+    } as KPIData;
+  }, [periodKpis, prevPeriodKpis, initialData?.kpis]);
 
   // Normalize SWR data with fallbacks — prefer SWR, then initialData, then empty
   const monthlyTrend = useMemo<MonthlyTrendRow[]>(() => monthlyTrendRaw ?? initialData?.trend ?? [], [monthlyTrendRaw, initialData?.trend]);
@@ -288,15 +298,7 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
   }, []);
 
   // ---------- Derived data ----------
-  const yoyChange = useMemo(() => {
-    if (!kpis || !yoyKpis || yoyKpis.total_sales === 0) return null;
-    return ((kpis.this_month_sales - yoyKpis.total_sales) / yoyKpis.total_sales) * 100;
-  }, [kpis, yoyKpis]);
-
-  const goalRate = useMemo(() => {
-    if (!kpis || salesGoal <= 0) return null;
-    return (kpis.this_month_sales / salesGoal) * 100;
-  }, [kpis, salesGoal]);
+  // yoyChange, goalRate removed — replaced with period-based KPIs
 
   const trendChartData = useMemo(() => {
     if (trendMode === 'daily') return dailyTrend.map(r => ({ label: r.day.length >= 10 ? r.day.slice(5) : r.day, sales: r.total_sales }));
@@ -467,7 +469,11 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
           {/* ===== KPI SECTION ===== */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatusKPICard
-              label={t('이달 매출', '今月売上')}
+              label={(() => {
+                const d = new Date(startDate);
+                const monthLabel = `${d.getMonth() + 1}${t('월 매출', '月売上')}`;
+                return monthLabel;
+              })()}
               value={kpis.this_month_sales}
               formatter={formatCurrency}
               status={kpis.mom_change >= 0 ? 'good' : kpis.mom_change >= -20 ? 'warn' : 'bad'}
@@ -486,19 +492,18 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
               icon={kpis.mom_change >= 0 ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
             />
             <StatusKPICard
-              label={t('전년 대비', '前年比')}
-              value={yoyChange !== null ? Math.abs(yoyChange) : 0}
-              formatter={(v) => yoyChange !== null ? `${yoyChange >= 0 ? '+' : '-'}${v.toFixed(1)}%` : '—'}
-              status={yoyChange === null ? 'neutral' : yoyChange >= 0 ? 'good' : yoyChange >= -20 ? 'warn' : 'bad'}
-              changePct={yoyChange}
-              changeLabel="YoY"
+              label={t('서비스 플랫폼', 'サービスPF')}
+              value={kpis.active_platforms}
+              formatter={(v) => `${v}${t('개', '個')}`}
+              status="neutral"
               delay={0.16}
               icon={<Activity size={16} />}
+              noAnimation
             />
             <StatusKPICard
-              label={t('활성 작품/PF', 'アクティブ')}
+              label={t('서비스 작품', 'サービス作品')}
               value={kpis.active_titles}
-              formatter={(v) => `${v}${t('작품', '作品')} / ${kpis.active_platforms}PF`}
+              formatter={(v) => `${v}${t('작품', '作品')}`}
               status="neutral"
               delay={0.24}
               icon={<BookOpen size={16} />}
@@ -952,10 +957,10 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
           {/* ===== INSIGHT PANEL ===== */}
           <InsightPanel
             kpis={kpis}
-            yoyChange={yoyChange}
+            yoyChange={null}
             growthAlerts={growthAlerts}
             platformSummary={platformSummary}
-            goalRate={goalRate}
+            goalRate={null}
           />
         </div>
       )}
