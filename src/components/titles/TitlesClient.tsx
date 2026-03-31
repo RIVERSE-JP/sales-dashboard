@@ -696,7 +696,11 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
               )}
               {selectedTitleInfo?.serial_status && (
                 <span className="px-2 py-0.5 rounded-full text-[10px]" style={{ background: 'var(--color-glass)', color: 'var(--color-text-secondary)' }}>
-                  {selectedTitleInfo.serial_status}
+                  {selectedTitleInfo.serial_status === '連載中' ? t('연재중', '連載中') :
+                   selectedTitleInfo.serial_status === '完結' ? t('완결', '完結') :
+                   selectedTitleInfo.serial_status === '休載中' ? t('휴재중', '休載中') :
+                   selectedTitleInfo.serial_status === '未連載' ? t('미연재', '未連載') :
+                   selectedTitleInfo.serial_status}
                 </span>
               )}
               {selectedTitleInfo?.content_format && (

@@ -118,7 +118,12 @@ export function FilterPanel(props: FilterPanelProps) {
           <select value={props.serialStatusTab} onChange={(e) => props.setSerialStatusTab(e.target.value)} style={selectStyle}>
             <option value="all">{t('연재상태 전체', '連載状況全体')}</option>
             {SERIAL_STATUSES.map((s) => (
-              <option key={s} value={s}>{s}</option>
+              <option key={s} value={s}>{
+                s === '連載中' ? t('연재중', '連載中') :
+                s === '完結' ? t('완결', '完結') :
+                s === '休載中' ? t('휴재중', '休載中') :
+                s === '未連載' ? t('미연재', '未連載') : s
+              }</option>
             ))}
           </select>
 

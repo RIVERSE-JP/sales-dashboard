@@ -496,7 +496,7 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
                   <div className="flex items-center gap-2.5 mb-3">
                     {logo ? (
                       <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0" style={{ boxShadow: `0 2px 8px ${color}30` }}>
-                        <img src={logo} alt={brand.nameJP || pf.channel} className="w-full h-full object-cover" />
+                        <img src={logo} alt={t(brand.nameKR, brand.nameJP) || pf.channel} className="w-full h-full object-cover" />
                       </div>
                     ) : (
                       <div
@@ -508,7 +508,7 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
                     )}
                     <div className="min-w-0">
                       <p className="text-xs font-semibold truncate" style={{ color: 'var(--color-text-primary)' }}>
-                        {brand.nameJP || pf.channel}
+                        {t(brand.nameKR, brand.nameJP) || pf.channel}
                       </p>
                       {/* Rank badge */}
                       <div className="flex items-center gap-1">
@@ -563,7 +563,7 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
                           <div className="w-3 h-3 rounded-full" style={{ background: brand.color }} />
                         )}
                         <span className="text-xs font-medium" style={{ color: brand.color }}>
-                          {brand.nameJP || pf}
+                          {t(brand.nameKR, brand.nameJP) || pf}
                         </span>
                       </div>
                     );
@@ -594,7 +594,7 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
                       wrapperStyle={{ fontSize: 12, color: 'var(--color-text-secondary)' }}
                       formatter={(value: string) => {
                         const brand = getPlatformBrand(value);
-                        return brand.nameJP || value;
+                        return t(brand.nameKR, brand.nameJP) || value;
                       }}
                     />
                     {comparePlatforms.map((pf) => (

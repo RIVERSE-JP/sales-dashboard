@@ -750,7 +750,7 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
                                     </div>
                                   )}
                                   <span className="text-[13px] font-medium flex-1 truncate" style={{ color: 'var(--color-text-primary)' }}>
-                                    {brand.nameJP || pf.name}
+                                    {t(brand.nameKR, brand.nameJP) || pf.name}
                                   </span>
                                   <span className="text-[13px] font-bold shrink-0" style={{ color: 'var(--color-text-primary)' }}>
                                     {formatCurrency(pf.sales)}
