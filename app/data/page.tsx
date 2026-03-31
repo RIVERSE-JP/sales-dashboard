@@ -15,6 +15,7 @@ import { useApp } from '@/context/AppContext';
 import dynamic from 'next/dynamic';
 
 const TitleMasterTab = dynamic(() => import('@/components/data/TitleMasterTab'), { ssr: false });
+const MasterSettingsTab = dynamic(() => import('@/components/data/MasterSettingsTab'), { ssr: false });
 
 // ============================================================
 // Shared styles & animation variants
@@ -143,7 +144,7 @@ export default function DataPage() {
   const { formatCurrency, t, theme } = useApp();
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<'sales' | 'titles'>('sales');
+  const [activeTab, setActiveTab] = useState<'sales' | 'titles' | 'settings'>('sales');
 
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<DailySale[]>([]);
@@ -412,10 +413,10 @@ export default function DataPage() {
         </div>
         <div className="flex-1">
           <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-            {t('원본 데이터', 'Raw Data')}
+            {t('데이터 관리', 'データ管理')}
           </h1>
           <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-            {t('매출 데이터 열람 및 작품 마스터 관리', '売上データ閲覧・作品マスター管理')}
+            {t('매출 데이터 열람, 작품 마스터, 마스터 설정 관리', '売上データ閲覧・作品マスター・マスター設定管理')}
           </p>
         </div>
         {activeTab === 'sales' && (
@@ -440,6 +441,7 @@ export default function DataPage() {
         {([
           { key: 'sales' as const, label: t('매출 데이터', '売上データ') },
           { key: 'titles' as const, label: t('작품 마스터', '作品マスター') },
+          { key: 'settings' as const, label: t('마스터 설정', 'マスター設定') },
         ]).map((tab) => (
           <button
             key={tab.key}
@@ -458,6 +460,9 @@ export default function DataPage() {
 
       {/* Title Master Tab */}
       {activeTab === 'titles' && <TitleMasterTab />}
+
+      {/* Master Settings Tab */}
+      {activeTab === 'settings' && <MasterSettingsTab />}
 
       {/* Sales Data Tab */}
       {activeTab === 'sales' && <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-4">

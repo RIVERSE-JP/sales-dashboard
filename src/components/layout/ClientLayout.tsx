@@ -11,8 +11,6 @@ import {
 
   Database,
   Upload,
-  Settings,
-  Settings2,
   FileText,
   ChevronLeft,
   ChevronRight,
@@ -51,16 +49,14 @@ const navGroups: NavGroup[] = [
     items: [
       { to: '/titles', ko: '작품 매출 현황', ja: 'タイトル売上', icon: BookOpen },
       { to: '/platforms', ko: '플랫폼 성과', ja: 'プラットフォーム', icon: Globe },
-      { to: '/titles-manage', ko: '작품 관리', ja: 'タイトル管理', icon: Settings },
     ],
   },
   {
     label: { ko: '데이터', ja: 'データ' },
     items: [
-      { to: '/data', ko: '원본 조회', ja: 'データ照会', icon: Database },
+      { to: '/data', ko: '데이터 관리', ja: 'データ管理', icon: Database },
       { to: '/upload', ko: '데이터 업로드', ja: 'アップロード', icon: Upload },
       { to: '/reports', ko: '리포트', ja: 'レポート', icon: FileText },
-      { to: '/settings', ko: '설정', ja: '設定', icon: Settings2 },
     ],
   },
 ];
