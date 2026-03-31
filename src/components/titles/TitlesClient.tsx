@@ -858,13 +858,13 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--color-glass-border)' }}>
                   {[
-                    { key: '', label: '#', sortable: false, className: 'w-12 text-center' },
-                    ...(compareMode ? [{ key: '__compare', label: '', sortable: false, className: 'w-10' }] : []),
-                    { key: 'title_jp', label: t('작품명', 'タイトル'), sortable: true, className: 'text-left' },
-                    { key: 'genre', label: t('장르', 'ジャンル'), sortable: true, className: 'text-left w-28' },
-                    { key: 'company', label: t('제작사', '制作会社'), sortable: true, className: 'text-left w-32' },
-                    { key: 'platforms', label: t('플랫폼', 'PF'), sortable: true, className: 'text-center w-32' },
-                    { key: 'sales', label: t('매출', '売上'), sortable: true, className: 'text-right w-36' },
+                    { key: '', label: '#', sortable: false, className: 'w-10 text-center' },
+                    ...(compareMode ? [{ key: '__compare', label: '', sortable: false, className: 'w-8' }] : []),
+                    { key: 'title_jp', label: t('작품명', 'タイトル'), sortable: true, className: 'text-left', style: { width: '30%' } },
+                    { key: 'genre', label: t('장르', 'ジャンル'), sortable: true, className: 'text-left', style: { width: '12%' } },
+                    { key: 'company', label: t('제작사', '制作会社'), sortable: true, className: 'text-left', style: { width: '15%' } },
+                    { key: 'platforms', label: t('플랫폼', 'PF'), sortable: true, className: 'text-center', style: { width: '18%' } },
+                    { key: 'sales', label: t('매출', '売上'), sortable: true, className: 'text-right', style: { width: '15%' } },
                   ].map((col) => (
                     <th
                       key={col.key || 'rank'}
@@ -872,6 +872,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                       style={{
                         color: col.sortable && sortKey === col.key ? 'var(--color-accent-blue, #818cf8)' : 'var(--color-text-secondary)',
                         background: 'var(--color-glass)',
+                        ...((col as Record<string, unknown>).style as Record<string, string> ?? {}),
                       }}
                       onClick={() => col.sortable && handleColumnSort(col.key)}
                     >
@@ -964,20 +965,16 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
 
                       {/* Genre */}
                       <td className="px-3 py-3">
-                        {mainTitle?.genre_name && (
-                          <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'var(--color-glass)', color: 'var(--color-text-secondary)' }}>
-                            {mainTitle.genre_name}
-                          </span>
-                        )}
+                        <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: mainTitle?.genre_name ? 'var(--color-glass)' : 'transparent', color: 'var(--color-text-secondary)' }}>
+                          {mainTitle?.genre_name || '-'}
+                        </span>
                       </td>
 
                       {/* Company */}
                       <td className="px-3 py-3">
-                        {mainTitle?.company_name && (
-                          <span className="text-xs truncate block" style={{ color: 'var(--color-text-secondary)' }}>
-                            {mainTitle.company_name}
-                          </span>
-                        )}
+                        <span className="text-xs truncate block max-w-[120px]" title={mainTitle?.company_name || ''} style={{ color: 'var(--color-text-secondary)' }}>
+                          {mainTitle?.company_name || '-'}
+                        </span>
                       </td>
 
                       {/* Platforms */}
