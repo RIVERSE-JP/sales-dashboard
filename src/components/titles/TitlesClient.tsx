@@ -511,6 +511,11 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
     const peakDay = dailyChartData.length > 0
       ? dailyChartData.reduce((max, d) => d.sales > max.sales ? d : max, dailyChartData[0])
       : null;
+    // 완결일 마커
+    const mainTitle = selectedGroup?.products.find(p => p.product_type === 'オリジナル') ?? selectedGroup?.products[0];
+    const masterInfo = mainTitle ? masterMap.get(mainTitle.title_jp) : null;
+    const completionDate = (masterInfo as Record<string, unknown> | undefined)?.completion_date as string | null;
+    const completionDay = completionDate ? dailyChartData.find(d => d.date === completionDate) ?? (completionDate ? { label: completionDate.slice(5), date: completionDate, sales: 0 } : null) : null;
 
     // === 2. Trend chart: product-type lines + period toggle ===
     const hasMultipleProducts = selectedGroup != null && selectedGroup.products.length > 1;
@@ -804,6 +809,12 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                       <span className="text-[12px] font-semibold" style={{ color: '#f59e0b' }}>{t('최고 매출', '最高売上')}</span>
                     </div>
                   )}
+                  {completionDate && (
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg cursor-default" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)' }} title={completionDate}>
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: '#ef4444' }} />
+                      <span className="text-[12px] font-semibold" style={{ color: '#ef4444' }}>{t('완결', '完結')}</span>
+                    </div>
+                  )}
                 </div>
 
                 <ResponsiveContainer width="100%" height={300}>
@@ -824,6 +835,9 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                     )}
                     {peakDay && peakDay.sales > 0 && peakDay.label !== firstSaleDay?.label && (
                       <ReferenceDot x={peakDay.label} y={peakDay.sales} r={6} fill="#fbbf24" stroke="#fff" strokeWidth={2} />
+                    )}
+                    {completionDay && completionDay.label && (
+                      <ReferenceDot x={completionDay.label} y={completionDay.sales} r={6} fill="#ef4444" stroke="#fff" strokeWidth={2} />
                     )}
                   </AreaChart>
                 </ResponsiveContainer>
