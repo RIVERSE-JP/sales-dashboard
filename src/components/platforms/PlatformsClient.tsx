@@ -307,7 +307,7 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
 
   const toggleComparePlatform = (pf: string) => {
     setComparePlatforms((prev) =>
-      prev.includes(pf) ? prev.filter((p) => p !== pf) : prev.length < 4 ? [...prev, pf] : prev
+      prev.includes(pf) ? prev.filter((p) => p !== pf) : [...prev, pf]
     );
   };
 
@@ -612,7 +612,7 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
                 </ResponsiveContainer>
               ) : (
                 <p className="text-center py-12" style={{ color: 'var(--color-text-muted)' }}>
-                  {t('비교할 플랫폼을 선택해주세요 (최대 4개)', 'プラットフォームを選択してください（最大4つ）')}
+                  {t('비교할 플랫폼을 선택해주세요', 'プラットフォームを選択してください')}
                 </p>
               )}
             </motion.div>
