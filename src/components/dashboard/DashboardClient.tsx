@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import {
   useMonthlyTrend, usePlatformSummaryForPeriod,
-  useTopTitles, useGrowthAlerts, usePeriodKpis,
+  useGrowthAlerts, usePeriodKpis, useTitleRankings,
   useGenreSummary, useCompanySummary,
   useDailyTrend, useWeeklyTrend, useTitleMaster,
 } from '@/hooks/useData';
@@ -222,12 +222,8 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
 
   const { data: monthlyTrendRaw } = useMonthlyTrend();
   const { data: platformSummaryRaw } = usePlatformSummaryForPeriod(startDate, endDate);
-  // Top titles: 기간 파라미터 전달 (월 선택 시 해당 월)
-  const selectedMonth = useMemo(() => {
-    if (activePreset === 'all' || activePreset === 'thisYear') return undefined;
-    return startDate.slice(0, 7); // YYYY-MM
-  }, [activePreset, startDate]);
-  const { data: topTitlesRaw } = useTopTitles(20, selectedMonth);
+  // Top titles: 선택 기간의 매출 기준 (title-rankings API 사용)
+  const { data: topTitlesRaw } = useTitleRankings(startDate, endDate, prevMonth.start, prevMonth.end);
   const { data: growthAlertsRaw } = useGrowthAlerts();
   const { data: genreSummaryRaw } = useGenreSummary(sd, ed);
   const { data: companySummaryRaw } = useCompanySummary(sd, ed);
@@ -277,7 +273,18 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
   // Normalize SWR data with fallbacks — prefer SWR, then initialData, then empty
   const monthlyTrend = useMemo<MonthlyTrendRow[]>(() => monthlyTrendRaw ?? initialData?.trend ?? [], [monthlyTrendRaw, initialData?.trend]);
   const platformSummary = useMemo<PlatformSummaryRow[]>(() => platformSummaryRaw ?? initialData?.platforms ?? [], [platformSummaryRaw, initialData?.platforms]);
-  const topTitles = useMemo<TopTitleRow[]>(() => topTitlesRaw ?? initialData?.topTitles ?? [], [topTitlesRaw, initialData?.topTitles]);
+  // title-rankings 응답을 TopTitleRow 형식으로 변환
+  const topTitles = useMemo<TopTitleRow[]>(() => {
+    const raw = topTitlesRaw as Array<{ title_jp: string; title_kr: string | null; channels: string[]; current_sales: number; prev_sales: number; rank_change: number }> | undefined;
+    if (!raw) return initialData?.topTitles ?? [];
+    return raw.slice(0, 20).map(r => ({
+      title_jp: r.title_jp,
+      title_kr: r.title_kr,
+      channels: r.channels ?? [],
+      total_sales: r.current_sales, // 해당 기간 매출
+      day_count: 0,
+    }));
+  }, [topTitlesRaw, initialData?.topTitles]);
   const growthAlerts = useMemo<GrowthAlertRow[]>(() => growthAlertsRaw ?? initialData?.growthAlerts ?? [], [growthAlertsRaw, initialData?.growthAlerts]);
   const genreSummary = useMemo<GenreSalesRow[]>(() => (genreSummaryRaw ?? []) as GenreSalesRow[], [genreSummaryRaw]);
   const companySummary = useMemo<CompanySalesRow[]>(() => (companySummaryRaw ?? []) as CompanySalesRow[], [companySummaryRaw]);
