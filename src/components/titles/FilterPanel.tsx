@@ -182,7 +182,7 @@ export function FilterPanel(props: FilterPanelProps) {
               key={f.label}
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[12px] font-medium"
               style={{
-                background: 'var(--color-accent-blue, #818cf8)',
+                background: 'var(--color-accent-blue, #3B6FF6)',
                 color: '#fff',
               }}
             >

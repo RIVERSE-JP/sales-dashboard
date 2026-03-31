@@ -127,7 +127,7 @@ export default function DateRangePicker({
                   className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
                   style={{
                     background: active
-                      ? 'linear-gradient(135deg, #3b82f6, #8b5cf6)'
+                      ? 'linear-gradient(135deg, #1A2B5E, #3B6FF6)'
                       : 'var(--color-surface)',
                     color: active ? '#fff' : 'var(--color-text-secondary)',
                     border: active ? 'none' : '1px solid var(--color-glass-border)',
@@ -146,7 +146,7 @@ export default function DateRangePicker({
                   className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
                   style={{
                     background: active
-                      ? 'linear-gradient(135deg, #3b82f6, #8b5cf6)'
+                      ? 'linear-gradient(135deg, #1A2B5E, #3B6FF6)'
                       : 'var(--color-surface)',
                     color: active ? '#fff' : 'var(--color-text-secondary)',
                     border: active ? 'none' : '1px solid var(--color-glass-border)',

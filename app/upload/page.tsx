@@ -738,12 +738,12 @@ export default function DataUploadPage() {
                 style={{
                   ...GLASS_CARD,
                   border: dragOver ? '2px dashed rgba(129, 140, 248, 0.6)' : '2px dashed var(--color-glass-border)',
-                  background: dragOver ? 'rgba(99, 102, 241, 0.06)' : 'var(--color-glass)',
+                  background: dragOver ? 'rgba(59, 111, 246, 0.06)' : 'var(--color-glass)',
                   minHeight: 240,
                 }}
               >
-                <motion.div animate={{ y: dragOver ? -8 : 0 }} className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4" style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.15))' }}>
-                  <FileSpreadsheet size={32} color="#818cf8" />
+                <motion.div animate={{ y: dragOver ? -8 : 0 }} className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4" style={{ background: 'linear-gradient(135deg, rgba(59,111,246,0.15), rgba(59,111,246,0.15))' }}>
+                  <FileSpreadsheet size={32} color="#3B6FF6" />
                 </motion.div>
                 <p className="text-sm font-semibold mb-1" style={{ color: 'var(--color-text-primary)' }}>{t('파일을 드래그 앤 드롭', 'ファイルをドラッグ＆ドロップ')}</p>
                 <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{t('Excel (.xlsx) / CSV (.csv) 지원', 'Excel (.xlsx) / CSV (.csv) に対応')}</p>
@@ -831,7 +831,7 @@ export default function DataUploadPage() {
 
             {status === 'parsing' && (
               <motion.div key="parsing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="rounded-2xl p-12 flex flex-col items-center justify-center" style={{ ...GLASS_CARD, minHeight: 240 }}>
-                <Loader2 size={40} color="#818cf8" className="animate-spin mb-4" />
+                <Loader2 size={40} color="#3B6FF6" className="animate-spin mb-4" />
                 <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>{t('분석 중...', '解析中...')}</p>
                 <p className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>{fileName}</p>
               </motion.div>
@@ -994,10 +994,10 @@ export default function DataUploadPage() {
 
             {status === 'uploading' && (
               <motion.div key="uploading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="rounded-2xl p-12 flex flex-col items-center justify-center" style={{ ...GLASS_CARD, minHeight: 240 }}>
-                <Loader2 size={40} color="#818cf8" className="animate-spin mb-4" />
+                <Loader2 size={40} color="#3B6FF6" className="animate-spin mb-4" />
                 <p className="text-sm font-semibold mb-2" style={{ color: 'var(--color-text-primary)' }}>{t('업로드 중...', 'アップロード中...')}</p>
                 <div className="w-48 h-2 rounded-full overflow-hidden" style={{ background: 'var(--color-glass-border)' }}>
-                  <motion.div className="h-full rounded-full" style={{ background: 'linear-gradient(90deg, #6366f1, #818cf8)' }} initial={{ width: 0 }} animate={{ width: `${uploadProgress}%` }} transition={{ duration: 0.3 }} />
+                  <motion.div className="h-full rounded-full" style={{ background: 'linear-gradient(90deg, #1A2B5E, #3B6FF6)' }} initial={{ width: 0 }} animate={{ width: `${uploadProgress}%` }} transition={{ duration: 0.3 }} />
                 </div>
                 <p className="text-xs mt-2" style={{ color: 'var(--color-text-muted)' }}>{uploadProgress}%</p>
               </motion.div>
@@ -1016,8 +1016,8 @@ export default function DataUploadPage() {
                     <p className="text-2xl font-bold" style={{ color: '#22c55e' }}>{uploadResult.inserted}</p>
                     <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>{t('신규 추가', '新規追加')}</p>
                   </div>
-                  <div className="text-center px-4 py-3 rounded-xl" style={{ background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
-                    <p className="text-2xl font-bold" style={{ color: '#818cf8' }}>{uploadResult.updated}</p>
+                  <div className="text-center px-4 py-3 rounded-xl" style={{ background: 'rgba(59, 111, 246, 0.1)', border: '1px solid rgba(59, 111, 246, 0.2)' }}>
+                    <p className="text-2xl font-bold" style={{ color: '#3B6FF6' }}>{uploadResult.updated}</p>
                     <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>{t('업데이트', '更新')}</p>
                   </div>
                   {uploadResult.errors > 0 && (
@@ -1099,7 +1099,7 @@ export default function DataUploadPage() {
                           {new Date(log.created_at).toLocaleString(t('ko-KR', 'ja-JP'), { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </td>
                         <td className="py-2.5 px-2">
-                          <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ background: log.upload_type === 'sokuhochi' ? 'rgba(251,191,36,0.15)' : 'rgba(99,102,241,0.15)', color: log.upload_type === 'sokuhochi' ? '#fbbf24' : '#818cf8' }}>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ background: log.upload_type === 'sokuhochi' ? 'rgba(251,191,36,0.15)' : 'rgba(59,111,246,0.15)', color: log.upload_type === 'sokuhochi' ? '#fbbf24' : '#3B6FF6' }}>
                             {log.upload_type === 'weekly_report' ? 'WR' : t('속보', '速報')}
                           </span>
                         </td>
@@ -1118,7 +1118,7 @@ export default function DataUploadPage() {
                             <button
                               onClick={() => setExpandedLogId(expandedLogId === log.id ? null : log.id)}
                               className="text-[10px] px-2 py-1 rounded-full cursor-pointer"
-                              style={{ background: 'rgba(99, 102, 241, 0.1)', color: '#818cf8', border: '1px solid rgba(99, 102, 241, 0.2)' }}
+                              style={{ background: 'rgba(59, 111, 246, 0.1)', color: '#3B6FF6', border: '1px solid rgba(59, 111, 246, 0.2)' }}
                             >
                               {t('상세', '詳細')}
                             </button>

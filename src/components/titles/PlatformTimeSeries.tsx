@@ -112,7 +112,7 @@ export function PlatformTimeSeries({ titleJP, t }: PlatformTimeSeriesProps) {
             onClick={() => setShowShare(false)}
             className="px-2 py-1 rounded text-[12px] font-medium cursor-pointer"
             style={{
-              background: !showShare ? 'var(--color-accent-blue, #818cf8)' : 'var(--color-glass)',
+              background: !showShare ? 'var(--color-accent-blue, #3B6FF6)' : 'var(--color-glass)',
               color: !showShare ? '#fff' : 'var(--color-text-muted)',
             }}
           >
@@ -122,7 +122,7 @@ export function PlatformTimeSeries({ titleJP, t }: PlatformTimeSeriesProps) {
             onClick={() => setShowShare(true)}
             className="px-2 py-1 rounded text-[12px] font-medium cursor-pointer"
             style={{
-              background: showShare ? 'var(--color-accent-blue, #818cf8)' : 'var(--color-glass)',
+              background: showShare ? 'var(--color-accent-blue, #3B6FF6)' : 'var(--color-glass)',
               color: showShare ? '#fff' : 'var(--color-text-muted)',
             }}
           >

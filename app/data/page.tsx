@@ -455,9 +455,9 @@ export default function DataPage() {
             onClick={() => setActiveTab(tab.key)}
             className="flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold cursor-pointer transition-all"
             style={{
-              background: activeTab === tab.key ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
-              color: activeTab === tab.key ? '#a5b4fc' : 'var(--color-text-muted)',
-              border: activeTab === tab.key ? '1px solid rgba(99, 102, 241, 0.3)' : '1px solid transparent',
+              background: activeTab === tab.key ? 'rgba(26, 43, 94, 0.12)' : 'transparent',
+              color: activeTab === tab.key ? '#1A2B5E' : 'var(--color-text-muted)',
+              border: activeTab === tab.key ? '1px solid rgba(26, 43, 94, 0.25)' : '1px solid transparent',
             }}
           >
             {tab.label}
@@ -625,7 +625,7 @@ export default function DataPage() {
                       type="checkbox"
                       checked={rows.length > 0 && selectedIds.size === rows.length}
                       onChange={toggleSelectAll}
-                      className="w-4 h-4 rounded cursor-pointer accent-indigo-500"
+                      className="w-4 h-4 rounded cursor-pointer accent-blue-600"
                     />
                   </th>
                   {[
@@ -676,7 +676,7 @@ export default function DataPage() {
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => toggleSelect(row.id)}
-                          className="w-4 h-4 rounded cursor-pointer accent-indigo-500"
+                          className="w-4 h-4 rounded cursor-pointer accent-blue-600"
                         />
                       </td>
                       <td className="py-3 px-2 font-mono text-xs" style={{ color: 'var(--color-text-secondary)' }}>{row.sale_date}</td>
@@ -724,7 +724,7 @@ export default function DataPage() {
                           className="text-[10px] px-2 py-0.5 rounded-full"
                           style={{
                             background: row.data_source === 'sokuhochi' ? 'rgba(251, 191, 36, 0.15)' : 'rgba(99, 102, 241, 0.15)',
-                            color: row.data_source === 'sokuhochi' ? '#fbbf24' : '#818cf8',
+                            color: row.data_source === 'sokuhochi' ? '#fbbf24' : '#3B6FF6',
                           }}
                         >
                           {row.data_source === 'weekly_report' ? 'WR' : row.data_source === 'sokuhochi' ? t('속보', '速報') : row.data_source}

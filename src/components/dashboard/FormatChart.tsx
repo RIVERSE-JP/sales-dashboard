@@ -24,7 +24,7 @@ export default function FormatChart({ data }: FormatChartProps) {
     name: d.content_format,
     sales: d.total_sales,
     titles: d.title_count,
-    color: FORMAT_COLORS[d.content_format] ?? '#818cf8',
+    color: FORMAT_COLORS[d.content_format] ?? '#3B6FF6',
   }));
 
   return (

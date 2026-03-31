@@ -529,7 +529,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
     // === 2. Trend chart: product-type lines + period toggle ===
     const hasMultipleProducts = selectedGroup != null && selectedGroup.products.length > 1;
     const PRODUCT_COLORS: Record<string, string> = {
-      'オリジナル': '#818cf8',
+      'オリジナル': '#3B6FF6',
       'ノベル': '#f472b6',
       '完全版': '#34d399',
       '分冊版': '#fbbf24',
@@ -871,7 +871,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                         onClick={() => setTrendPeriod(period)}
                         className="px-4 py-1.5 text-[13px] font-medium cursor-pointer transition-all"
                         style={{
-                          background: trendPeriod === period ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'transparent',
+                          background: trendPeriod === period ? 'linear-gradient(135deg, #1A2B5E, #3B6FF6)' : 'transparent',
                           color: trendPeriod === period ? '#fff' : 'var(--color-text-secondary)',
                           borderRight: period !== 'daily' ? '1px solid var(--color-glass-border)' : 'none',
                         }}
@@ -889,7 +889,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                       <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={65} />
                       <ReTooltip content={renderTooltip} />
                       <Legend wrapperStyle={{ fontSize: '12px' }} />
-                      <Line type="monotone" dataKey="total" name={t('총합', '合計')} stroke="#818cf8" strokeWidth={3} dot={false} />
+                      <Line type="monotone" dataKey="total" name={t('총합', '合計')} stroke="#3B6FF6" strokeWidth={3} dot={false} />
                       {productTypes.map((pt) => (
                         <Line key={pt} type="monotone" dataKey={pt} name={pt}
                           stroke={PRODUCT_COLORS[pt] ?? '#94a3b8'} strokeWidth={1.5} dot={false} strokeDasharray="4 2" />
@@ -899,15 +899,15 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                     <AreaChart data={trendData}>
                       <defs>
                         <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#818cf8" stopOpacity={0.3} />
-                          <stop offset="100%" stopColor="#818cf8" stopOpacity={0} />
+                          <stop offset="0%" stopColor="#3B6FF6" stopOpacity={0.3} />
+                          <stop offset="100%" stopColor="#3B6FF6" stopOpacity={0} />
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
                       <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} />
                       <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={65} />
                       <ReTooltip content={renderTooltip} />
-                      <Area type="monotone" dataKey="total" name={t('매출', '売上')} stroke="#818cf8" strokeWidth={2} fill="url(#trendGrad)" />
+                      <Area type="monotone" dataKey="total" name={t('매출', '売上')} stroke="#3B6FF6" strokeWidth={2} fill="url(#trendGrad)" />
                     </AreaChart>
                   )}
                 </ResponsiveContainer>
@@ -979,7 +979,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
             className="flex items-center gap-2 px-3 py-2 rounded-xl text-[13px] font-medium cursor-pointer transition-all"
             style={{
               ...GLASS_CARD,
-              background: compareMode ? 'var(--color-accent-blue, #818cf8)' : 'var(--color-glass)',
+              background: compareMode ? 'var(--color-accent-blue, #3B6FF6)' : 'var(--color-glass)',
               color: compareMode ? '#fff' : 'var(--color-text-secondary)',
             }}
           >
@@ -1081,7 +1081,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
             }}
             className="px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all"
             style={{
-              background: periodPreset === preset.id ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'var(--color-glass)',
+              background: periodPreset === preset.id ? 'linear-gradient(135deg, #1A2B5E, #3B6FF6)' : 'var(--color-glass)',
               color: periodPreset === preset.id ? '#fff' : 'var(--color-text-secondary)',
               border: `1px solid ${periodPreset === preset.id ? 'transparent' : 'var(--color-glass-border)'}`,
             }}
@@ -1116,7 +1116,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
             onClick={() => setShowCompare(true)}
             disabled={compareList.length < 2}
             className="px-3 py-1.5 rounded-lg text-[13px] font-medium cursor-pointer disabled:opacity-40"
-            style={{ background: '#818cf8', color: '#fff' }}
+            style={{ background: '#3B6FF6', color: '#fff' }}
           >
             {t('비교하기', '比較する')}
           </motion.button>
@@ -1207,7 +1207,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                       key={col.key || 'rank'}
                       className={`px-3 py-3 text-[13px] font-semibold whitespace-nowrap ${col.className ?? ''} ${col.sortable ? 'cursor-pointer select-none hover:opacity-80' : ''}`}
                       style={{
-                        color: col.sortable && sortKey === col.key ? 'var(--color-accent-blue, #818cf8)' : 'var(--color-text-secondary)',
+                        color: col.sortable && sortKey === col.key ? 'var(--color-accent-blue, #3B6FF6)' : 'var(--color-text-secondary)',
                         background: 'var(--color-glass)',
                         ...((col as Record<string, unknown>).style as Record<string, string> ?? {}),
                       }}
@@ -1239,7 +1239,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                       className="transition-colors cursor-pointer"
                       style={{
                         borderBottom: '1px solid var(--color-glass-border)',
-                        borderLeft: isCompareSelected ? '3px solid var(--color-accent-blue, #818cf8)' : '3px solid transparent',
+                        borderLeft: isCompareSelected ? '3px solid var(--color-accent-blue, #3B6FF6)' : '3px solid transparent',
                       }}
                       onClick={() => {
                         if (compareMode) {
@@ -1263,7 +1263,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                         <td className="px-2 py-3">
                           <div className="shrink-0">
                             {isCompareSelected ? (
-                              <CheckSquare size={16} color="#818cf8" />
+                              <CheckSquare size={16} color="#3B6FF6" />
                             ) : (
                               <Square size={16} color="var(--color-text-muted)" />
                             )}

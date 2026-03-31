@@ -40,7 +40,7 @@ function buildInsights(
       ),
       highlights: [
         { word: `${Math.abs(kpis.mom_change).toFixed(1)}%`, color: '#ef4444' },
-        { word: topPlatform, color: '#6366f1' },
+        { word: topPlatform, color: '#3B6FF6' },
       ],
     });
   } else if (kpis.mom_change >= 10) {
@@ -176,7 +176,7 @@ export default function InsightPanel({ kpis, yoyChange, growthAlerts, platformSu
       className="rounded-2xl p-5"
       style={{
         ...GLASS_CARD,
-        borderLeft: '3px solid #6366f1',
+        borderLeft: '3px solid #3B6FF6',
       }}
     >
       <div className="flex items-center gap-2 mb-4">
@@ -195,7 +195,7 @@ export default function InsightPanel({ kpis, yoyChange, growthAlerts, platformSu
             className="flex items-start gap-2.5 text-[14px] leading-relaxed"
             style={{ color: 'var(--color-text-secondary)' }}
           >
-            <span className="mt-1 w-1.5 h-1.5 rounded-full shrink-0" style={{ background: '#6366f1' }} />
+            <span className="mt-1 w-1.5 h-1.5 rounded-full shrink-0" style={{ background: '#3B6FF6' }} />
             <span>{highlightText(insight.text, insight.highlights)}</span>
           </motion.li>
         ))}

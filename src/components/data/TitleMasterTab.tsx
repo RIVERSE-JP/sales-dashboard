@@ -944,7 +944,7 @@ export default function TitleMasterTab() {
                       type="checkbox"
                       checked={allSelected}
                       onChange={toggleAll}
-                      className="w-4 h-4 rounded cursor-pointer accent-indigo-500"
+                      className="w-4 h-4 rounded cursor-pointer accent-blue-600"
                     />
                   </th>
                   {columns.map((col) => (
@@ -982,7 +982,7 @@ export default function TitleMasterTab() {
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => toggleOne(row.id)}
-                          className="w-4 h-4 rounded cursor-pointer accent-indigo-500"
+                          className="w-4 h-4 rounded cursor-pointer accent-blue-600"
                         />
                       </td>
                       {/* title_jp */}

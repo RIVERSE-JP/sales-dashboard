@@ -1260,7 +1260,7 @@ function FormField({ label, required, children }: { label: string; required?: bo
 
 function FormatBadge({ format }: { format: string | null }) {
   const colors: Record<string, string> = {
-    WEBTOON: '#818cf8',
+    WEBTOON: '#3B6FF6',
     PAGETOON: '#f472b6',
     NOVEL: '#34d399',
   };

@@ -41,7 +41,7 @@ export function PeriodCompare({ monthlyTrend, periodA, periodB, setPeriodA, setP
     const salesA = sumRange(periodA.start, periodA.end);
     const salesB = sumRange(periodB.start, periodB.end);
     return [
-      { name: `A: ${periodA.start}~${periodA.end}`, sales: salesA, color: '#818cf8' },
+      { name: `A: ${periodA.start}~${periodA.end}`, sales: salesA, color: '#3B6FF6' },
       { name: `B: ${periodB.start}~${periodB.end}`, sales: salesB, color: '#f472b6' },
     ];
   }, [monthlyTrend, periodA, periodB]);
@@ -60,7 +60,7 @@ export function PeriodCompare({ monthlyTrend, periodA, periodB, setPeriodA, setP
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
         <div className="rounded-xl p-3" style={{ background: 'var(--color-glass)' }}>
-          <p className="text-xs mb-2 font-medium" style={{ color: '#818cf8' }}>{t('A기간', 'A期間')}</p>
+          <p className="text-xs mb-2 font-medium" style={{ color: '#3B6FF6' }}>{t('A기간', 'A期間')}</p>
           <div className="flex gap-2">
             <input type="month" value={periodA.start} onChange={(e) => setPeriodA({ ...periodA, start: e.target.value })} style={inputStyle} />
             <span className="text-xs self-center" style={{ color: 'var(--color-text-muted)' }}>~</span>

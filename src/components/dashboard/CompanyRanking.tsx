@@ -57,7 +57,7 @@ export default function CompanyRanking({ data }: CompanyRankingProps) {
               <div className="ml-9 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--color-glass-border)' }}>
                 <motion.div
                   className="h-full rounded-full"
-                  style={{ background: 'linear-gradient(90deg, #818cf8, #a78bfa)' }}
+                  style={{ background: 'linear-gradient(90deg, #3B6FF6, #60a5fa)' }}
                   initial={{ width: 0 }}
                   animate={{ width: `${barWidth}%` }}
                   transition={{ duration: 0.6, delay: i * 0.05 }}

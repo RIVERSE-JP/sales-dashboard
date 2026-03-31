@@ -26,7 +26,7 @@ const STATUS_COLORS: Record<string, string> = {
   good: '#22c55e',
   warn: '#f59e0b',
   bad: '#ef4444',
-  neutral: '#6366f1',
+  neutral: '#3B6FF6',
 };
 
 function AnimatedValue({ value, formatter }: { value: number; formatter: (v: number) => string }) {

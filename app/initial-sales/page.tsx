@@ -89,7 +89,7 @@ const darkTooltipStyle = {
 };
 
 const CHART_COLORS = [
-  '#818cf8', '#f472b6', '#34d399', '#fbbf24',
+  '#3B6FF6', '#f472b6', '#34d399', '#fbbf24',
   '#f87171', '#60a5fa', '#a78bfa', '#fb923c',
   '#2dd4bf', '#e879f9',
 ];
