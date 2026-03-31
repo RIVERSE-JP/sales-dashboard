@@ -166,13 +166,9 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
   const detailLoading = platformDetailValidating && !platformDetailSWR;
 
   // C1: Date range (default: this month)
-  const [startDate, setStartDate] = useState(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
-  });
-  const [endDate, setEndDate] = useState(() => {
-    return new Date().toISOString().slice(0, 10);
-  });
+  // 기본: 전체 기간
+  const [startDate, setStartDate] = useState('2025-03-01');
+  const [endDate, setEndDate] = useState(() => new Date().toISOString().slice(0, 10));
 
   useEffect(() => {
     if (platformSummary.length > 0 && selectedPlatform === null) {
