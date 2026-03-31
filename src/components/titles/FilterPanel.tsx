@@ -112,31 +112,16 @@ export function FilterPanel(props: FilterPanelProps) {
       </div>
 
       {/* Filter Panel (always visible) */}
-      <div className="rounded-2xl p-4 space-y-3" style={GLASS_CARD}>
-        {/* Serial Status Tabs */}
-        <div className="flex gap-2 flex-wrap">
-          {['all', ...SERIAL_STATUSES].map((status) => {
-            const isActive = props.serialStatusTab === status;
-            const label = status === 'all' ? t('전체', '全体') : status;
-            return (
-              <button
-                key={status}
-                onClick={() => props.setSerialStatusTab(status)}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer"
-                style={{
-                  background: isActive ? 'var(--color-accent-blue, #818cf8)' : 'transparent',
-                  color: isActive ? '#fff' : 'var(--color-text-secondary)',
-                  border: `1px solid ${isActive ? 'transparent' : 'var(--color-glass-border)'}`,
-                }}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
+      <div className="rounded-2xl p-4" style={GLASS_CARD}>
+        {/* Filter Grid: 연재상태/장르/제작사/플랫폼/서비스형식 */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+          <select value={props.serialStatusTab} onChange={(e) => props.setSerialStatusTab(e.target.value)} style={selectStyle}>
+            <option value="all">{t('연재상태 전체', '連載状況全体')}</option>
+            {SERIAL_STATUSES.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
 
-        {/* Filter Grid: 장르/제작사/플랫폼/포맷 */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <select value={props.selectedGenre} onChange={(e) => props.setSelectedGenre(e.target.value)} style={selectStyle}>
             <option value="">{t('장르 전체', 'ジャンル全体')}</option>
             {props.genres.map((g) => (
@@ -159,7 +144,7 @@ export function FilterPanel(props: FilterPanelProps) {
           </select>
 
           <select value={props.selectedFormat} onChange={(e) => props.setSelectedFormat(e.target.value)} style={selectStyle}>
-            <option value="">{t('포맷 전체', 'フォーマット全体')}</option>
+            <option value="">{t('서비스 형식', 'サービス形式')}</option>
             {CONTENT_FORMATS.map((f) => (
               <option key={f} value={f}>{f}</option>
             ))}

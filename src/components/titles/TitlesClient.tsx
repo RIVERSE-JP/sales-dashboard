@@ -125,7 +125,13 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
   }, [effectiveSummaries]);
 
   const titleMaster = useMemo<TitleMasterRow[]>(() => (masterRaw as unknown as TitleMasterRow[]) ?? (initialData?.titleMaster as unknown as TitleMasterRow[]) ?? [], [masterRaw, initialData?.titleMaster]);
-  const genres = useMemo<Array<{ id: number; name: string }>>(() => genreListRaw ?? initialData?.genres ?? [], [genreListRaw, initialData?.genres]);
+  const genres = useMemo<Array<{ id: number; name: string }>>(() => {
+    const raw = (genreListRaw ?? initialData?.genres ?? []) as Array<Record<string, unknown>>;
+    return raw.map(g => ({
+      id: Number(g.id ?? 0),
+      name: String(g.name_kr ?? g.name_jp ?? g.name ?? ''),
+    })).filter(g => g.name);
+  }, [genreListRaw, initialData?.genres]);
   const rankings = useMemo<TitleRankingRow[]>(() => rankingsRaw ?? [], [rankingsRaw]);
 
   const loading = !summariesRaw && !masterRaw && !initialData?.summaries;
