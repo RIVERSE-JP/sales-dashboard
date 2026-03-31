@@ -47,6 +47,7 @@ function formatShort(value: number): string {
   return value.toLocaleString();
 }
 
+// isNew: 최근 3개월 이내 서비스 시작 (데이터 유지, UI 표시 안 함)
 function isNewTitle(firstDate: string | null, launchDate: string | null): boolean {
   const ref = launchDate ?? firstDate;
   if (!ref) return false;
@@ -672,11 +673,6 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
               <h1 className="text-xl font-bold truncate" style={{ color: 'var(--color-text-primary)' }}>
                 {selectedGroup ? selectedGroup.base_title : selectedTitle}
               </h1>
-              {selectedTitleInfo?.isNew && (
-                <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ background: '#22c55e20', color: '#22c55e' }}>
-                  {t('신작', '新作')}
-                </span>
-              )}
             </div>
             {(detailData?.title_kr || selectedTitleInfo?.title_kr) && (
               <p className="text-sm truncate" style={{ color: 'var(--color-text-muted)' }}>
@@ -1157,11 +1153,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                               <span className="text-sm font-bold truncate" title={group.base_title} style={{ color: 'var(--color-text-primary)' }}>
                                 {group.base_title}
                               </span>
-                              {mainTitle?.isNew && (
-                                <span className="shrink-0 px-1.5 py-0.5 rounded-full text-[9px] font-bold" style={{ background: '#3b82f620', color: '#3b82f6' }}>
-                                  NEW
-                                </span>
-                              )}
+                              {/* isNew data preserved but badge hidden */}
                               {group.products.length > 1 && nonOriginalTypes.length > 0 && (
                                 <span className="shrink-0 text-[9px] px-1.5 py-0.5 rounded-full"
                                   style={{ background: 'rgba(139,92,246,0.1)', color: '#8B5CF6' }}>
