@@ -791,23 +791,17 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                 </h2>
 
                 {/* 마커 정보 — 차트 위에 HTML로 표시 */}
-                <div className="flex gap-4 mb-4 flex-wrap">
+                <div className="flex gap-3 mb-4 flex-wrap">
                   {firstSaleDay && (
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.3)' }}>
-                      <span className="w-3 h-3 rounded-full shrink-0" style={{ background: '#34d399' }} />
-                      <div>
-                        <span className="text-[12px] font-bold" style={{ color: '#34d399' }}>{t('서비스 시작', 'サービス開始')}</span>
-                        <span className="text-[11px] ml-2" style={{ color: 'var(--color-text-secondary)' }}>{firstSaleDay.label}</span>
-                      </div>
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg cursor-default" style={{ background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.3)' }} title={`${firstSaleDay.label} · ${formatCurrency(firstSaleDay.sales)}`}>
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: '#34d399' }} />
+                      <span className="text-[12px] font-semibold" style={{ color: '#34d399' }}>{t('서비스 시작', 'サービス開始')}</span>
                     </div>
                   )}
                   {peakDay && peakDay.sales > 0 && (
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)' }}>
-                      <span className="w-3 h-3 rounded-full shrink-0" style={{ background: '#fbbf24' }} />
-                      <div>
-                        <span className="text-[12px] font-bold" style={{ color: '#f59e0b' }}>{t('최고 매출', '最高売上')}</span>
-                        <span className="text-[11px] ml-2" style={{ color: 'var(--color-text-secondary)' }}>{peakDay.label} · {formatCurrency(peakDay.sales)}</span>
-                      </div>
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg cursor-default" style={{ background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)' }} title={`${peakDay.label} · ${formatCurrency(peakDay.sales)}`}>
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: '#fbbf24' }} />
+                      <span className="text-[12px] font-semibold" style={{ color: '#f59e0b' }}>{t('최고 매출', '最高売上')}</span>
                     </div>
                   )}
                 </div>
