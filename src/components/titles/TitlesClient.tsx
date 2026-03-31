@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useTitleSummaries, useTitleMaster, useGenres, useTitleRankings } from '@/hooks/useData';
+import { useTitleSummaries, useTitleMaster, useTitleRankings } from '@/hooks/useData';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip,
@@ -105,7 +105,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
   // SWR data hooks (client-side fetch with server prefetch as fallback)
   const { data: summariesRaw } = useTitleSummaries();
   const { data: masterRaw } = useTitleMaster();
-  const { data: genreListRaw } = useGenres();
+  // genres extracted from masterMap instead of useGenres()
 
   const { currentStart, currentEnd, prevStart, prevEnd } = useMemo(() => getDateRangeForRanking(), []);
   const { data: rankingsRaw } = useTitleRankings(currentStart, currentEnd, prevStart, prevEnd);
@@ -125,13 +125,6 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
   }, [effectiveSummaries]);
 
   const titleMaster = useMemo<TitleMasterRow[]>(() => (masterRaw as unknown as TitleMasterRow[]) ?? (initialData?.titleMaster as unknown as TitleMasterRow[]) ?? [], [masterRaw, initialData?.titleMaster]);
-  const genres = useMemo<Array<{ id: number; name: string }>>(() => {
-    const raw = (genreListRaw ?? initialData?.genres ?? []) as Array<Record<string, unknown>>;
-    return raw.map(g => ({
-      id: Number(g.id ?? 0),
-      name: String(g.name_kr ?? g.name_jp ?? g.name ?? ''),
-    })).filter(g => g.name);
-  }, [genreListRaw, initialData?.genres]);
   const rankings = useMemo<TitleRankingRow[]>(() => rankingsRaw ?? [], [rankingsRaw]);
 
   const loading = !summariesRaw && !masterRaw && !initialData?.summaries;
@@ -180,10 +173,11 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
       const raw = m as unknown as Record<string, unknown>;
       const genres = raw.genres as Record<string, string> | null | undefined;
       const companies = raw.production_companies as Record<string, string> | null | undefined;
+      const rawGenre = genres?.name_kr ?? genres?.name_jp ?? (m as unknown as Record<string, string>).genre_name ?? '';
       map.set(m.title_jp, {
         ...m,
-        genre_name: genres?.name_kr ?? genres?.name_jp ?? (m as unknown as Record<string, string>).genre_name,
-        company_name: companies?.name ?? (m as unknown as Record<string, string>).company_name,
+        genre_name: (rawGenre && rawGenre !== '-') ? rawGenre : '',
+        company_name: companies?.name ?? (m as unknown as Record<string, string>).company_name ?? '',
       });
     });
     return map;
@@ -198,6 +192,19 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
   // ============================================================
   // Derived filter options
   // ============================================================
+
+  // 장르 목록: 실제 작품에 사용되는 장르만 (masterMap에서 추출) + 미분류
+  const genres = useMemo<Array<{ id: number; name: string }>>(() => {
+    const genreSet = new Set<string>();
+    let hasUnclassified = false;
+    for (const [, m] of masterMap) {
+      if (m.genre_name) genreSet.add(m.genre_name);
+      else hasUnclassified = true;
+    }
+    const list = Array.from(genreSet).sort().map((name, i) => ({ id: i + 1, name }));
+    if (hasUnclassified) list.push({ id: 9999, name: '미분류' });
+    return list;
+  }, [masterMap]);
 
   const companies = useMemo(() => {
     const set = new Set<string>();
@@ -285,7 +292,11 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
 
     // Genre
     if (selectedGenre) {
-      result = result.filter(g => g.products.some(p => p.genre_name === selectedGenre));
+      if (selectedGenre === '미분류') {
+        result = result.filter(g => g.products.some(p => !p.genre_name));
+      } else {
+        result = result.filter(g => g.products.some(p => p.genre_name === selectedGenre));
+      }
     }
 
     // Company
@@ -980,8 +991,8 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
 
                       {/* Genre */}
                       <td className="px-3 py-3">
-                        <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: mainTitle?.genre_name ? 'var(--color-glass)' : 'transparent', color: 'var(--color-text-secondary)' }}>
-                          {mainTitle?.genre_name || '-'}
+                        <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: mainTitle?.genre_name ? 'var(--color-glass)' : 'transparent', color: mainTitle?.genre_name ? 'var(--color-text-secondary)' : 'var(--color-text-muted)' }}>
+                          {mainTitle?.genre_name || '미분류'}
                         </span>
                       </td>
 
