@@ -41,15 +41,20 @@ export async function POST(request: Request) {
 }
 
 /**
- * DELETE /api/sales/upload-logs
- * 모든 업로드 이력 삭제
+ * DELETE /api/sales/upload-logs?id=<uuid>
+ * 개별 업로드 이력 삭제
+ * @param id — 삭제할 로그 ID (필수)
  * @returns { ok: true }
  */
-export async function DELETE() {
+export async function DELETE(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
+  if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 });
+
   const { error } = await supabaseServer
     .from('upload_logs')
     .delete()
-    .neq('id', '00000000-0000-0000-0000-000000000000');
+    .eq('id', id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });

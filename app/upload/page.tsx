@@ -1077,31 +1077,6 @@ export default function DataUploadPage() {
           <div className="flex items-center gap-3 mb-4">
             <Clock size={16} color="var(--color-text-secondary)" />
             <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>{t('업로드 이력', 'アップロード履歴')}</h2>
-            {uploadLogs.length > 0 && (
-              <button
-                onClick={() => {
-                  const pw = prompt(t('이력 삭제 비밀번호를 입력하세요', '履歴削除パスワードを入力してください'));
-                  if (pw !== 'CLINK') {
-                    if (pw !== null) alert(t('비밀번호가 일치하지 않습니다', 'パスワードが一致しません'));
-                    return;
-                  }
-                  if (!confirm(t('모든 업로드 이력을 삭제하시겠습니까?', 'すべてのアップロード履歴を削除しますか？'))) return;
-                  fetch('/api/sales/upload-logs', { method: 'DELETE' })
-                    .then(r => {
-                      if (r.ok) {
-                        setUploadLogs([]);
-                      } else {
-                        alert(t('삭제 실패', '削除失敗'));
-                      }
-                    })
-                    .catch(() => alert(t('삭제 실패', '削除失敗')));
-                }}
-                className="px-3 py-1 rounded-lg text-[11px] font-medium cursor-pointer transition-all"
-                style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)' }}
-              >
-                {t('이력 전체 삭제', '履歴全削除')}
-              </button>
-            )}
           </div>
           {uploadLogs.length > 0 ? (
             <div className="overflow-x-auto">
@@ -1156,6 +1131,25 @@ export default function DataUploadPage() {
                                 {t('취소', '取消')}
                               </button>
                             )}
+                            <button
+                              onClick={() => {
+                                const pw = prompt(t('삭제 비밀번호를 입력하세요', '削除パスワードを入力'));
+                                if (pw !== 'CLINK') {
+                                  if (pw !== null) alert(t('비밀번호가 일치하지 않습니다', 'パスワードが一致しません'));
+                                  return;
+                                }
+                                fetch(`/api/sales/upload-logs?id=${log.id}`, { method: 'DELETE' })
+                                  .then(r => {
+                                    if (r.ok) setUploadLogs(prev => prev.filter(l => l.id !== log.id));
+                                    else alert(t('삭제 실패', '削除失敗'));
+                                  })
+                                  .catch(() => alert(t('삭제 실패', '削除失敗')));
+                              }}
+                              className="text-[10px] px-2 py-1 rounded-full cursor-pointer"
+                              style={{ background: 'transparent', color: '#9ca3af', border: '1px solid rgba(156,163,175,0.3)' }}
+                            >
+                              {t('삭제', '削除')}
+                            </button>
                           </div>
                         </td>
                       </tr>
