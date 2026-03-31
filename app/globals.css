@@ -105,7 +105,7 @@ select:focus-visible,
   --color-text-subtle: #9CA3AF;
 
   --color-glass: #FFFFFF;
-  --color-glass-border: rgba(26, 43, 94, 0.13);
+  --color-glass-border: rgba(26, 43, 94, 0.15);
   --color-glass-hover: rgba(26, 43, 94, 0.06);
   --color-glass-hover-border: rgba(26, 43, 94, 0.18);
 
@@ -123,20 +123,20 @@ select:focus-visible,
   --color-input-bg: #FFFFFF;
   --color-input-border: rgba(26, 43, 94, 0.20);
 
-  --color-sidebar-bg: #FFFFFF;
-  --color-sidebar-active: rgba(59, 111, 246, 0.08);
-  --color-sidebar-active-text: #2558D6;
+  --color-sidebar-bg: #1A2B5E;
+  --color-sidebar-active: rgba(255, 255, 255, 0.15);
+  --color-sidebar-active-text: #FFFFFF;
 }
 
 .theme-light .glass-card {
   background: #FFFFFF;
-  border: 1px solid rgba(26, 43, 94, 0.12);
-  box-shadow: 0 1px 3px rgba(26, 43, 94, 0.08), 0 1px 2px rgba(26, 43, 94, 0.04);
+  border: 1px solid rgba(26, 43, 94, 0.14);
+  box-shadow: 0 2px 6px rgba(26, 43, 94, 0.08), 0 1px 2px rgba(26, 43, 94, 0.05);
   backdrop-filter: none;
 }
 
 .theme-light .card-hover-lift:hover {
-  box-shadow: 0 4px 16px rgba(26, 43, 94, 0.12), 0 2px 4px rgba(26, 43, 94, 0.06);
+  box-shadow: 0 6px 20px rgba(26, 43, 94, 0.12), 0 2px 6px rgba(26, 43, 94, 0.06);
 }
 
 .theme-light .table-striped tbody tr:nth-child(even) {

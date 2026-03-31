@@ -79,18 +79,24 @@ function ToggleButton({
   active,
   onClick,
   children,
+  isLight,
 }: {
   active: boolean;
   onClick: () => void;
   children: React.ReactNode;
+  isLight?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
       className="px-3 py-1.5 text-[12px] font-semibold transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:ring-offset-1"
       style={{
-        background: active ? '#1A2B5E' : 'transparent',
-        color: active ? '#ffffff' : 'var(--color-text-secondary)',
+        background: active
+          ? (isLight ? 'rgba(255,255,255,0.25)' : '#1A2B5E')
+          : 'transparent',
+        color: active
+          ? '#ffffff'
+          : (isLight ? 'rgba(255,255,255,0.5)' : 'var(--color-text-secondary)'),
         borderRadius: '6px',
         border: 'none',
       }}
@@ -143,7 +149,8 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
         transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
         style={{
           background: 'var(--color-sidebar-bg)',
-          borderRight: '1px solid var(--color-glass-border)',
+          borderRight: isLight ? 'none' : '1px solid var(--color-glass-border)',
+          boxShadow: isLight ? '2px 0 8px rgba(26, 43, 94, 0.10)' : 'none',
         }}
       >
         {/* Logo area */}
@@ -172,12 +179,17 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
             src="/riverse_logo.png"
             alt="RIVERSE"
             className="shrink-0"
-            style={{ height: collapsed ? 26 : 30, width: 'auto', objectFit: 'contain' }}
+            style={{
+              height: collapsed ? 26 : 30,
+              width: 'auto',
+              objectFit: 'contain',
+              filter: isLight ? 'brightness(0) invert(1)' : 'none',
+            }}
           />
           {!collapsed && (
             <span
               className="ml-2 text-sm font-bold whitespace-nowrap"
-              style={{ color: 'var(--color-text-primary)' }}
+              style={{ color: isLight ? '#FFFFFF' : 'var(--color-text-primary)' }}
             >
               {t('매출 현황 보드', '売上現況ボード')}
             </span>
@@ -188,7 +200,7 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
             onClick={() => setMobileOpen(false)}
             className="ml-auto md:hidden p-1.5 rounded-lg hover:bg-[var(--color-glass-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue"
             style={{
-              color: 'var(--color-text-muted)',
+              color: isLight ? 'rgba(255,255,255,0.7)' : 'var(--color-text-muted)',
               background: 'transparent',
               border: 'none',
               cursor: 'pointer',
@@ -203,7 +215,7 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
         <div
           className="mx-4 mb-2"
           style={{
-            borderBottom: '1px solid var(--color-glass-border)',
+            borderBottom: isLight ? '1px solid rgba(255,255,255,0.15)' : '1px solid var(--color-glass-border)',
           }}
         />
 
@@ -215,7 +227,7 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
               {!collapsed && (
                 <div
                   className="text-[11px] tracking-wider uppercase font-semibold px-3 pt-3 pb-1.5 select-none"
-                  style={{ color: 'var(--color-text-muted)', letterSpacing: '0.08em' }}
+                  style={{ color: isLight ? 'rgba(255,255,255,0.5)' : 'var(--color-text-muted)', letterSpacing: '0.08em' }}
                 >
                   {lang === 'ko' ? group.label.ko : group.label.ja}
                 </div>
@@ -225,13 +237,13 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
               {gi > 0 && collapsed && (
                 <div
                   className="mx-3 my-2"
-                  style={{ borderBottom: '1px solid rgba(128,128,128,0.06)' }}
+                  style={{ borderBottom: isLight ? '1px solid rgba(255,255,255,0.10)' : '1px solid rgba(128,128,128,0.06)' }}
                 />
               )}
               {gi > 0 && !collapsed && (
                 <div
                   className="mx-3 mb-1"
-                  style={{ borderBottom: '1px solid rgba(128,128,128,0.06)' }}
+                  style={{ borderBottom: isLight ? '1px solid rgba(255,255,255,0.10)' : '1px solid rgba(128,128,128,0.06)' }}
                 />
               )}
 
@@ -255,7 +267,9 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
                       style={{
                         padding: collapsed ? '10px 0' : '10px 12px',
                         justifyContent: collapsed ? 'center' : 'flex-start',
-                        color: isActive ? 'var(--color-sidebar-active-text)' : 'var(--color-text-secondary)',
+                        color: isActive
+                          ? 'var(--color-sidebar-active-text)'
+                          : isLight ? 'rgba(255,255,255,0.7)' : 'var(--color-text-secondary)',
                         background: isActive ? 'var(--color-sidebar-active)' : 'transparent',
                         textDecoration: 'none',
                       }}
@@ -267,8 +281,8 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
                           className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-full"
                           style={{
                             height: '60%',
-                            background: 'var(--color-accent-blue, #3b82f6)',
-                            boxShadow: '0 0 8px rgba(59, 130, 246, 0.4)',
+                            background: isLight ? '#FFFFFF' : 'var(--color-accent-blue, #3b82f6)',
+                            boxShadow: isLight ? '0 0 8px rgba(255,255,255,0.4)' : '0 0 8px rgba(59, 130, 246, 0.4)',
                           }}
                           transition={{ type: 'spring', stiffness: 350, damping: 30 }}
                         />
@@ -280,14 +294,14 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
                           className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 -translate-x-1 group-hover:translate-x-0"
                           style={{
                             height: '40%',
-                            background: 'var(--color-accent-blue, #3b82f6)',
+                            background: isLight ? 'rgba(255,255,255,0.6)' : 'var(--color-accent-blue, #3b82f6)',
                           }}
                         />
                       )}
 
                       <div
                         className="shrink-0 transition-colors duration-200"
-                        style={{ color: isActive ? 'var(--color-sidebar-active-text)' : undefined }}
+                        style={{ color: isActive ? 'var(--color-sidebar-active-text)' : (isLight ? 'rgba(255,255,255,0.7)' : undefined) }}
                       >
                         <item.icon size={20} />
                       </div>
@@ -313,7 +327,7 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
                           background: isActive
                             ? 'transparent'
                             : isLight
-                              ? 'rgba(26, 43, 94, 0.06)'
+                              ? 'rgba(255, 255, 255, 0.08)'
                               : 'rgba(255, 255, 255, 0.03)',
                         }}
                       />
@@ -330,27 +344,27 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
           <div
             className="px-4 py-3 space-y-2.5"
             style={{
-              borderTop: '1px solid var(--color-glass-border)',
+              borderTop: isLight ? '1px solid rgba(255,255,255,0.15)' : '1px solid var(--color-glass-border)',
             }}
           >
             {/* Theme toggle */}
             <div className="flex items-center justify-between">
               <span
                 className="text-[12px] font-medium tracking-wider"
-                style={{ color: 'var(--color-text-muted)' }}
+                style={{ color: isLight ? 'rgba(255,255,255,0.5)' : 'var(--color-text-muted)' }}
               >
                 THEME
               </span>
               <div
                 className="flex rounded-lg overflow-hidden"
                 style={{
-                  border: '1px solid var(--color-glass-border)',
+                  border: isLight ? '1px solid rgba(255,255,255,0.20)' : '1px solid var(--color-glass-border)',
                 }}
               >
-                <ToggleButton active={theme === 'dark'} onClick={() => setTheme('dark')}>
+                <ToggleButton active={theme === 'dark'} onClick={() => setTheme('dark')} isLight={isLight}>
                   Dark
                 </ToggleButton>
-                <ToggleButton active={theme === 'light'} onClick={() => setTheme('light')}>
+                <ToggleButton active={theme === 'light'} onClick={() => setTheme('light')} isLight={isLight}>
                   Light
                 </ToggleButton>
               </div>
@@ -360,20 +374,20 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
             <div className="flex items-center justify-between">
               <span
                 className="text-[12px] font-medium tracking-wider"
-                style={{ color: 'var(--color-text-muted)' }}
+                style={{ color: isLight ? 'rgba(255,255,255,0.5)' : 'var(--color-text-muted)' }}
               >
                 LANG
               </span>
               <div
                 className="flex rounded-lg overflow-hidden"
                 style={{
-                  border: '1px solid var(--color-glass-border)',
+                  border: isLight ? '1px solid rgba(255,255,255,0.20)' : '1px solid var(--color-glass-border)',
                 }}
               >
-                <ToggleButton active={lang === 'ko'} onClick={() => setLang('ko')}>
+                <ToggleButton active={lang === 'ko'} onClick={() => setLang('ko')} isLight={isLight}>
                   KO
                 </ToggleButton>
-                <ToggleButton active={lang === 'ja'} onClick={() => setLang('ja')}>
+                <ToggleButton active={lang === 'ja'} onClick={() => setLang('ja')} isLight={isLight}>
                   JA
                 </ToggleButton>
               </div>
@@ -383,20 +397,20 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
             <div className="flex items-center justify-between">
               <span
                 className="text-[12px] font-medium tracking-wider"
-                style={{ color: 'var(--color-text-muted)' }}
+                style={{ color: isLight ? 'rgba(255,255,255,0.5)' : 'var(--color-text-muted)' }}
               >
                 CURRENCY
               </span>
               <div
                 className="flex rounded-lg overflow-hidden"
                 style={{
-                  border: '1px solid var(--color-glass-border)',
+                  border: isLight ? '1px solid rgba(255,255,255,0.20)' : '1px solid var(--color-glass-border)',
                 }}
               >
-                <ToggleButton active={currency === 'JPY'} onClick={() => setCurrency('JPY')}>
+                <ToggleButton active={currency === 'JPY'} onClick={() => setCurrency('JPY')} isLight={isLight}>
                   JPY
                 </ToggleButton>
-                <ToggleButton active={currency === 'KRW'} onClick={() => setCurrency('KRW')}>
+                <ToggleButton active={currency === 'KRW'} onClick={() => setCurrency('KRW')} isLight={isLight}>
                   KRW
                 </ToggleButton>
               </div>
@@ -411,9 +425,9 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
             className="w-full flex items-center justify-center rounded-xl transition-all duration-200 hover:bg-[var(--color-glass-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue"
             style={{
               padding: '8px 0',
-              color: 'var(--color-text-muted)',
-              background: 'var(--color-glass)',
-              border: '1px solid var(--color-glass-border)',
+              color: isLight ? 'rgba(255,255,255,0.6)' : 'var(--color-text-muted)',
+              background: isLight ? 'rgba(255,255,255,0.08)' : 'var(--color-glass)',
+              border: isLight ? '1px solid rgba(255,255,255,0.15)' : '1px solid var(--color-glass-border)',
               cursor: 'pointer',
             }}
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
