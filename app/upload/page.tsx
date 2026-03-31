@@ -190,30 +190,60 @@ function parseCSVWeeklyReport(text: string): ParsedRow[] {
   return rows;
 }
 
-function parseCSVSokuhochi(text: string): ParsedRow[] {
+/**
+ * 속보치 CSV 파싱 (Shift-JIS 디코딩은 호출부에서 처리)
+ * 헤더: 日付,取次店書籍ID,ブックID,ブック名,チャプタID/巻ID,チャプタ名/巻名,話数番号/巻番号,著者名,出版社名,価格,購入件数,購入ポイント数
+ * 작품(ブック名) 기준으로 일별 합산
+ */
+function parseCSVSokuhochi(text: string, channel: string): ParsedRow[] {
   const lines = parseCSVText(text);
   if (lines.length < 2) return [];
-  const rows: ParsedRow[] = [];
+
+  // Find header row — look for 日付 or ブック名
   let headerIdx = 0;
   for (let i = 0; i < Math.min(5, lines.length); i++) {
-    if (lines[i].some((c) => c.includes('作品') || c.includes('タイトル') || c.includes('売上'))) {
+    if (lines[i].some((c) => c.includes('日付') || c.includes('ブック名') || c.includes('購入ポイント数'))) {
       headerIdx = i;
       break;
     }
   }
+
+  // Aggregate by (titleJP, date) — sum 購入ポイント数
+  const salesMap = new Map<string, Map<string, number>>();
+
   for (let i = headerIdx + 1; i < lines.length; i++) {
-    const vals = lines[i];
-    const titleJP = (vals[0] ?? '').trim();
-    const channel = (vals[1] ?? '').trim();
-    const rawDate = (vals[2] ?? '').trim();
-    const rawAmount = (vals[3] ?? '').trim();
-    if (!titleJP) continue;
+    const cols = lines[i];
+    const rawDate = (cols[0] ?? '').trim();   // 日付 (YYYY/MM/DD)
+    const titleJP = (cols[3] ?? '').trim();   // ブック名
+    const rawAmount = (cols[11] ?? '').trim(); // 購入ポイント数
+
+    if (!rawDate || !titleJP) continue;
+
     const saleDate = parseDateString(rawDate);
-    const salesAmount = parseInt(rawAmount.replace(/[¥,]/g, ''), 10) || 0;
-    if (saleDate && salesAmount > 0) {
-      rows.push({ title_jp: titleJP, title_kr: '', channel_title_jp: '', channel, sale_date: saleDate, sales_amount: salesAmount });
+    const amount = parseInt(rawAmount.replace(/[¥,]/g, ''), 10) || 0;
+
+    if (!saleDate || amount <= 0) continue;
+
+    if (!salesMap.has(titleJP)) salesMap.set(titleJP, new Map());
+    const dateMap = salesMap.get(titleJP)!;
+    dateMap.set(saleDate, (dateMap.get(saleDate) || 0) + amount);
+  }
+
+  // Convert to ParsedRow[]
+  const rows: ParsedRow[] = [];
+  for (const [titleJP, dateMap] of salesMap) {
+    for (const [date, amount] of dateMap) {
+      rows.push({
+        title_jp: titleJP,
+        title_kr: '',
+        channel_title_jp: titleJP,
+        channel,
+        sale_date: date,
+        sales_amount: amount,
+      });
     }
   }
+
   return rows;
 }
 
@@ -335,6 +365,14 @@ export default function DataUploadPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [lastUploadTime, setLastUploadTime] = useState<string | null>(null);
 
+  // Sokuhochi CSV platform selection
+  const [sokuhochiPlatform, setSokuhochiPlatform] = useState<string>('');
+  const [pendingSokuhochiFile, setPendingSokuhochiFile] = useState<File | null>(null);
+
+  // New title detection
+  const [knownTitles, setKnownTitles] = useState<Set<string>>(new Set());
+  const [newTitles, setNewTitles] = useState<string[]>([]);
+
   // Validation warnings
   const [warnings, setWarnings] = useState<ValidationWarning[]>([]);
   const [showWarnings, setShowWarnings] = useState(false);
@@ -352,7 +390,24 @@ export default function DataUploadPage() {
   useEffect(() => {
     fetch('/api/sales/platforms')
       .then((res) => res.json())
-      .then((data: string[]) => { if (data) setKnownPlatforms(data); })
+      .then((data: Array<{ channel_name?: string; name?: string } | string>) => {
+        if (data && Array.isArray(data)) {
+          const names = data.map((d) => (typeof d === 'string' ? d : d.channel_name || d.name || ''));
+          setKnownPlatforms(names.filter(Boolean));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Fetch known titles for new title detection
+  useEffect(() => {
+    fetch('/api/sales/title-master')
+      .then((res) => res.json())
+      .then((data: Array<{ title_jp?: string }>) => {
+        if (data && Array.isArray(data)) {
+          setKnownTitles(new Set(data.map((d) => d.title_jp || '').filter(Boolean)));
+        }
+      })
       .catch(() => {});
   }, []);
 
@@ -369,9 +424,17 @@ export default function DataUploadPage() {
 
   const detectFileType = (name: string): 'weekly_report' | 'sokuhochi' => {
     const lower = name.toLowerCase();
-    if (lower.includes('sokuhochi') || lower.includes('速報')) return 'sokuhochi';
+    // 속보치 CSV: app_daily_sales_log, sp_daily_sales_log, app_kan_daily_sales_log, sp_kan_daily_sales_log
+    if (lower.includes('daily_sales_log') || lower.includes('sokuhochi') || lower.includes('速報')) return 'sokuhochi';
     return 'weekly_report';
   };
+
+  // Detect new titles from parsed rows
+  const detectNewTitles = useCallback((rows: ParsedRow[]) => {
+    if (knownTitles.size === 0) return [];
+    const uniqueTitles = new Set(rows.map((r) => r.title_jp));
+    return Array.from(uniqueTitles).filter((t) => !knownTitles.has(t));
+  }, [knownTitles]);
 
   // Validate parsed rows
   const validateRows = useCallback((rows: ParsedRow[], platforms: string[]): ValidationWarning[] => {
@@ -401,24 +464,31 @@ export default function DataUploadPage() {
     return warns;
   }, [t]);
 
-  const handleFile = useCallback(async (file: File) => {
+  // Process sokuhochi CSV after platform is selected
+  const processSokuhochiFile = useCallback(async (file: File, platform: string) => {
     setStatus('parsing');
     setFileName(file.name);
     setErrorMessage('');
     setUploadResult(null);
     setWarnings([]);
-    const detectedType = detectFileType(file.name);
-    setFileType(detectedType);
+    setNewTitles([]);
+    setFileType('sokuhochi');
+
     try {
       const isCSV = file.name.toLowerCase().endsWith('.csv');
       let rows: ParsedRow[];
 
       if (isCSV) {
-        const text = await file.text();
-        rows = detectedType === 'sokuhochi' ? parseCSVSokuhochi(text) : parseCSVWeeklyReport(text);
+        // Shift-JIS decoding for sokuhochi CSV
+        const buffer = await file.arrayBuffer();
+        const decoder = new TextDecoder('shift_jis');
+        const text = decoder.decode(buffer);
+        rows = parseCSVSokuhochi(text, platform);
       } else {
         const buffer = await file.arrayBuffer();
-        rows = detectedType === 'sokuhochi' ? await parseSokuhochi(buffer) : await parseWeeklyReport(buffer);
+        rows = await parseSokuhochi(buffer);
+        // Override channel with selected platform
+        rows = rows.map((r) => ({ ...r, channel: platform }));
       }
 
       if (rows.length === 0) {
@@ -426,7 +496,10 @@ export default function DataUploadPage() {
         setErrorMessage(t('데이터를 찾을 수 없습니다. 파일 형식을 확인해주세요.', 'データが見つかりませんでした。ファイル形式を確認してください。'));
         return;
       }
+
       setParsedRows(rows);
+      const detected = detectNewTitles(rows);
+      setNewTitles(detected);
       const warns = validateRows(rows, knownPlatforms);
       setWarnings(warns);
       if (warns.length > 0) setShowWarnings(true);
@@ -435,7 +508,56 @@ export default function DataUploadPage() {
       setStatus('error');
       setErrorMessage(err instanceof Error ? err.message : t('파일 분석에 실패했습니다', 'ファイルの解析に失敗しました'));
     }
-  }, [t, knownPlatforms, validateRows]);
+  }, [t, knownPlatforms, validateRows, detectNewTitles]);
+
+  const handleFile = useCallback(async (file: File) => {
+    const detectedType = detectFileType(file.name);
+
+    // For sokuhochi CSV, show platform selection first
+    if (detectedType === 'sokuhochi') {
+      setPendingSokuhochiFile(file);
+      setFileName(file.name);
+      setFileType('sokuhochi');
+      setStatus('idle');
+      return;
+    }
+
+    setStatus('parsing');
+    setFileName(file.name);
+    setErrorMessage('');
+    setUploadResult(null);
+    setWarnings([]);
+    setNewTitles([]);
+    setFileType(detectedType);
+    try {
+      const isCSV = file.name.toLowerCase().endsWith('.csv');
+      let rows: ParsedRow[];
+
+      if (isCSV) {
+        const text = await file.text();
+        rows = parseCSVWeeklyReport(text);
+      } else {
+        const buffer = await file.arrayBuffer();
+        rows = await parseWeeklyReport(buffer);
+      }
+
+      if (rows.length === 0) {
+        setStatus('error');
+        setErrorMessage(t('데이터를 찾을 수 없습니다. 파일 형식을 확인해주세요.', 'データが見つかりませんでした。ファイル形式を確認してください。'));
+        return;
+      }
+      setParsedRows(rows);
+      const detected = detectNewTitles(rows);
+      setNewTitles(detected);
+      const warns = validateRows(rows, knownPlatforms);
+      setWarnings(warns);
+      if (warns.length > 0) setShowWarnings(true);
+      setStatus('preview');
+    } catch (err) {
+      setStatus('error');
+      setErrorMessage(err instanceof Error ? err.message : t('파일 분석에 실패했습니다', 'ファイルの解析に失敗しました'));
+    }
+  }, [t, knownPlatforms, validateRows, detectNewTitles]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -456,13 +578,14 @@ export default function DataUploadPage() {
   const handleUpload = async () => {
     setStatus('uploading');
     setUploadProgress(0);
+    const isPreliminary = fileType === 'sokuhochi';
     try {
       const batchSize = 500;
       let totalInserted = 0;
       let totalUpdated = 0;
       for (let i = 0; i < parsedRows.length; i += batchSize) {
         const batch = parsedRows.slice(i, i + batchSize);
-        const result = await upsertDailySales(batch, fileType, false);
+        const result = await upsertDailySales(batch, fileType, isPreliminary);
         totalInserted += result.inserted;
         totalUpdated += result.updated;
         setUploadProgress(Math.round(((i + batchSize) / parsedRows.length) * 100));
@@ -493,6 +616,9 @@ export default function DataUploadPage() {
     setWarnings([]);
     setShowWarnings(false);
     setLastUploadTime(null);
+    setPendingSokuhochiFile(null);
+    setSokuhochiPlatform('');
+    setNewTitles([]);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -598,7 +724,7 @@ export default function DataUploadPage() {
       <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-6">
         <motion.div variants={cardVariants}>
           <AnimatePresence mode="wait">
-            {status === 'idle' && (
+            {status === 'idle' && !pendingSokuhochiFile && (
               <motion.div
                 key="dropzone"
                 initial={{ opacity: 0, scale: 0.96 }}
@@ -625,6 +751,84 @@ export default function DataUploadPage() {
               </motion.div>
             )}
 
+            {/* Sokuhochi CSV: Platform selection */}
+            {status === 'idle' && pendingSokuhochiFile && (
+              <motion.div
+                key="sokuhochi-platform"
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.96 }}
+                className="rounded-2xl p-8"
+                style={GLASS_CARD}
+              >
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, rgba(251,191,36,0.2), rgba(245,158,11,0.2))' }}>
+                    <FileSpreadsheet size={20} color="#fbbf24" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                      {t('속보치 CSV', '速報値 CSV')}
+                    </h2>
+                    <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{fileName}</p>
+                  </div>
+                </div>
+
+                <div className="mb-6">
+                  <label className="block text-xs font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>
+                    {t('플랫폼 선택 (필수)', 'プラットフォーム選択（必須）')}
+                  </label>
+                  <select
+                    value={sokuhochiPlatform}
+                    onChange={(e) => setSokuhochiPlatform(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl text-sm cursor-pointer"
+                    style={{
+                      background: 'var(--color-input-bg)',
+                      color: 'var(--color-text-primary)',
+                      border: '1px solid var(--color-input-border)',
+                      outline: 'none',
+                    }}
+                  >
+                    <option value="">{t('-- 플랫폼을 선택하세요 --', '-- プラットフォームを選択 --')}</option>
+                    {knownPlatforms.map((p) => (
+                      <option key={p} value={p}>{p}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="px-3 py-2 rounded-xl mb-6 text-xs" style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)', color: '#fbbf24' }}>
+                  {t(
+                    '속보치 데이터는 속보(잠정)값으로 저장됩니다.',
+                    '速報値データは速報（暫定）値として保存されます。'
+                  )}
+                </div>
+
+                <div className="flex gap-2 justify-end">
+                  <motion.button
+                    whileHover={{ scale: 1.04 }}
+                    whileTap={{ scale: 0.96 }}
+                    onClick={reset}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium cursor-pointer"
+                    style={{ background: 'var(--color-input-bg)', color: 'var(--color-text-secondary)', border: '1px solid var(--color-input-border)' }}
+                  >
+                    <X size={14} />{t('취소', 'キャンセル')}
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.04 }}
+                    whileTap={{ scale: 0.96 }}
+                    onClick={() => {
+                      if (!sokuhochiPlatform) return;
+                      processSokuhochiFile(pendingSokuhochiFile, sokuhochiPlatform);
+                    }}
+                    disabled={!sokuhochiPlatform}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold cursor-pointer btn-gradient"
+                    style={{ opacity: sokuhochiPlatform ? 1 : 0.4 }}
+                  >
+                    <Upload size={14} />{t('분석 시작', '解析開始')}
+                  </motion.button>
+                </div>
+              </motion.div>
+            )}
+
             {status === 'parsing' && (
               <motion.div key="parsing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="rounded-2xl p-12 flex flex-col items-center justify-center" style={{ ...GLASS_CARD, minHeight: 240 }}>
                 <Loader2 size={40} color="#818cf8" className="animate-spin mb-4" />
@@ -640,6 +844,11 @@ export default function DataUploadPage() {
                     <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>{t('미리보기', 'プレビュー')}</h2>
                     <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
                       {fileName} | {parsedRows.length.toLocaleString()} {t('행', '行')} | {t('타입', 'タイプ')}: {fileType === 'weekly_report' ? 'Weekly Report' : t('속보치', '速報値')}
+                      {fileType === 'sokuhochi' && sokuhochiPlatform && (
+                        <span className="ml-2 text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ background: 'rgba(251,191,36,0.15)', color: '#fbbf24' }}>
+                          {sokuhochiPlatform}
+                        </span>
+                      )}
                     </p>
                   </div>
                   <div className="flex gap-2">
@@ -693,6 +902,37 @@ export default function DataUploadPage() {
                   </div>
                 )}
 
+                {/* New titles warning */}
+                {newTitles.length > 0 && (
+                  <div className="mb-4 px-3 py-2.5 rounded-xl" style={{ background: 'rgba(251, 191, 36, 0.08)', border: '1px solid rgba(251, 191, 36, 0.25)' }}>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <AlertCircle size={14} color="#fbbf24" />
+                      <span className="text-xs font-semibold" style={{ color: '#fbbf24' }}>
+                        {t(
+                          `${newTitles.length}개의 신규 작품이 발견되었습니다. 업로드하면 매출 데이터에 추가됩니다.`,
+                          `${newTitles.length}件の新規タイトルが見つかりました。アップロードすると売上データに追加されます。`
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {newTitles.slice(0, 10).map((title) => (
+                        <span
+                          key={title}
+                          className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium"
+                          style={{ background: 'rgba(251, 191, 36, 0.15)', color: '#fbbf24', border: '1px solid rgba(251, 191, 36, 0.3)' }}
+                        >
+                          {t('신규', '新規')} {title}
+                        </span>
+                      ))}
+                      {newTitles.length > 10 && (
+                        <span className="text-[10px] px-2 py-0.5" style={{ color: 'var(--color-text-muted)' }}>
+                          ... {t('외', '他')} {newTitles.length - 10}{t('개', '件')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid var(--color-table-border)' }}>
                   <table className="w-full text-xs min-w-[600px]">
                     <thead>
@@ -727,7 +967,14 @@ export default function DataUploadPage() {
                               {!hasError && hasWarning && <span className="mr-1" style={{ color: '#fbbf24' }}>{'\u26A0\uFE0F'}</span>}
                               {idx + 1}
                             </td>
-                            <td className="py-2.5 px-3 truncate max-w-[200px]" style={{ color: 'var(--color-text-primary)' }}>{row.title_jp}</td>
+                            <td className="py-2.5 px-3 max-w-[200px]" style={{ color: 'var(--color-text-primary)' }}>
+                              <span className="truncate block">{row.title_jp}</span>
+                              {newTitles.includes(row.title_jp) && (
+                                <span className="inline-block text-[9px] px-1.5 py-0 rounded-full font-medium mt-0.5" style={{ background: 'rgba(251, 191, 36, 0.15)', color: '#fbbf24', border: '1px solid rgba(251, 191, 36, 0.3)' }}>
+                                  {t('신규', '新規')}
+                                </span>
+                              )}
+                            </td>
                             <td className="py-2.5 px-3" style={{ color: 'var(--color-text-secondary)' }}>{row.channel}</td>
                             <td className="py-2.5 px-3 font-mono" style={{ color: 'var(--color-text-secondary)' }}>{row.sale_date}</td>
                             <td className="py-2.5 px-3 text-right font-mono font-semibold" style={{ color: 'var(--color-text-primary)' }}>¥{row.sales_amount.toLocaleString()}</td>

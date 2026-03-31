@@ -12,6 +12,9 @@ import type { DailySale } from '@/types';
 import { getPlatformBrand } from '@/utils/platformConfig';
 import { PlatformBadge } from '@/components/PlatformBadge';
 import { useApp } from '@/context/AppContext';
+import dynamic from 'next/dynamic';
+
+const TitleMasterTab = dynamic(() => import('@/components/data/TitleMasterTab'), { ssr: false });
 
 // ============================================================
 // Shared styles & animation variants
@@ -138,6 +141,9 @@ const PAGE_SIZE = 50;
 
 export default function DataPage() {
   const { formatCurrency, t, theme } = useApp();
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState<'sales' | 'titles'>('sales');
 
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<DailySale[]>([]);
@@ -398,7 +404,7 @@ export default function DataPage() {
       </AnimatePresence>
 
       {/* Header */}
-      <div className="flex items-center gap-3 mb-8">
+      <div className="flex items-center gap-3 mb-6">
         <div
           className="w-11 h-11 rounded-xl flex items-center justify-center page-icon-glow"
         >
@@ -409,25 +415,52 @@ export default function DataPage() {
             {t('원본 데이터', 'Raw Data')}
           </h1>
           <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-            {t('매출 데이터 열람 및 내보내기', '売上データ閲覧・エクスポート')}
+            {t('매출 데이터 열람 및 작품 마스터 관리', '売上データ閲覧・作品マスター管理')}
           </p>
         </div>
-        <motion.button
-          whileHover={{ scale: 1.04 }}
-          whileTap={{ scale: 0.96 }}
-          onClick={handleDownload}
-          disabled={downloading}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-all btn-gradient"
-          style={{
-            opacity: downloading ? 0.6 : 1,
-          }}
-        >
-          {downloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-          Excel DL
-        </motion.button>
+        {activeTab === 'sales' && (
+          <motion.button
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.96 }}
+            onClick={handleDownload}
+            disabled={downloading}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-all btn-gradient"
+            style={{
+              opacity: downloading ? 0.6 : 1,
+            }}
+          >
+            {downloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+            Excel DL
+          </motion.button>
+        )}
       </div>
 
-      <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-4">
+      {/* Tabs */}
+      <div className="flex gap-1 mb-6 p-1 rounded-xl" style={{ background: 'var(--color-glass)', border: '1px solid var(--color-glass-border)' }}>
+        {([
+          { key: 'sales' as const, label: t('매출 데이터', '売上データ') },
+          { key: 'titles' as const, label: t('작품 마스터', '作品マスター') },
+        ]).map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className="flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold cursor-pointer transition-all"
+            style={{
+              background: activeTab === tab.key ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
+              color: activeTab === tab.key ? '#a5b4fc' : 'var(--color-text-muted)',
+              border: activeTab === tab.key ? '1px solid rgba(99, 102, 241, 0.3)' : '1px solid transparent',
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Title Master Tab */}
+      {activeTab === 'titles' && <TitleMasterTab />}
+
+      {/* Sales Data Tab */}
+      {activeTab === 'sales' && <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-4">
         {/* Filters */}
         <motion.div variants={cardVariants} className="rounded-2xl p-4" style={GLASS_CARD}>
           <button
@@ -776,7 +809,7 @@ export default function DataPage() {
             </motion.button>
           </motion.div>
         )}
-      </motion.div>
+      </motion.div>}
     </motion.div>
   );
 }
