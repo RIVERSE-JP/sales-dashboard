@@ -842,19 +842,20 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
             {/* 2. Sales Trend (매출 추이) — monthly/weekly/daily toggle + product type lines */}
             {(monthlyTrend.length > 0 || dailyRecent.length > 0) && trendData.length > 0 && (
               <motion.div variants={cardVariants} className="rounded-2xl p-6" style={GLASS_CARD}>
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                <div className="flex items-center gap-3 mb-6 flex-wrap">
+                  <h2 className="text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>
                     {t('매출 추이', '売上推移')}
                   </h2>
-                  <div className="flex gap-1">
+                  <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid var(--color-glass-border)' }}>
                     {(['monthly', 'weekly', 'daily'] as const).map((period) => (
                       <button
                         key={period}
                         onClick={() => setTrendPeriod(period)}
-                        className="px-3 py-1 rounded-lg text-[11px] font-medium cursor-pointer transition-all"
+                        className="px-4 py-1.5 text-[12px] font-medium cursor-pointer transition-all"
                         style={{
-                          background: trendPeriod === period ? 'var(--color-accent-blue, #818cf8)' : 'var(--color-glass)',
-                          color: trendPeriod === period ? '#fff' : 'var(--color-text-muted)',
+                          background: trendPeriod === period ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'transparent',
+                          color: trendPeriod === period ? '#fff' : 'var(--color-text-secondary)',
+                          borderRight: period !== 'daily' ? '1px solid var(--color-glass-border)' : 'none',
                         }}
                       >
                         {period === 'monthly' ? t('월별', '月別') : period === 'weekly' ? t('주별', '週別') : t('일별', '日別')}
