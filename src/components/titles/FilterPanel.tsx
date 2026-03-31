@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, Filter, RotateCcw, Search, X } from 'lucide-react';
-import { GLASS_CARD, cardVariants, SERIAL_STATUSES, CONTENT_FORMATS, SALES_PRESETS } from './constants';
+// useState removed — filter always visible
+import { motion } from 'framer-motion';
+import { RotateCcw, Search, X } from 'lucide-react';
+import { GLASS_CARD, cardVariants, SERIAL_STATUSES, CONTENT_FORMATS } from './constants';
 import type { SalesPreset } from './constants';
 
 interface FilterPanelProps {
@@ -65,7 +65,7 @@ const SORT_OPTIONS = [
 
 export function FilterPanel(props: FilterPanelProps) {
   const { t } = props;
-  const [expanded, setExpanded] = useState(false);
+  // expanded state removed — always visible
 
   const hasAdvancedFilter = props.selectedGenre || props.selectedCompany || props.selectedPlatform ||
     props.selectedStatus || props.selectedFormat || props.salesPreset !== 'all';
@@ -111,117 +111,74 @@ export function FilterPanel(props: FilterPanelProps) {
         </div>
       </div>
 
-      {/* Advanced Filter Toggle */}
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium cursor-pointer transition-all"
-        style={{
-          background: hasAdvancedFilter ? 'var(--color-accent-blue, #818cf8)' : 'var(--color-glass)',
-          color: hasAdvancedFilter ? '#fff' : 'var(--color-text-secondary)',
-          border: `1px solid ${hasAdvancedFilter ? 'transparent' : 'var(--color-glass-border)'}`,
-        }}
-      >
-        <Filter size={14} />
-        {t('고급 필터', '詳細フィルター')}
+      {/* Filter Panel (always visible) */}
+      <div className="rounded-2xl p-4 space-y-3" style={GLASS_CARD}>
+        {/* Serial Status Tabs */}
+        <div className="flex gap-2 flex-wrap">
+          {['all', ...SERIAL_STATUSES].map((status) => {
+            const isActive = props.serialStatusTab === status;
+            const label = status === 'all' ? t('전체', '全体') : status;
+            return (
+              <button
+                key={status}
+                onClick={() => props.setSerialStatusTab(status)}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer"
+                style={{
+                  background: isActive ? 'var(--color-accent-blue, #818cf8)' : 'transparent',
+                  color: isActive ? '#fff' : 'var(--color-text-secondary)',
+                  border: `1px solid ${isActive ? 'transparent' : 'var(--color-glass-border)'}`,
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Filter Grid: 장르/제작사/플랫폼/포맷 */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <select value={props.selectedGenre} onChange={(e) => props.setSelectedGenre(e.target.value)} style={selectStyle}>
+            <option value="">{t('장르 전체', 'ジャンル全体')}</option>
+            {props.genres.map((g) => (
+              <option key={g.id} value={g.name}>{g.name}</option>
+            ))}
+          </select>
+
+          <select value={props.selectedCompany} onChange={(e) => props.setSelectedCompany(e.target.value)} style={selectStyle}>
+            <option value="">{t('제작사 전체', '制作会社全体')}</option>
+            {props.companies.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+
+          <select value={props.selectedPlatform} onChange={(e) => props.setSelectedPlatform(e.target.value)} style={selectStyle}>
+            <option value="">{t('플랫폼 전체', 'プラットフォーム全体')}</option>
+            {props.platforms.map((p) => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </select>
+
+          <select value={props.selectedFormat} onChange={(e) => props.setSelectedFormat(e.target.value)} style={selectStyle}>
+            <option value="">{t('포맷 전체', 'フォーマット全体')}</option>
+            {CONTENT_FORMATS.map((f) => (
+              <option key={f} value={f}>{f}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Reset */}
         {hasAdvancedFilter && (
-          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold" style={{ background: 'rgba(255,255,255,0.25)' }}>
-            {activeFilters.length}
-          </span>
+          <div className="flex justify-end">
+            <button
+              onClick={props.onReset}
+              className="flex items-center gap-1 text-xs cursor-pointer hover:underline px-3 py-1.5 rounded-lg transition-all"
+              style={{ color: 'var(--color-text-muted)', background: 'var(--color-glass)' }}
+            >
+              <RotateCcw size={12} /> {t('필터 초기화', 'フィルターリセット')}
+            </button>
+          </div>
         )}
-        <motion.span
-          animate={{ rotate: expanded ? 180 : 0 }}
-          transition={{ duration: 0.2 }}
-        >
-          <ChevronDown size={14} />
-        </motion.span>
-      </button>
-
-      {/* Expandable Filter Panel */}
-      <AnimatePresence>
-        {expanded && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            style={{ overflow: 'hidden' }}
-          >
-            <div className="rounded-2xl p-4 space-y-3" style={GLASS_CARD}>
-              {/* Serial Status Tabs */}
-              <div className="flex gap-2 flex-wrap">
-                {['all', ...SERIAL_STATUSES].map((status) => {
-                  const isActive = props.serialStatusTab === status;
-                  const label = status === 'all' ? t('전체', '全体') : status;
-                  return (
-                    <button
-                      key={status}
-                      onClick={() => props.setSerialStatusTab(status)}
-                      className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer"
-                      style={{
-                        background: isActive ? 'var(--color-accent-blue, #818cf8)' : 'transparent',
-                        color: isActive ? '#fff' : 'var(--color-text-secondary)',
-                        border: `1px solid ${isActive ? 'transparent' : 'var(--color-glass-border)'}`,
-                      }}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Filter Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-                <select value={props.selectedGenre} onChange={(e) => props.setSelectedGenre(e.target.value)} style={selectStyle}>
-                  <option value="">{t('장르 전체', 'ジャンル全体')}</option>
-                  {props.genres.map((g) => (
-                    <option key={g.id} value={g.name}>{g.name}</option>
-                  ))}
-                </select>
-
-                <select value={props.selectedCompany} onChange={(e) => props.setSelectedCompany(e.target.value)} style={selectStyle}>
-                  <option value="">{t('제작사 전체', '制作会社全体')}</option>
-                  {props.companies.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-
-                <select value={props.selectedPlatform} onChange={(e) => props.setSelectedPlatform(e.target.value)} style={selectStyle}>
-                  <option value="">{t('플랫폼 전체', 'プラットフォーム全体')}</option>
-                  {props.platforms.map((p) => (
-                    <option key={p} value={p}>{p}</option>
-                  ))}
-                </select>
-
-                <select value={props.selectedFormat} onChange={(e) => props.setSelectedFormat(e.target.value)} style={selectStyle}>
-                  <option value="">{t('포맷 전체', 'フォーマット全体')}</option>
-                  {CONTENT_FORMATS.map((f) => (
-                    <option key={f} value={f}>{f}</option>
-                  ))}
-                </select>
-
-                <select value={props.salesPreset} onChange={(e) => props.setSalesPreset(e.target.value as SalesPreset)} style={selectStyle}>
-                  {SALES_PRESETS.map((p) => (
-                    <option key={p} value={p}>{t(SALES_PRESET_LABELS[p][0], SALES_PRESET_LABELS[p][1])}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Reset */}
-              {hasAdvancedFilter && (
-                <div className="flex justify-end">
-                  <button
-                    onClick={props.onReset}
-                    className="flex items-center gap-1 text-xs cursor-pointer hover:underline px-3 py-1.5 rounded-lg transition-all"
-                    style={{ color: 'var(--color-text-muted)', background: 'var(--color-glass)' }}
-                  >
-                    <RotateCcw size={12} /> {t('필터 초기화', 'フィルターリセット')}
-                  </button>
-                </div>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      </div>
 
       {/* Active Filter Tags */}
       {activeFilters.length > 0 && (

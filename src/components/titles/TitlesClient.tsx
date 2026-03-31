@@ -168,8 +168,18 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
   // ============================================================
 
   const masterMap = useMemo(() => {
-    const map = new Map<string, TitleMasterRow>();
-    titleMaster.forEach((m) => map.set(m.title_jp, m));
+    const map = new Map<string, TitleMasterRow & { genre_name?: string; company_name?: string }>();
+    titleMaster.forEach((m) => {
+      // API returns genres: { name_kr }, production_companies: { name }
+      const raw = m as unknown as Record<string, unknown>;
+      const genres = raw.genres as Record<string, string> | null | undefined;
+      const companies = raw.production_companies as Record<string, string> | null | undefined;
+      map.set(m.title_jp, {
+        ...m,
+        genre_name: genres?.name_kr ?? genres?.name_jp ?? (m as unknown as Record<string, string>).genre_name,
+        company_name: companies?.name ?? (m as unknown as Record<string, string>).company_name,
+      });
+    });
     return map;
   }, [titleMaster]);
 
@@ -185,12 +195,11 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
 
   const companies = useMemo(() => {
     const set = new Set<string>();
-    titleMaster.forEach((m) => {
-      const name = m.company_name ?? (m as unknown as Record<string, unknown>).production_companies?.toString();
-      if (name) set.add(name);
-    });
+    for (const [, m] of masterMap) {
+      if (m.company_name) set.add(m.company_name);
+    }
     return Array.from(set).sort();
-  }, [titleMaster]);
+  }, [masterMap]);
 
   const platforms = useMemo(() => {
     const set = new Set<string>();
