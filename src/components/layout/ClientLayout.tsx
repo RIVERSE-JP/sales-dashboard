@@ -39,24 +39,19 @@ interface NavGroup {
 
 const navGroups: NavGroup[] = [
   {
-    label: { ko: '현황', ja: '現況' },
-    items: [
-      { to: '/dashboard', ko: '경영 브리핑', ja: '経営ブリーフィング', icon: LayoutDashboard },
-    ],
-  },
-  {
     label: { ko: '분석', ja: '分析' },
     items: [
-      { to: '/titles', ko: '작품 매출 현황', ja: 'タイトル売上', icon: BookOpen },
-      { to: '/platforms', ko: '플랫폼 성과', ja: 'プラットフォーム', icon: Globe },
+      { to: '/dashboard', ko: '매출 대시보드', ja: '売上ダッシュボード', icon: LayoutDashboard },
+      { to: '/titles', ko: '작품별 매출', ja: 'タイトル別売上', icon: BookOpen },
+      { to: '/platforms', ko: '플랫폼별 매출', ja: 'プラットフォーム別売上', icon: Globe },
     ],
   },
   {
-    label: { ko: '데이터', ja: 'データ' },
+    label: { ko: '운영', ja: '運営' },
     items: [
-      { to: '/data', ko: '데이터 관리', ja: 'データ管理', icon: Database },
-      { to: '/upload', ko: '데이터 업로드', ja: 'アップロード', icon: Upload },
-      { to: '/reports', ko: '리포트', ja: 'レポート', icon: FileText },
+      { to: '/upload', ko: '속보치 업로드', ja: '速報アップロード', icon: Upload },
+      { to: '/reports', ko: '리포트 다운로드', ja: 'レポートDL', icon: FileText },
+      { to: '/data', ko: '데이터베이스 관리', ja: 'データベース管理', icon: Database },
     ],
   },
 ];
