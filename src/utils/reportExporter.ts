@@ -2,7 +2,7 @@
  * Report Exporter — generates Excel/CSV files in various report formats.
  * The "Weekly Report" format matches the original [RVJP-RVKR] Weekly Report.xlsx layout.
  */
-import type { CellFormulaValue, FillPattern } from 'exceljs';
+import type { CellFormulaValue } from 'exceljs';
 import { saveAs } from 'file-saver';
 import type { DailySale } from '@/types';
 
@@ -31,13 +31,13 @@ export async function generateWeeklyReport(
 
   const lastDataRow = data.length + 2;
 
-  // ---------- Column widths ----------
-  ws.getColumn(1).width = 30; // Title JP
-  ws.getColumn(2).width = 25; // Title KR
-  ws.getColumn(3).width = 30; // Channel Title
-  ws.getColumn(4).width = 18; // Channel
-  ws.getColumn(5).width = 12; // Date
-  ws.getColumn(6).width = 18; // Sales
+  // ---------- Column widths (원본과 동일) ----------
+  ws.getColumn(1).width = 25.57; // Title JP
+  ws.getColumn(2).width = 31.29; // Title KR
+  ws.getColumn(3).width = 36.57; // Channel Title
+  ws.getColumn(4).width = 14.86; // Channel
+  ws.getColumn(5).width = 15.43; // Date
+  ws.getColumn(6).width = 22.43; // Sales
 
   // ---------- Row 1: SUBTOTAL formula ----------
   const row1 = ws.getRow(1);
@@ -60,34 +60,18 @@ export async function generateWeeklyReport(
   headers.forEach((h, i) => {
     const cell = headerRow.getCell(i + 1);
     cell.value = h;
-    cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+    cell.font = { size: 10, color: { argb: 'FF000000' }, name: 'Arial' };
     cell.fill = {
       type: 'pattern',
       pattern: 'solid',
-      fgColor: { argb: 'FF4472C4' },
-    };
-    cell.border = {
-      top: { style: 'thin' },
-      bottom: { style: 'thin' },
-      left: { style: 'thin' },
-      right: { style: 'thin' },
+      fgColor: { argb: 'FFD9E2F3' },
     };
     cell.alignment = { horizontal: 'center', vertical: 'middle' };
   });
-  headerRow.height = 20;
+  headerRow.height = 16.5;
 
-  // ---------- Row 3+: Data rows ----------
-  const altFill: FillPattern = {
-    type: 'pattern',
-    pattern: 'solid',
-    fgColor: { argb: 'FFD9E2F3' },
-  };
-  const thinBorder = {
-    top: { style: 'thin' as const, color: { argb: 'FFB4C6E7' } },
-    bottom: { style: 'thin' as const, color: { argb: 'FFB4C6E7' } },
-    left: { style: 'thin' as const, color: { argb: 'FFB4C6E7' } },
-    right: { style: 'thin' as const, color: { argb: 'FFB4C6E7' } },
-  };
+  // ---------- Row 3+: Data rows (원본과 동일: 교대 행 없음, 보더 없음) ----------
+  // 원본에 교대 행/보더 없음
 
   data.forEach((row, idx) => {
     const r = ws.getRow(idx + 3);
@@ -113,17 +97,12 @@ export async function generateWeeklyReport(
     r.getCell(6).value = row.sales_amount;
     r.getCell(6).numFmt = '#,##0';
 
-    // Alternating row background
-    if (idx % 2 === 1) {
-      for (let c = 1; c <= 6; c++) {
-        r.getCell(c).fill = altFill;
-      }
+    // 원본에 교대 행 없음, 폰트 설정
+    for (let c = 1; c <= 6; c++) {
+      r.getCell(c).font = { size: 10, name: 'Arial' };
     }
 
-    // Borders
-    for (let c = 1; c <= 6; c++) {
-      r.getCell(c).border = thinBorder;
-    }
+    // 원본에 보더 없음
   });
 
   // ---------- Auto filter ----------
