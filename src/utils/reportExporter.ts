@@ -45,7 +45,7 @@ export async function generateWeeklyReport(
     formula: `SUBTOTAL(9,F3:F${lastDataRow})`,
     result: undefined,
   } as CellFormulaValue;
-  row1.getCell(6).numFmt = '#,##0';
+  row1.getCell(6).numFmt = '[$¥]#,##0';
 
   // ---------- Row 2: Headers ----------
   const headers = [
@@ -80,22 +80,21 @@ export async function generateWeeklyReport(
     r.getCell(3).value = row.title_jp; // channel_title_jp fallback
     r.getCell(4).value = row.channel;
 
-    // Parse date properly
+    // 날짜: 시간 없이 날짜만 (원본과 동일)
     const parts = row.sale_date.split('-');
     if (parts.length === 3) {
       r.getCell(5).value = new Date(
         Number(parts[0]),
         Number(parts[1]) - 1,
         Number(parts[2]),
-        12, 0, 0,
       );
     } else {
       r.getCell(5).value = new Date(row.sale_date);
     }
-    r.getCell(5).numFmt = 'yyyy/mm/dd';
+    r.getCell(5).numFmt = 'yyyy"/"mm"/"d';
 
     r.getCell(6).value = row.sales_amount;
-    r.getCell(6).numFmt = '#,##0';
+    r.getCell(6).numFmt = '[$¥]#,##0';
 
     // 원본에 교대 행 없음, 폰트 설정
     for (let c = 1; c <= 6; c++) {
