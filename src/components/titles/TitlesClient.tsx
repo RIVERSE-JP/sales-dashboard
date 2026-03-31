@@ -656,10 +656,10 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
     const renderTooltip = ({ active, payload, label }: any) => {
       if (!active || !payload) return null;
       return (
-        <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-glass-border)', borderRadius: 12, padding: '10px 14px' }}>
-          <p style={{ color: 'var(--color-text-secondary)', fontSize: 12, marginBottom: 6 }}>{label}</p>
+        <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-glass-border)', borderRadius: 12, padding: '10px 14px', boxShadow: '0 4px 16px rgba(26, 43, 94, 0.12)' }}>
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: 13, marginBottom: 6 }}>{label}</p>
           {payload.map((entry: any) => (
-            <p key={entry.name} style={{ color: entry.color, fontSize: 13, fontWeight: 600 }}>
+            <p key={entry.name} style={{ color: entry.color, fontSize: 14, fontWeight: 600 }}>
               {entry.name}: {formatCurrency(entry.value)}
             </p>
           ))}
@@ -695,12 +695,12 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
             )}
             <div className="flex flex-wrap gap-1 mt-1">
               {selectedTitleInfo?.genre_name && (
-                <span className="px-2 py-0.5 rounded-full text-[10px]" style={{ background: 'var(--color-glass)', color: 'var(--color-text-secondary)' }}>
+                <span className="px-2 py-0.5 rounded-full text-[12px]" style={{ background: 'var(--color-glass)', color: 'var(--color-text-secondary)' }}>
                   {selectedTitleInfo.genre_name}
                 </span>
               )}
               {selectedTitleInfo?.serial_status && (
-                <span className="px-2 py-0.5 rounded-full text-[10px]" style={{ background: 'var(--color-glass)', color: 'var(--color-text-secondary)' }}>
+                <span className="px-2 py-0.5 rounded-full text-[12px]" style={{ background: 'var(--color-glass)', color: 'var(--color-text-secondary)' }}>
                   {selectedTitleInfo.serial_status === '連載中' ? t('연재중', '連載中') :
                    selectedTitleInfo.serial_status === '完結' ? t('완결', '完結') :
                    selectedTitleInfo.serial_status === '休載中' ? t('휴재중', '休載中') :
@@ -709,12 +709,12 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                 </span>
               )}
               {selectedTitleInfo?.content_format && (
-                <span className="px-2 py-0.5 rounded-full text-[10px]" style={{ background: 'var(--color-glass)', color: 'var(--color-text-secondary)' }}>
+                <span className="px-2 py-0.5 rounded-full text-[12px]" style={{ background: 'var(--color-glass)', color: 'var(--color-text-secondary)' }}>
                   {selectedTitleInfo.content_format}
                 </span>
               )}
               {selectedTitleInfo?.company_name && (
-                <span className="px-2 py-0.5 rounded-full text-[10px]" style={{ background: 'var(--color-glass)', color: 'var(--color-text-secondary)' }}>
+                <span className="px-2 py-0.5 rounded-full text-[12px]" style={{ background: 'var(--color-glass)', color: 'var(--color-text-secondary)' }}>
                   {selectedTitleInfo.company_name}
                 </span>
               )}
@@ -753,10 +753,10 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                 }] : []),
               ].map((kpi, idx) => (
                 <motion.div key={idx} variants={cardVariants} className="rounded-2xl p-6" style={GLASS_CARD}>
-                  <p className="text-xs font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>{kpi.label}</p>
+                  <p className="text-[13px] font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>{kpi.label}</p>
                   <p className="text-2xl font-bold" style={{ color: (kpi as { color?: string }).color ?? 'var(--color-text-primary)' }}>{kpi.value}</p>
                   {(kpi as { sub?: string }).sub && (
-                    <p className="text-[10px] mt-1" style={{ color: 'var(--color-text-muted)' }}>{(kpi as { sub?: string }).sub}</p>
+                    <p className="text-[12px] mt-1" style={{ color: 'var(--color-text-muted)' }}>{(kpi as { sub?: string }).sub}</p>
                   )}
                 </motion.div>
               ))}
@@ -780,7 +780,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                           style={{ background: 'var(--color-glass)', border: '1px solid var(--color-glass-border)' }}
                         >
                           <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-xs px-2 py-0.5 rounded-full font-medium shrink-0"
+                            <span className="text-[13px] px-2 py-0.5 rounded-full font-medium shrink-0"
                               style={{
                                 background: pt === 'オリジナル' ? 'rgba(59,111,246,0.1)' : 'rgba(139,92,246,0.1)',
                                 color: pt === 'オリジナル' ? '#3B6FF6' : '#8B5CF6',
@@ -813,19 +813,19 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                   {launchDay && (
                     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg cursor-default" style={{ background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.3)' }} title={`${serviceLaunchDate} · ${formatCurrency(launchDay.sales)}`}>
                       <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: '#34d399' }} />
-                      <span className="text-[12px] font-semibold" style={{ color: '#34d399' }}>{t('서비스 시작', 'サービス開始')}</span>
+                      <span className="text-[13px] font-semibold" style={{ color: '#34d399' }}>{t('서비스 시작', 'サービス開始')}</span>
                     </div>
                   )}
                   {peakDay && peakDay.sales > 0 && (
                     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg cursor-default" style={{ background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)' }} title={`${peakDay.label} · ${formatCurrency(peakDay.sales)}`}>
                       <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: '#fbbf24' }} />
-                      <span className="text-[12px] font-semibold" style={{ color: '#f59e0b' }}>{t('최고 매출', '最高売上')}</span>
+                      <span className="text-[13px] font-semibold" style={{ color: '#f59e0b' }}>{t('최고 매출', '最高売上')}</span>
                     </div>
                   )}
                   {completionDate && (
                     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg cursor-default" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)' }} title={completionDate}>
                       <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: '#ef4444' }} />
-                      <span className="text-[12px] font-semibold" style={{ color: '#ef4444' }}>{t('완결', '完結')}</span>
+                      <span className="text-[13px] font-semibold" style={{ color: '#ef4444' }}>{t('완결', '完結')}</span>
                     </div>
                   )}
                 </div>
@@ -839,8 +839,8 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
-                    <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={60} />
+                    <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={65} />
                     <ReTooltip content={renderTooltip} />
                     <Area type="monotone" dataKey="sales" name={t('매출', '売上')} stroke="#34d399" strokeWidth={2} fill="url(#dailyTrendGrad)" />
                     {launchDay && (
@@ -869,7 +869,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                       <button
                         key={period}
                         onClick={() => setTrendPeriod(period)}
-                        className="px-4 py-1.5 text-[12px] font-medium cursor-pointer transition-all"
+                        className="px-4 py-1.5 text-[13px] font-medium cursor-pointer transition-all"
                         style={{
                           background: trendPeriod === period ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'transparent',
                           color: trendPeriod === period ? '#fff' : 'var(--color-text-secondary)',
@@ -885,10 +885,10 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                   {hasMultipleProducts ? (
                     <LineChart data={trendData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
-                      <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={60} />
+                      <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={65} />
                       <ReTooltip content={renderTooltip} />
-                      <Legend wrapperStyle={{ fontSize: '11px' }} />
+                      <Legend wrapperStyle={{ fontSize: '12px' }} />
                       <Line type="monotone" dataKey="total" name={t('총합', '合計')} stroke="#818cf8" strokeWidth={3} dot={false} />
                       {productTypes.map((pt) => (
                         <Line key={pt} type="monotone" dataKey={pt} name={pt}
@@ -904,8 +904,8 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
-                      <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={60} />
+                      <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={65} />
                       <ReTooltip content={renderTooltip} />
                       <Area type="monotone" dataKey="total" name={t('매출', '売上')} stroke="#818cf8" strokeWidth={2} fill="url(#trendGrad)" />
                     </AreaChart>
@@ -923,7 +923,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                 <ResponsiveContainer width="100%" height={Math.max(200, platformBreakdown.length * 48)}>
                   <BarChart data={platformBreakdown} layout="vertical" margin={{ left: 80 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" horizontal={false} />
-                    <XAxis type="number" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatShort} />
+                    <XAxis type="number" tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} tickFormatter={formatShort} />
                     <YAxis type="category" dataKey="channel" tick={{ fill: 'var(--color-text-secondary)', fontSize: 12 }} axisLine={false} tickLine={false} width={80} />
                     <ReTooltip content={renderTooltip} />
                     <Bar dataKey="sales" name={t('매출', '売上')} radius={[0, 6, 6, 0]} barSize={24}>
@@ -976,7 +976,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
               setCompareMode((prev) => !prev);
               if (compareMode) { setCompareList([]); setShowCompare(false); }
             }}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium cursor-pointer transition-all"
+            className="flex items-center gap-2 px-3 py-2 rounded-xl text-[13px] font-medium cursor-pointer transition-all"
             style={{
               ...GLASS_CARD,
               background: compareMode ? 'var(--color-accent-blue, #818cf8)' : 'var(--color-glass)',
@@ -1019,7 +1019,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                 >
                   <ChevronLeft size={16} />
                 </button>
-                <span className="text-[14px] font-bold px-3 min-w-[140px] text-center" style={{ color: 'var(--color-text-primary)' }}>
+                <span className="text-[15px] font-bold px-3 min-w-[140px] text-center" style={{ color: 'var(--color-text-primary)' }}>
                   {(() => {
                     if (periodPreset === 'all' || !periodStart) return t('전체 기간', '全期間');
                     if (periodPreset === 'thisYear') return `${new Date().getFullYear()}${t('년', '年')}`;
@@ -1079,7 +1079,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                 setPeriodEnd(undefined);
               }
             }}
-            className="px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all"
+            className="px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all"
             style={{
               background: periodPreset === preset.id ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'var(--color-glass)',
               color: periodPreset === preset.id ? '#fff' : 'var(--color-text-secondary)',
@@ -1099,12 +1099,12 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
           className="rounded-2xl p-4 mb-4 flex items-center gap-3 flex-wrap"
           style={GLASS_CARD}
         >
-          <span className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+          <span className="text-[13px] font-medium" style={{ color: 'var(--color-text-secondary)' }}>
             {compareList.length}/5 {t('선택됨', '選択済み')}
           </span>
           <div className="flex gap-1 flex-wrap flex-1">
             {compareList.map((title) => (
-              <span key={title} className="px-2 py-0.5 rounded-full text-[10px] font-medium" style={{ background: 'var(--color-glass)', color: 'var(--color-text-primary)' }}>
+              <span key={title} className="px-2 py-0.5 rounded-full text-[12px] font-medium" style={{ background: 'var(--color-glass)', color: 'var(--color-text-primary)' }}>
                 {title.length > 15 ? title.slice(0, 15) + '…' : title}
                 <button onClick={() => toggleCompare(title)} className="ml-1 cursor-pointer" style={{ color: 'var(--color-text-muted)' }}>×</button>
               </span>
@@ -1115,7 +1115,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
             whileTap={{ scale: 0.95 }}
             onClick={() => setShowCompare(true)}
             disabled={compareList.length < 2}
-            className="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer disabled:opacity-40"
+            className="px-3 py-1.5 rounded-lg text-[13px] font-medium cursor-pointer disabled:opacity-40"
             style={{ background: '#818cf8', color: '#fff' }}
           >
             {t('비교하기', '比較する')}
@@ -1180,7 +1180,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
           <p className="mt-4 text-sm font-medium" style={{ color: 'var(--color-text-muted)' }}>
             {t('해당하는 작품이 없습니다', '該当するタイトルがありません')}
           </p>
-          <p className="text-xs mt-1" style={{ color: 'var(--color-text-muted)', opacity: 0.6 }}>
+          <p className="text-[13px] mt-1" style={{ color: 'var(--color-text-muted)', opacity: 0.6 }}>
             {t('필터를 조정해 보세요', 'フィルターを調整してみてください')}
           </p>
         </motion.div>
@@ -1205,7 +1205,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                   ].map((col) => (
                     <th
                       key={col.key || 'rank'}
-                      className={`px-3 py-3 text-xs font-semibold whitespace-nowrap ${col.className ?? ''} ${col.sortable ? 'cursor-pointer select-none hover:opacity-80' : ''}`}
+                      className={`px-3 py-3 text-[13px] font-semibold whitespace-nowrap ${col.className ?? ''} ${col.sortable ? 'cursor-pointer select-none hover:opacity-80' : ''}`}
                       style={{
                         color: col.sortable && sortKey === col.key ? 'var(--color-accent-blue, #818cf8)' : 'var(--color-text-secondary)',
                         background: 'var(--color-glass)',
@@ -1216,7 +1216,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                       <span className="inline-flex items-center gap-1">
                         {col.label}
                         {col.sortable && sortKey === col.key && (
-                          <span className="text-[10px]">{sortDir === 'asc' ? '▲' : '▼'}</span>
+                          <span className="text-[12px]">{sortDir === 'asc' ? '▲' : '▼'}</span>
                         )}
                       </span>
                     </th>
@@ -1281,14 +1281,14 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                               </span>
                               {/* isNew data preserved but badge hidden */}
                               {group.products.length > 1 && nonOriginalTypes.length > 0 && (
-                                <span className="shrink-0 text-[9px] px-1.5 py-0.5 rounded-full"
+                                <span className="shrink-0 text-[11px] px-1.5 py-0.5 rounded-full"
                                   style={{ background: 'rgba(139,92,246,0.1)', color: '#8B5CF6' }}>
                                   {nonOriginalTypes.join('+')}
                                 </span>
                               )}
                             </div>
                             {mainTitle?.title_kr && (
-                              <p className="text-[11px] truncate mt-0.5" title={mainTitle.title_kr} style={{ color: 'var(--color-text-muted)' }}>
+                              <p className="text-[12px] truncate mt-0.5" title={mainTitle.title_kr} style={{ color: 'var(--color-text-muted)' }}>
                                 {mainTitle.title_kr}
                               </p>
                             )}
@@ -1298,14 +1298,14 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
 
                       {/* Genre */}
                       <td className="px-3 py-3">
-                        <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: mainTitle?.genre_name ? 'var(--color-glass)' : 'transparent', color: mainTitle?.genre_name ? 'var(--color-text-secondary)' : 'var(--color-text-muted)' }}>
+                        <span className="text-[13px] px-2 py-0.5 rounded-full" style={{ background: mainTitle?.genre_name ? 'var(--color-glass)' : 'transparent', color: mainTitle?.genre_name ? 'var(--color-text-secondary)' : 'var(--color-text-muted)' }}>
                           {mainTitle?.genre_name || '미분류'}
                         </span>
                       </td>
 
                       {/* Company */}
                       <td className="px-3 py-3">
-                        <span className="text-xs truncate block max-w-[120px]" title={mainTitle?.company_name || ''} style={{ color: 'var(--color-text-secondary)' }}>
+                        <span className="text-[13px] truncate block max-w-[120px]" title={mainTitle?.company_name || ''} style={{ color: 'var(--color-text-secondary)' }}>
                           {mainTitle?.company_name || '-'}
                         </span>
                       </td>
@@ -1317,7 +1317,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                             <PlatformBadge key={p} name={p} showName={false} size="sm" />
                           ))}
                           {group.channels.length > 4 && (
-                            <span className="text-[10px] px-1 py-0.5 rounded-full font-medium" style={{ color: 'var(--color-text-muted)' }}>
+                            <span className="text-[12px] px-1 py-0.5 rounded-full font-medium" style={{ color: 'var(--color-text-muted)' }}>
                               +{group.channels.length - 4}
                             </span>
                           )}
@@ -1331,7 +1331,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                         </p>
                         {mainTitle?.rank_change !== undefined && mainTitle.rank_change !== 0 && (
                           <span
-                            className="inline-flex items-center gap-0.5 mt-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold"
+                            className="inline-flex items-center gap-0.5 mt-0.5 px-1.5 py-0.5 rounded-full text-[12px] font-bold"
                             style={{
                               background: mainTitle.rank_change > 0 ? '#22c55e15' : '#ef444415',
                               color: mainTitle.rank_change > 0 ? '#22c55e' : '#ef4444',
@@ -1341,7 +1341,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                           </span>
                         )}
                         {mainTitle?.rank_change === 0 && (
-                          <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>-</span>
+                          <span className="text-[12px]" style={{ color: 'var(--color-text-muted)' }}>-</span>
                         )}
                       </td>
                     </tr>

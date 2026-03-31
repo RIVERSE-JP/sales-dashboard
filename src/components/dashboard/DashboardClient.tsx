@@ -123,7 +123,7 @@ function AreaChartTooltip({ active, payload, label, fmtCurrency }: {
       backdropFilter: 'blur(8px)',
       minWidth: 140,
     }}>
-      <p style={{ color: 'var(--color-tooltip-label)', fontSize: 12, marginBottom: 8, fontWeight: 600 }}>{label}</p>
+      <p style={{ color: 'var(--color-tooltip-label)', fontSize: 13, marginBottom: 8, fontWeight: 600 }}>{label}</p>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'linear-gradient(135deg, #3b82f6, #a78bfa)', boxShadow: '0 0 6px rgba(99,102,241,0.5)', flexShrink: 0 }} />
         <p style={{ color: 'var(--color-tooltip-value)', fontSize: 16, fontWeight: 700, margin: 0 }}>
@@ -157,7 +157,7 @@ function renderDonutLabel(props: {
   const displayName = PLATFORM_BRANDS[name]?.nameJP || name;
   return (
     <text x={x} y={y} fill="var(--color-text-secondary)" textAnchor={x > cx ? 'start' : 'end'}
-      dominantBaseline="central" fontSize={11} fontWeight={500}>
+      dominantBaseline="central" fontSize={12} fontWeight={500}>
       {displayName} ({(percent * 100).toFixed(1)}%)
     </text>
   );
@@ -395,7 +395,7 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
                   >
                     <ChevronLeft size={16} />
                   </button>
-                  <span className="text-[14px] font-bold px-3 min-w-[140px] text-center" style={{ color: 'var(--color-text-primary)' }}>
+                  <span className="text-[15px] font-bold px-3 min-w-[140px] text-center" style={{ color: 'var(--color-text-primary)' }}>
                     {(() => {
                       if (activePreset === 'all') return t('전체 기간', '全期間');
                       if (activePreset === 'thisYear') return `${new Date().getFullYear()}${t('년', '年')}`;
@@ -456,7 +456,7 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
                   setEndDate(now.toISOString().slice(0, 10));
                 }
               }}
-              className="px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all"
+              className="px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all"
               style={{
                 background: activePreset === preset.id ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'var(--color-glass)',
                 color: activePreset === preset.id ? '#fff' : 'var(--color-text-secondary)',
@@ -469,7 +469,7 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
 
           {/* 속보치 배지 */}
           {hasPreliminary && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold"
+            <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[12px] font-semibold"
               style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b' }}>
               <Zap size={12} />
               {t('속보치', '速報値')}
@@ -559,10 +559,10 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
               >
                 <div className="flex items-center gap-2 mb-3">
                   <AlertTriangle size={16} color="#ef4444" />
-                  <h3 className="text-[14px] font-semibold" style={{ color: '#ef4444' }}>
+                  <h3 className="text-[15px] font-semibold" style={{ color: '#ef4444' }}>
                     {t('주의 작품', '注意作品')}
                   </h3>
-                  <span className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>
+                  <span className="text-[12px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>
                     {declining.length}{t('건', '件')}
                   </span>
                 </div>
@@ -580,11 +580,11 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
                     >
                       <TrendingDown size={14} color="#ef4444" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>
+                        <p className="text-[14px] font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>
                           {alert.title_kr || alert.title_jp}
                         </p>
                       </div>
-                      <span className="text-[13px] font-bold shrink-0" style={{ color: '#ef4444' }}>
+                      <span className="text-[14px] font-bold shrink-0" style={{ color: '#ef4444' }}>
                         {alert.growth_pct.toFixed(0)}%
                       </span>
                       <ChevronRight size={14} style={{ color: 'var(--color-text-muted)' }} />
@@ -593,7 +593,7 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
                 </div>
                 {declining.length > 5 && (
                   <button onClick={() => router.push('/titles')}
-                    className="mt-3 text-[12px] font-medium w-full text-center py-1.5 rounded-lg transition-colors"
+                    className="mt-3 text-[13px] font-medium w-full text-center py-1.5 rounded-lg transition-colors"
                     style={{ color: '#ef4444', background: 'rgba(239,68,68,0.06)' }}>
                     {t('전체 보기', 'すべて表示')} ({declining.length})
                   </button>
@@ -610,10 +610,10 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
               >
                 <div className="flex items-center gap-2 mb-3">
                   <Rocket size={16} color="#22c55e" />
-                  <h3 className="text-[14px] font-semibold" style={{ color: '#22c55e' }}>
+                  <h3 className="text-[15px] font-semibold" style={{ color: '#22c55e' }}>
                     {t('급성장 작품', '急成長作品')}
                   </h3>
-                  <span className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e' }}>
+                  <span className="text-[12px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e' }}>
                     {surging.length}{t('건', '件')}
                   </span>
                 </div>
@@ -631,11 +631,11 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
                     >
                       <TrendingUp size={14} color="#22c55e" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>
+                        <p className="text-[14px] font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>
                           {alert.title_kr || alert.title_jp}
                         </p>
                       </div>
-                      <span className="text-[13px] font-bold shrink-0" style={{ color: '#22c55e' }}>
+                      <span className="text-[14px] font-bold shrink-0" style={{ color: '#22c55e' }}>
                         +{alert.growth_pct.toFixed(0)}%
                       </span>
                       <ChevronRight size={14} style={{ color: 'var(--color-text-muted)' }} />
@@ -644,7 +644,7 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
                 </div>
                 {surging.length > 5 && (
                   <button onClick={() => router.push('/titles')}
-                    className="mt-3 text-[12px] font-medium w-full text-center py-1.5 rounded-lg transition-colors"
+                    className="mt-3 text-[13px] font-medium w-full text-center py-1.5 rounded-lg transition-colors"
                     style={{ color: '#22c55e', background: 'rgba(34,197,94,0.06)' }}>
                     {t('전체 보기', 'すべて表示')} ({surging.length})
                   </button>
@@ -658,7 +658,7 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
           {/* ── 1. 현황: 매출 추이 ── */}
           <div className="rounded-2xl p-6" style={GLASS_CARD}>
             <div className="flex items-center gap-3 mb-5 flex-wrap">
-              <h3 className="text-[15px] font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+              <h3 className="text-[16px] font-semibold" style={{ color: 'var(--color-text-primary)' }}>
                 {t('매출 추이', '売上推移')}
               </h3>
               <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid var(--color-glass-border)' }}>
@@ -666,7 +666,7 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
                   <button
                     key={mode}
                     onClick={() => setTrendMode(mode)}
-                    className="px-3 py-1.5 text-[12px] font-medium transition-all"
+                    className="px-3 py-1.5 text-[13px] font-medium transition-all"
                     style={{
                       background: trendMode === mode ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'transparent',
                       color: trendMode === mode ? '#fff' : 'var(--color-text-secondary)',
@@ -686,8 +686,8 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
-                <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={60} />
+                <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={65} />
                 <ReTooltip content={<AreaChartTooltip fmtCurrency={formatCurrency} />} />
                 <Area type="monotone" dataKey="sales" stroke="#6366f1" strokeWidth={2.5} fill="url(#execAreaGrad)" />
               </AreaChart>
@@ -699,7 +699,7 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       {/* Donut */}
                       <div>
-                        <h3 className="text-[15px] font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
+                        <h3 className="text-[16px] font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
                           {t('플랫폼 점유율', 'PF占有率')}
                         </h3>
                         <ResponsiveContainer width="100%" height={300}>
@@ -720,7 +720,7 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
 
                       {/* Ranking bars */}
                       <div>
-                        <h3 className="text-[15px] font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
+                        <h3 className="text-[16px] font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
                           {t('플랫폼 랭킹', 'PFランキング')}
                         </h3>
                         <div className="space-y-3">
@@ -738,21 +738,21 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
                                 onClick={() => router.push(`/platforms?channel=${encodeURIComponent(pf.name)}`)}
                               >
                                 <div className="flex items-center gap-3 mb-1">
-                                  <span className="text-[12px] font-bold w-5 text-center" style={{ color: i < 3 ? pf.color : 'var(--color-text-muted)' }}>
+                                  <span className="text-[13px] font-bold w-5 text-center" style={{ color: i < 3 ? pf.color : 'var(--color-text-muted)' }}>
                                     {i + 1}
                                   </span>
                                   {brand.logo ? (
                                     <img src={brand.logo} alt={pf.name} className="w-6 h-6 rounded-md object-contain" />
                                   ) : (
-                                    <div className="w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-bold"
+                                    <div className="w-6 h-6 rounded-md flex items-center justify-center text-[12px] font-bold"
                                       style={{ background: brand.bgColor, color: brand.color, border: `1px solid ${brand.borderColor}` }}>
                                       {brand.icon}
                                     </div>
                                   )}
-                                  <span className="text-[13px] font-medium flex-1 truncate" style={{ color: 'var(--color-text-primary)' }}>
+                                  <span className="text-[14px] font-medium flex-1 truncate" style={{ color: 'var(--color-text-primary)' }}>
                                     {t(brand.nameKR, brand.nameJP) || pf.name}
                                   </span>
-                                  <span className="text-[13px] font-bold shrink-0" style={{ color: 'var(--color-text-primary)' }}>
+                                  <span className="text-[14px] font-bold shrink-0" style={{ color: 'var(--color-text-primary)' }}>
                                     {formatCurrency(pf.sales)}
                                   </span>
                                 </div>
@@ -778,7 +778,7 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       {/* Genre donut */}
                       <div>
-                        <h3 className="text-[15px] font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
+                        <h3 className="text-[16px] font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
                           {t('장르별 점유율', 'ジャンル別占有率')}
                         </h3>
                         <ResponsiveContainer width="100%" height={300}>
@@ -798,7 +798,7 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
 
                       {/* Genre ranking bars */}
                       <div>
-                        <h3 className="text-[15px] font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
+                        <h3 className="text-[16px] font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
                           {t('장르별 랭킹', 'ジャンル別ランキング')}
                         </h3>
                         <div className="space-y-3">
@@ -816,17 +816,17 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
                                 onClick={() => router.push(`/titles?genre=${encodeURIComponent(row.genre_code)}`)}
                               >
                                 <div className="flex items-center gap-3 mb-1">
-                                  <span className="text-[12px] font-bold w-5 text-center" style={{ color: i < 3 ? color : 'var(--color-text-muted)' }}>
+                                  <span className="text-[13px] font-bold w-5 text-center" style={{ color: i < 3 ? color : 'var(--color-text-muted)' }}>
                                     {i + 1}
                                   </span>
                                   <div className="w-3 h-3 rounded-full shrink-0" style={{ background: color }} />
-                                  <span className="text-[13px] font-medium flex-1 truncate" style={{ color: 'var(--color-text-primary)' }}>
+                                  <span className="text-[14px] font-medium flex-1 truncate" style={{ color: 'var(--color-text-primary)' }}>
                                     {row.genre_kr || row.genre_code}
                                   </span>
-                                  <span className="text-[11px] shrink-0" style={{ color: 'var(--color-text-muted)' }}>
+                                  <span className="text-[12px] shrink-0" style={{ color: 'var(--color-text-muted)' }}>
                                     {row.title_count}{t('작품', '作品')}
                                   </span>
-                                  <span className="text-[13px] font-bold shrink-0" style={{ color: 'var(--color-text-primary)' }}>
+                                  <span className="text-[14px] font-bold shrink-0" style={{ color: 'var(--color-text-primary)' }}>
                                     {formatCurrency(row.total_sales)}
                                   </span>
                                 </div>
@@ -852,7 +852,7 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       {/* Company donut */}
                       <div>
-                        <h3 className="text-[15px] font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
+                        <h3 className="text-[16px] font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
                           {t('제작사 점유율', '制作会社占有率')}
                         </h3>
                         <ResponsiveContainer width="100%" height={300}>
@@ -877,7 +877,7 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
 
                       {/* Company ranking bars */}
                       <div>
-                        <h3 className="text-[15px] font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
+                        <h3 className="text-[16px] font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
                           {t('제작사 랭킹', '制作会社ランキング')}
                         </h3>
                         <div className="space-y-3">
@@ -894,16 +894,16 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
                                 className="cursor-pointer group"
                               >
                                 <div className="flex items-center gap-3 mb-1">
-                                  <span className="text-[12px] font-bold w-5 text-center" style={{ color: i < 3 ? color : 'var(--color-text-muted)' }}>
+                                  <span className="text-[13px] font-bold w-5 text-center" style={{ color: i < 3 ? color : 'var(--color-text-muted)' }}>
                                     {i + 1}
                                   </span>
-                                  <span className="text-[13px] font-medium flex-1 truncate" style={{ color: 'var(--color-text-primary)' }}>
+                                  <span className="text-[14px] font-medium flex-1 truncate" style={{ color: 'var(--color-text-primary)' }}>
                                     {row.company_name}
                                   </span>
-                                  <span className="text-[11px] shrink-0" style={{ color: 'var(--color-text-muted)' }}>
+                                  <span className="text-[12px] shrink-0" style={{ color: 'var(--color-text-muted)' }}>
                                     {row.title_count}{t('작품', '作品')}
                                   </span>
-                                  <span className="text-[13px] font-bold shrink-0" style={{ color: 'var(--color-text-primary)' }}>
+                                  <span className="text-[14px] font-bold shrink-0" style={{ color: 'var(--color-text-primary)' }}>
                                     {formatCurrency(row.total_sales)}
                                   </span>
                                 </div>
@@ -926,19 +926,19 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
 
           {/* ── 5. 트렌드 작품 ── */}
           <div className="rounded-2xl p-6" style={GLASS_CARD}>
-            <h3 className="text-[15px] font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
+            <h3 className="text-[16px] font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
               Top {Math.min(topTitles.length, 20)} {t('작품', 'タイトル')}
             </h3>
             <div className="overflow-x-auto">
               <table className="w-full text-sm min-w-[600px]">
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--color-table-border)' }}>
-                    <th className="text-left py-3 px-2 font-medium text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>#</th>
-                    <th className="text-left py-3 px-2 font-medium text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>{t('작품', 'タイトル')}</th>
-                    <th className="text-left py-3 px-2 font-medium text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>{t('장르', 'ジャンル')}</th>
-                    <th className="text-left py-3 px-2 font-medium text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>{t('제작사', '制作会社')}</th>
-                    <th className="text-left py-3 px-2 font-medium text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>{t('플랫폼', 'PF')}</th>
-                    <th className="text-right py-3 px-2 font-medium text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>{t('해당 기간 매출', '期間売上')}</th>
+                    <th className="text-left py-3 px-2 font-medium text-[13px]" style={{ color: 'var(--color-text-secondary)' }}>#</th>
+                    <th className="text-left py-3 px-2 font-medium text-[13px]" style={{ color: 'var(--color-text-secondary)' }}>{t('작품', 'タイトル')}</th>
+                    <th className="text-left py-3 px-2 font-medium text-[13px]" style={{ color: 'var(--color-text-secondary)' }}>{t('장르', 'ジャンル')}</th>
+                    <th className="text-left py-3 px-2 font-medium text-[13px]" style={{ color: 'var(--color-text-secondary)' }}>{t('제작사', '制作会社')}</th>
+                    <th className="text-left py-3 px-2 font-medium text-[13px]" style={{ color: 'var(--color-text-secondary)' }}>{t('플랫폼', 'PF')}</th>
+                    <th className="text-right py-3 px-2 font-medium text-[13px]" style={{ color: 'var(--color-text-secondary)' }}>{t('해당 기간 매출', '期間売上')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -952,20 +952,20 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
                       className="cursor-pointer transition-colors hover:brightness-110"
                       onClick={() => router.push(`/titles?highlight=${encodeURIComponent(title.title_jp)}`)}
                     >
-                      <td className="py-3 px-2 font-bold text-[13px]" style={{ color: idx < 3 ? '#6366f1' : 'var(--color-text-muted)' }}>
+                      <td className="py-3 px-2 font-bold text-[14px]" style={{ color: idx < 3 ? '#6366f1' : 'var(--color-text-muted)' }}>
                         {idx + 1}
                       </td>
                       <td className="py-3 px-2" style={{ maxWidth: 220 }}>
-                        <p className="font-medium text-[13px] truncate" style={{ color: 'var(--color-text-primary)' }}>{title.title_jp}</p>
-                        {title.title_kr && <p className="text-[11px] truncate" style={{ color: 'var(--color-text-muted)' }}>{title.title_kr}</p>}
+                        <p className="font-medium text-[14px] truncate" style={{ color: 'var(--color-text-primary)' }}>{title.title_jp}</p>
+                        {title.title_kr && <p className="text-[12px] truncate" style={{ color: 'var(--color-text-muted)' }}>{title.title_kr}</p>}
                       </td>
                       <td className="py-3 px-2">
-                        <span className="text-[11px]" style={{ color: 'var(--color-text-secondary)' }}>
+                        <span className="text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>
                           {titleMetaMap.get(title.title_jp)?.genre || '-'}
                         </span>
                       </td>
                       <td className="py-3 px-2">
-                        <span className="text-[11px] truncate block max-w-[100px]" title={titleMetaMap.get(title.title_jp)?.company || ''} style={{ color: 'var(--color-text-secondary)' }}>
+                        <span className="text-[12px] truncate block max-w-[100px]" title={titleMetaMap.get(title.title_jp)?.company || ''} style={{ color: 'var(--color-text-secondary)' }}>
                           {titleMetaMap.get(title.title_jp)?.company || '-'}
                         </span>
                       </td>
@@ -975,11 +975,11 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
                             <PlatformBadge key={ch} name={ch} showName={false} size="sm" />
                           ))}
                           {(title.channels ?? []).length > 3 && (
-                            <span className="text-[10px] px-1" style={{ color: 'var(--color-text-muted)' }}>+{title.channels.length - 3}</span>
+                            <span className="text-[12px] px-1" style={{ color: 'var(--color-text-muted)' }}>+{title.channels.length - 3}</span>
                           )}
                         </div>
                       </td>
-                      <td className="py-3 px-2 text-right font-bold text-[13px]" style={{ color: 'var(--color-text-primary)' }}>
+                      <td className="py-3 px-2 text-right font-bold text-[14px]" style={{ color: 'var(--color-text-primary)' }}>
                         {formatCurrency(title.total_sales)}
                       </td>
                     </motion.tr>

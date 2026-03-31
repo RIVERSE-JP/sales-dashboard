@@ -110,7 +110,7 @@ export function PlatformTimeSeries({ titleJP, t }: PlatformTimeSeriesProps) {
         <div className="flex gap-1">
           <button
             onClick={() => setShowShare(false)}
-            className="px-2 py-1 rounded text-[10px] font-medium cursor-pointer"
+            className="px-2 py-1 rounded text-[12px] font-medium cursor-pointer"
             style={{
               background: !showShare ? 'var(--color-accent-blue, #818cf8)' : 'var(--color-glass)',
               color: !showShare ? '#fff' : 'var(--color-text-muted)',
@@ -120,7 +120,7 @@ export function PlatformTimeSeries({ titleJP, t }: PlatformTimeSeriesProps) {
           </button>
           <button
             onClick={() => setShowShare(true)}
-            className="px-2 py-1 rounded text-[10px] font-medium cursor-pointer"
+            className="px-2 py-1 rounded text-[12px] font-medium cursor-pointer"
             style={{
               background: showShare ? 'var(--color-accent-blue, #818cf8)' : 'var(--color-glass)',
               color: showShare ? '#fff' : 'var(--color-text-muted)',
@@ -135,17 +135,17 @@ export function PlatformTimeSeries({ titleJP, t }: PlatformTimeSeriesProps) {
         {showShare ? (
           <AreaChart data={chartData} stackOffset="expand">
             <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
-            <XAxis dataKey="month" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false}
+            <XAxis dataKey="month" tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false}
               tickFormatter={(v: number) => `${(v * 100).toFixed(0)}%`} />
             <ReTooltip
               content={({ active, payload, label }: any) => {
                 if (!active || !payload) return null;
                 return (
-                  <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-glass-border)', borderRadius: 12, padding: '10px 14px' }}>
-                    <p style={{ color: 'var(--color-text-secondary)', fontSize: 12, marginBottom: 6 }}>{label}</p>
+                  <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-glass-border)', borderRadius: 12, padding: '10px 14px', boxShadow: '0 4px 16px rgba(26, 43, 94, 0.12)' }}>
+                    <p style={{ color: 'var(--color-text-secondary)', fontSize: 13, marginBottom: 6 }}>{label}</p>
                     {payload.map((entry: any) => (
-                      <p key={entry.name} style={{ color: entry.color, fontSize: 13, fontWeight: 600 }}>
+                      <p key={entry.name} style={{ color: entry.color, fontSize: 14, fontWeight: 600 }}>
                         {entry.name}: {((Number(entry.value ?? 0)) * 100).toFixed(1)}%
                       </p>
                     ))}
@@ -153,7 +153,7 @@ export function PlatformTimeSeries({ titleJP, t }: PlatformTimeSeriesProps) {
                 );
               }}
             />
-            <Legend wrapperStyle={{ fontSize: '11px' }} />
+            <Legend wrapperStyle={{ fontSize: '12px' }} />
             {platformData.map((p) => (
               <Area key={p.channel} type="monotone" dataKey={p.channel} stackId="1"
                 stroke={getPlatformColor(p.channel)} fill={getPlatformColor(p.channel)} fillOpacity={0.6} />
@@ -162,17 +162,17 @@ export function PlatformTimeSeries({ titleJP, t }: PlatformTimeSeriesProps) {
         ) : (
           <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
-            <XAxis dataKey="month" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} width={60}
+            <XAxis dataKey="month" tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} width={65}
               tickFormatter={(v: number) => v >= 100_000_000 ? `${(v / 100_000_000).toFixed(1)}億` : v >= 10_000 ? `${(v / 10_000).toFixed(0)}万` : String(v)} />
             <ReTooltip
               content={({ active, payload, label }: any) => {
                 if (!active || !payload) return null;
                 return (
-                  <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-glass-border)', borderRadius: 12, padding: '10px 14px' }}>
-                    <p style={{ color: 'var(--color-text-secondary)', fontSize: 12, marginBottom: 6 }}>{label}</p>
+                  <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-glass-border)', borderRadius: 12, padding: '10px 14px', boxShadow: '0 4px 16px rgba(26, 43, 94, 0.12)' }}>
+                    <p style={{ color: 'var(--color-text-secondary)', fontSize: 13, marginBottom: 6 }}>{label}</p>
                     {payload.map((entry: any) => (
-                      <p key={entry.name} style={{ color: entry.color, fontSize: 13, fontWeight: 600 }}>
+                      <p key={entry.name} style={{ color: entry.color, fontSize: 14, fontWeight: 600 }}>
                         {entry.name}: {formatCurrency(entry.value)}
                       </p>
                     ))}
@@ -180,7 +180,7 @@ export function PlatformTimeSeries({ titleJP, t }: PlatformTimeSeriesProps) {
                 );
               }}
             />
-            <Legend wrapperStyle={{ fontSize: '11px' }} />
+            <Legend wrapperStyle={{ fontSize: '12px' }} />
             {platformData.map((p) => (
               <Line key={p.channel} type="monotone" dataKey={p.channel}
                 stroke={getPlatformColor(p.channel)} strokeWidth={2} dot={false} />

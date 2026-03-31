@@ -39,8 +39,8 @@ const selectStyle: React.CSSProperties = {
   color: 'var(--color-text-primary)',
   border: '1px solid var(--color-glass-border)',
   borderRadius: '8px',
-  padding: '6px 10px',
-  fontSize: '12px',
+  padding: '8px 12px',
+  fontSize: '13px',
   outline: 'none',
   minWidth: 0,
 };
@@ -94,7 +94,7 @@ export function FilterPanel(props: FilterPanelProps) {
             style={{ color: 'var(--color-text-primary)' }}
           />
           {props.searchQuery && (
-            <button onClick={() => props.setSearchQuery('')} className="text-xs cursor-pointer hover:underline" style={{ color: 'var(--color-text-secondary)' }}>
+            <button onClick={() => props.setSearchQuery('')} className="text-[13px] cursor-pointer hover:underline" style={{ color: 'var(--color-text-secondary)' }}>
               {t('초기화', 'クリア')}
             </button>
           )}
@@ -102,7 +102,7 @@ export function FilterPanel(props: FilterPanelProps) {
           <select
             value={props.sortBy}
             onChange={(e) => props.setSortBy(e.target.value)}
-            style={{ ...selectStyle, border: 'none', background: 'transparent', fontSize: '12px' }}
+            style={{ ...selectStyle, border: 'none', background: 'transparent', fontSize: '13px' }}
           >
             {SORT_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>{t(opt.ko, opt.ja)}</option>
@@ -161,7 +161,7 @@ export function FilterPanel(props: FilterPanelProps) {
           <div className="flex justify-end">
             <button
               onClick={props.onReset}
-              className="flex items-center gap-1 text-xs cursor-pointer hover:underline px-3 py-1.5 rounded-lg transition-all"
+              className="flex items-center gap-1 text-[13px] cursor-pointer hover:underline px-3 py-1.5 rounded-lg transition-all"
               style={{ color: 'var(--color-text-muted)', background: 'var(--color-glass)' }}
             >
               <RotateCcw size={12} /> {t('필터 초기화', 'フィルターリセット')}
@@ -180,7 +180,7 @@ export function FilterPanel(props: FilterPanelProps) {
           {activeFilters.map((f) => (
             <span
               key={f.label}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[12px] font-medium"
               style={{
                 background: 'var(--color-accent-blue, #818cf8)',
                 color: '#fff',
@@ -196,7 +196,7 @@ export function FilterPanel(props: FilterPanelProps) {
       )}
 
       {/* Count */}
-      <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+      <p className="text-[13px]" style={{ color: 'var(--color-text-muted)' }}>
         {props.filteredCount} / {props.totalCount} {t('개 작품', 'タイトル')}
         {props.searchQuery && ` ("${props.searchQuery}")`}
       </p>

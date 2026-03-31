@@ -41,11 +41,11 @@ function CompareTooltip({ active, payload, label, formatCurrency }: {
       border: '1px solid var(--color-glass-border)',
       borderRadius: 12,
       padding: '10px 14px',
-      boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+      boxShadow: '0 4px 16px rgba(26, 43, 94, 0.12)',
     }}>
-      <p style={{ color: 'var(--color-text-secondary)', fontSize: 12, marginBottom: 6 }}>{label}</p>
+      <p style={{ color: 'var(--color-text-secondary)', fontSize: 13, marginBottom: 6 }}>{label}</p>
       {payload.map((entry) => (
-        <p key={entry.name} style={{ color: entry.color, fontSize: 13, fontWeight: 600, margin: '2px 0' }}>
+        <p key={entry.name} style={{ color: entry.color, fontSize: 14, fontWeight: 600, margin: '2px 0' }}>
           {entry.name}: {formatCurrency(entry.value)}
         </p>
       ))}
@@ -191,7 +191,7 @@ export function CompareChart({ selectedTitles, onClose, t, launchDates }: Compar
               <button
                 key={opt.key}
                 onClick={() => setTimeUnit(opt.key)}
-                className="px-2.5 py-1 text-[11px] font-semibold transition-all duration-200 cursor-pointer focus-visible:outline-none"
+                className="px-2.5 py-1 text-[12px] font-semibold transition-all duration-200 cursor-pointer focus-visible:outline-none"
                 style={{
                   background: timeUnit === opt.key ? '#1A2B5E' : 'transparent',
                   color: timeUnit === opt.key ? '#ffffff' : 'var(--color-text-muted)',
@@ -218,20 +218,20 @@ export function CompareChart({ selectedTitles, onClose, t, launchDates }: Compar
             <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
             <XAxis
               dataKey="label"
-              tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }}
+              tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }}
               axisLine={false}
               tickLine={false}
               interval={timeUnit === 'daily' ? Math.max(Math.floor(chartData.length / 10) - 1, 0) : 0}
             />
             <YAxis
-              tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }}
+              tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }}
               axisLine={false}
               tickLine={false}
-              width={60}
+              width={65}
               tickFormatter={formatYAxis}
             />
             <ReTooltip content={<CompareTooltip formatCurrency={formatCurrency} />} />
-            <Legend wrapperStyle={{ fontSize: '11px', color: 'var(--color-text-secondary)' }} />
+            <Legend wrapperStyle={{ fontSize: '12px', color: 'var(--color-text-secondary)' }} />
             {selectedTitles.map((title, idx) => (
               <Line
                 key={title}

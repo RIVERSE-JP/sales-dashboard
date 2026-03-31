@@ -21,14 +21,14 @@ export function PlatformBadge({ name, showName = false, size = 'sm' }: Props) {
         />
       ) : (
         <span
-          className="inline-flex items-center justify-center rounded text-[9px] font-bold text-white"
+          className="inline-flex items-center justify-center rounded text-[11px] font-bold text-white"
           style={{ width: iconSize, height: iconSize, backgroundColor: brand.color }}
         >
           {brand.icon}
         </span>
       )}
       {showName && (
-        <span className="text-[11px] text-[var(--color-text-secondary)]">
+        <span className="text-[12px] text-[var(--color-text-secondary)]">
           {brand.nameJP || name}
         </span>
       )}

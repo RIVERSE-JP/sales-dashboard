@@ -78,7 +78,7 @@ export default function StatusKPICard({
         {/* Label row */}
         <div className="flex items-center gap-2 mb-3">
           {icon && <span style={{ color: borderColor }}>{icon}</span>}
-          <p className="text-[13px] font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+          <p className="text-[14px] font-medium" style={{ color: 'var(--color-text-secondary)' }}>
             {label}
           </p>
         </div>
@@ -92,7 +92,7 @@ export default function StatusKPICard({
         {changePct != null && (
           <div className="flex items-center gap-2 mt-2">
             <span
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[13px] font-semibold"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[14px] font-semibold"
               style={{
                 background: changePct >= 0 ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)',
                 color: changePct >= 0 ? '#22c55e' : '#ef4444',
@@ -102,14 +102,14 @@ export default function StatusKPICard({
               {changePct > 0 ? '+' : ''}{changePct.toFixed(1)}%
             </span>
             {changeLabel && (
-              <span className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>{changeLabel}</span>
+              <span className="text-[12px]" style={{ color: 'var(--color-text-muted)' }}>{changeLabel}</span>
             )}
           </div>
         )}
 
         {/* Sub text */}
         {subText && (
-          <p className="text-[12px] mt-2" style={{ color: 'var(--color-text-muted)' }}>{subText}</p>
+          <p className="text-[13px] mt-2" style={{ color: 'var(--color-text-muted)' }}>{subText}</p>
         )}
 
         {/* Gauge bar */}
@@ -117,9 +117,9 @@ export default function StatusKPICard({
           <div className="mt-3">
             <div className="flex justify-between items-center mb-1.5">
               {gaugeLabel && (
-                <span className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>{gaugeLabel}</span>
+                <span className="text-[12px]" style={{ color: 'var(--color-text-muted)' }}>{gaugeLabel}</span>
               )}
-              <span className="text-[13px] font-bold" style={{ color: borderColor }}>
+              <span className="text-[14px] font-bold" style={{ color: borderColor }}>
                 {gauge.toFixed(1)}%
               </span>
             </div>

@@ -93,7 +93,7 @@ function GrowthPill({ current, previous, size = 'sm' }: { current: number; previ
   const isUp = pct > 0;
   const isFlat = Math.abs(pct) < 0.5;
 
-  const textSize = size === 'md' ? 'text-sm' : 'text-xs';
+  const textSize = size === 'md' ? 'text-sm' : 'text-[13px]';
   const px = size === 'md' ? 'px-2.5 py-1' : 'px-1.5 py-0.5';
 
   return (
@@ -115,7 +115,7 @@ function RankChangeBadge({ change }: { change: number }) {
   if (change === 0) return null;
   const isUp = change > 0;
   return (
-    <span className="text-[10px] font-bold" style={{ color: isUp ? '#22c55e' : '#ef4444' }}>
+    <span className="text-[12px] font-bold" style={{ color: isUp ? '#22c55e' : '#ef4444' }}>
       {isUp ? `↑${change}` : `↓${Math.abs(change)}`}
     </span>
   );
@@ -356,7 +356,7 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
               className="p-1.5 rounded-lg transition-colors hover:brightness-125"
               style={{ color: 'var(--color-text-secondary)' }}
             ><ChevronLeft size={16} /></button>
-            <span className="text-[14px] font-bold px-3 min-w-[130px] text-center" style={{ color: 'var(--color-text-primary)' }}>
+            <span className="text-[15px] font-bold px-3 min-w-[130px] text-center" style={{ color: 'var(--color-text-primary)' }}>
               {(() => { const d = new Date(startDate); return `${d.getFullYear()}${t('년', '年')} ${d.getMonth() + 1}${t('월', '月')}`; })()}
             </span>
             <button
@@ -385,7 +385,7 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
               else if (p.id === 'thisYear') { setStartDate(`${now.getFullYear()}-01-01`); setEndDate(now.toISOString().slice(0,10)); }
               else { setStartDate('2025-03-01'); setEndDate(now.toISOString().slice(0,10)); }
             }}
-              className="px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all"
+              className="px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all"
               style={{ background: 'var(--color-glass)', color: 'var(--color-text-secondary)', border: '1px solid var(--color-glass-border)' }}
             >{t(p.ko, p.ja)}</button>
           ))}
@@ -405,7 +405,7 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
               setCompareMode(!compareMode);
               setComparePlatforms(selectedPlatform ? [selectedPlatform] : []);
             }}
-            className="text-xs px-4 py-2 rounded-xl cursor-pointer transition-all font-medium self-start sm:self-auto"
+            className="text-[13px] px-4 py-2 rounded-xl cursor-pointer transition-all font-medium self-start sm:self-auto"
             style={{
               background: compareMode ? 'rgba(99, 102, 241, 0.2)' : 'var(--color-input-bg)',
               color: compareMode ? '#a5b4fc' : 'var(--color-text-secondary)',
@@ -503,12 +503,12 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
                       </div>
                     )}
                     <div className="min-w-0">
-                      <p className="text-xs font-semibold truncate" style={{ color: 'var(--color-text-primary)' }}>
+                      <p className="text-[13px] font-semibold truncate" style={{ color: 'var(--color-text-primary)' }}>
                         {t(brand.nameKR, brand.nameJP) || pf.channel}
                       </p>
                       {/* Rank badge */}
                       <div className="flex items-center gap-1">
-                        <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
+                        <span className="text-[12px]" style={{ color: 'var(--color-text-muted)' }}>
                           #{pf.rank}
                         </span>
                         {pf.rankChange !== 0 && <RankChangeBadge change={pf.rankChange} />}
@@ -524,7 +524,7 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
                   {/* Growth + title count */}
                   <div className="flex items-center gap-2 flex-wrap">
                     <GrowthPill current={pf.total_sales} previous={pf.prevTotalSales} />
-                    <span className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
+                    <span className="text-[12px]" style={{ color: 'var(--color-text-muted)' }}>
                       {t(`작품 ${pf.title_count}개`, `${pf.title_count}作品`)}
                     </span>
                   </div>
@@ -558,7 +558,7 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
                         ) : (
                           <div className="w-3 h-3 rounded-full" style={{ background: brand.color }} />
                         )}
-                        <span className="text-xs font-medium" style={{ color: brand.color }}>
+                        <span className="text-[13px] font-medium" style={{ color: brand.color }}>
                           {t(brand.nameKR, brand.nameJP) || pf}
                         </span>
                       </div>
@@ -583,16 +583,16 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
                       ))}
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
-                    <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={60} />
+                    <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={65} />
                     <ReTooltip content={({ active, payload, label }: any) => {
                       if (!active || !payload) return null;
                       const sorted = [...payload].sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
                       return (
                         <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-glass-border)', borderRadius: 12, padding: '10px 14px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
-                          <p style={{ color: 'var(--color-text-secondary)', fontSize: 12, marginBottom: 6 }}>{label}</p>
+                          <p style={{ color: 'var(--color-text-secondary)', fontSize: 13, marginBottom: 6 }}>{label}</p>
                           {sorted.map((entry) => (
-                            <p key={entry.name} style={{ color: entry.color, fontSize: 13, fontWeight: 600 }}>
+                            <p key={entry.name} style={{ color: entry.color, fontSize: 14, fontWeight: 600 }}>
                               {t(getPlatformBrand(entry.name).nameKR, getPlatformBrand(entry.name).nameJP) || entry.name}: {formatCurrency(entry.value)}
                             </p>
                           ))}
@@ -600,7 +600,7 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
                       );
                     }} />
                     <Legend
-                      wrapperStyle={{ fontSize: 12, color: 'var(--color-text-secondary)' }}
+                      wrapperStyle={{ fontSize: 13, color: 'var(--color-text-secondary)' }}
                       formatter={(value: string) => {
                         const brand = getPlatformBrand(value);
                         return t(brand.nameKR, brand.nameJP) || value;
@@ -724,7 +724,7 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
                         >
                           <div className="flex items-center gap-1.5 mb-1.5">
                             <span style={{ color: getPlatformColor(selectedPlatform), opacity: 0.7 }}>{kpi.icon}</span>
-                            <p className="text-[11px] font-medium" style={{ color: 'var(--color-text-muted)' }}>{kpi.label}</p>
+                            <p className="text-[12px] font-medium" style={{ color: 'var(--color-text-muted)' }}>{kpi.label}</p>
                           </div>
                           <p className="text-lg sm:text-xl font-bold" style={{
                             color: kpi.isGrowthCard
@@ -760,8 +760,8 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
                             </linearGradient>
                           </defs>
                           <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
-                          <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
-                          <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={60} />
+                          <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} />
+                          <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={65} />
                           <ReTooltip {...darkTooltipStyle} formatter={(v: unknown) => [formatCurrency(Number(v ?? 0)), t('매출', '売上')]} />
                           <Area type="monotone" dataKey="sales" stroke={getPlatformColor(selectedPlatform)} strokeWidth={2.5} fill="url(#pfSingleGrad)" />
                         </AreaChart>
@@ -783,7 +783,7 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
                         <select
                           value={topN}
                           onChange={(e) => setTopN(Number(e.target.value))}
-                          className="text-xs px-2 py-1.5 rounded-lg cursor-pointer outline-none"
+                          className="text-[13px] px-2 py-1.5 rounded-lg cursor-pointer outline-none"
                           style={{
                             background: 'var(--color-input-bg)',
                             color: 'var(--color-text-secondary)',
@@ -804,10 +804,10 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
                               <th className="text-left py-3 px-2 font-medium" style={{ color: 'var(--color-text-secondary)' }}>
                                 {t('작품', 'タイトル')}
                               </th>
-                              <th className="text-left py-3 px-2 font-medium text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                              <th className="text-left py-3 px-2 font-medium text-[13px]" style={{ color: 'var(--color-text-secondary)' }}>
                                 {t('장르', 'ジャンル')}
                               </th>
-                              <th className="text-left py-3 px-2 font-medium text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                              <th className="text-left py-3 px-2 font-medium text-[13px]" style={{ color: 'var(--color-text-secondary)' }}>
                                 {t('제작사', '制作会社')}
                               </th>
                               <th className="text-right py-3 px-2 font-medium" style={{ color: 'var(--color-text-secondary)' }}>
@@ -832,15 +832,15 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
                                 </td>
                                 <td className="py-3 px-2" style={{ maxWidth: '220px' }}>
                                   <p className="font-medium truncate" title={title.title_jp} style={{ color: 'var(--color-text-primary)' }}>{title.title_jp}</p>
-                                  {title.title_kr && <p className="text-xs truncate" title={title.title_kr} style={{ color: 'var(--color-text-muted)' }}>{title.title_kr}</p>}
+                                  {title.title_kr && <p className="text-[13px] truncate" title={title.title_kr} style={{ color: 'var(--color-text-muted)' }}>{title.title_kr}</p>}
                                 </td>
                                 <td className="py-3 px-2">
-                                  <span className="text-[11px]" style={{ color: 'var(--color-text-secondary)' }}>
+                                  <span className="text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>
                                     {titleMetaMap.get(title.title_jp)?.genre || '-'}
                                   </span>
                                 </td>
                                 <td className="py-3 px-2">
-                                  <span className="text-[11px] truncate block max-w-[80px]" title={titleMetaMap.get(title.title_jp)?.company || ''} style={{ color: 'var(--color-text-secondary)' }}>
+                                  <span className="text-[12px] truncate block max-w-[80px]" title={titleMetaMap.get(title.title_jp)?.company || ''} style={{ color: 'var(--color-text-secondary)' }}>
                                     {titleMetaMap.get(title.title_jp)?.company || '-'}
                                   </span>
                                 </td>
@@ -868,7 +868,7 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
               <h2 className="text-base font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
                 {t('플랫폼 × 장르 크로스 분석', 'プラットフォーム × ジャンル クロス分析')}
               </h2>
-              <p className="text-xs mb-4" style={{ color: 'var(--color-text-muted)' }}>
+              <p className="text-[13px] mb-4" style={{ color: 'var(--color-text-muted)' }}>
                 {t('어떤 장르가 어떤 플랫폼에서 강한지 한눈에', 'どのジャンルがどのプラットフォームで強いか一目で確認')}
               </p>
               <PlatformGenreMatrix startDate={startDate} endDate={endDate} />

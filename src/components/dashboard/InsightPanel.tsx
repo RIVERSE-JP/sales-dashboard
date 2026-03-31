@@ -181,7 +181,7 @@ export default function InsightPanel({ kpis, yoyChange, growthAlerts, platformSu
     >
       <div className="flex items-center gap-2 mb-4">
         <Lightbulb size={18} style={{ color: '#fbbf24' }} />
-        <h3 className="text-[15px] font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+        <h3 className="text-[16px] font-semibold" style={{ color: 'var(--color-text-primary)' }}>
           {t('AI 인사이트', 'AIインサイト')}
         </h3>
       </div>
@@ -192,7 +192,7 @@ export default function InsightPanel({ kpis, yoyChange, growthAlerts, platformSu
             initial={{ opacity: 0, x: -8 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.6 + i * 0.1 }}
-            className="flex items-start gap-2.5 text-[13px] leading-relaxed"
+            className="flex items-start gap-2.5 text-[14px] leading-relaxed"
             style={{ color: 'var(--color-text-secondary)' }}
           >
             <span className="mt-1 w-1.5 h-1.5 rounded-full shrink-0" style={{ background: '#6366f1' }} />

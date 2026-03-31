@@ -87,10 +87,10 @@ function ToggleButton({
   return (
     <button
       onClick={onClick}
-      className="px-2.5 py-1 text-[11px] font-semibold transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:ring-offset-1"
+      className="px-3 py-1.5 text-[12px] font-semibold transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:ring-offset-1"
       style={{
         background: active ? '#1A2B5E' : 'transparent',
-        color: active ? '#ffffff' : 'var(--color-text-muted)',
+        color: active ? '#ffffff' : 'var(--color-text-secondary)',
         borderRadius: '6px',
         border: 'none',
       }}
@@ -214,8 +214,8 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
               {/* Group label */}
               {!collapsed && (
                 <div
-                  className="text-[10px] tracking-wider uppercase font-semibold px-3 pt-3 pb-1.5 select-none"
-                  style={{ color: 'var(--color-text-muted)', letterSpacing: '1px' }}
+                  className="text-[11px] tracking-wider uppercase font-semibold px-3 pt-3 pb-1.5 select-none"
+                  style={{ color: 'var(--color-text-muted)', letterSpacing: '0.08em' }}
                 >
                   {lang === 'ko' ? group.label.ko : group.label.ja}
                 </div>
@@ -313,7 +313,7 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
                           background: isActive
                             ? 'transparent'
                             : isLight
-                              ? 'rgba(0, 0, 0, 0.03)'
+                              ? 'rgba(26, 43, 94, 0.06)'
                               : 'rgba(255, 255, 255, 0.03)',
                         }}
                       />
@@ -336,7 +336,7 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
             {/* Theme toggle */}
             <div className="flex items-center justify-between">
               <span
-                className="text-[11px] font-medium tracking-wider"
+                className="text-[12px] font-medium tracking-wider"
                 style={{ color: 'var(--color-text-muted)' }}
               >
                 THEME
@@ -359,7 +359,7 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
             {/* Lang toggle */}
             <div className="flex items-center justify-between">
               <span
-                className="text-[11px] font-medium tracking-wider"
+                className="text-[12px] font-medium tracking-wider"
                 style={{ color: 'var(--color-text-muted)' }}
               >
                 LANG
@@ -382,7 +382,7 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
             {/* Currency toggle */}
             <div className="flex items-center justify-between">
               <span
-                className="text-[11px] font-medium tracking-wider"
+                className="text-[12px] font-medium tracking-wider"
                 style={{ color: 'var(--color-text-muted)' }}
               >
                 CURRENCY
@@ -490,7 +490,7 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
           >
-            <div className="min-h-full p-4 md:p-6 lg:p-8 pb-20 sm:pb-8">
+            <div className="min-h-full p-4 md:p-6 lg:p-8 pb-24 sm:pb-8">
               {children}
             </div>
           </motion.main>
