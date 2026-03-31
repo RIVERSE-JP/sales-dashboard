@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -10,7 +11,7 @@ import {
 import { Layers } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { getPlatformColor } from '@/utils/platformConfig';
-import { GLASS_CARD, cardVariants, darkTooltipStyle } from './constants';
+import { GLASS_CARD, cardVariants } from './constants';
 
 interface PlatformTimeSeriesProps {
   titleJP: string;
@@ -137,7 +138,21 @@ export function PlatformTimeSeries({ titleJP, t }: PlatformTimeSeriesProps) {
             <XAxis dataKey="month" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false}
               tickFormatter={(v: number) => `${(v * 100).toFixed(0)}%`} />
-            <ReTooltip {...darkTooltipStyle} formatter={(v: unknown, name: unknown) => [`${((Number(v ?? 0)) * 100).toFixed(1)}%`, String(name ?? '')]} />
+            <ReTooltip
+              content={({ active, payload, label }: any) => {
+                if (!active || !payload) return null;
+                return (
+                  <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-glass-border)', borderRadius: 12, padding: '10px 14px' }}>
+                    <p style={{ color: 'var(--color-text-secondary)', fontSize: 12, marginBottom: 6 }}>{label}</p>
+                    {payload.map((entry: any) => (
+                      <p key={entry.name} style={{ color: entry.color, fontSize: 13, fontWeight: 600 }}>
+                        {entry.name}: {((Number(entry.value ?? 0)) * 100).toFixed(1)}%
+                      </p>
+                    ))}
+                  </div>
+                );
+              }}
+            />
             <Legend wrapperStyle={{ fontSize: '11px' }} />
             {platformData.map((p) => (
               <Area key={p.channel} type="monotone" dataKey={p.channel} stackId="1"
@@ -150,7 +165,21 @@ export function PlatformTimeSeries({ titleJP, t }: PlatformTimeSeriesProps) {
             <XAxis dataKey="month" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} width={60}
               tickFormatter={(v: number) => v >= 100_000_000 ? `${(v / 100_000_000).toFixed(1)}億` : v >= 10_000 ? `${(v / 10_000).toFixed(0)}万` : String(v)} />
-            <ReTooltip {...darkTooltipStyle} formatter={(v: unknown) => [formatCurrency(Number(v ?? 0)), '']} />
+            <ReTooltip
+              content={({ active, payload, label }: any) => {
+                if (!active || !payload) return null;
+                return (
+                  <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-glass-border)', borderRadius: 12, padding: '10px 14px' }}>
+                    <p style={{ color: 'var(--color-text-secondary)', fontSize: 12, marginBottom: 6 }}>{label}</p>
+                    {payload.map((entry: any) => (
+                      <p key={entry.name} style={{ color: entry.color, fontSize: 13, fontWeight: 600 }}>
+                        {entry.name}: {formatCurrency(entry.value)}
+                      </p>
+                    ))}
+                  </div>
+                );
+              }}
+            />
             <Legend wrapperStyle={{ fontSize: '11px' }} />
             {platformData.map((p) => (
               <Line key={p.channel} type="monotone" dataKey={p.channel}

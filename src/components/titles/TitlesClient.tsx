@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip,
   ResponsiveContainer, BarChart, Bar, Cell,
+  LineChart, Line, Legend, ReferenceDot,
 } from 'recharts';
 import { BookOpen, ArrowLeft, GitCompare, CheckSquare, Square } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
@@ -15,15 +16,12 @@ import { PlatformBadge } from '@/components/PlatformBadge';
 import { useApp } from '@/context/AppContext';
 import type { TitleSummaryRow, TitleDetailData, TitleMasterRow, TitleRankingRow } from '@/types';
 
-import { GLASS_CARD, containerVariants, cardVariants, darkTooltipStyle } from '@/components/titles/constants';
+import { GLASS_CARD, containerVariants, cardVariants } from '@/components/titles/constants';
 import type { SalesPreset } from '@/components/titles/constants';
 import { ListSkeleton, ChartSkeleton } from '@/components/titles/Skeletons';
 import { FilterPanel } from '@/components/titles/FilterPanel';
 import { CompareChart } from '@/components/titles/CompareChart';
-import { PeriodCompare } from '@/components/titles/PeriodCompare';
-import { TitleLifecycle } from '@/components/titles/TitleLifecycle';
 import { PlatformTimeSeries } from '@/components/titles/PlatformTimeSeries';
-import { PlatformContribution } from '@/components/titles/PlatformContribution';
 
 // ============================================================
 // Props — server-side prefetched data
@@ -158,9 +156,11 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
   const [compareList, setCompareList] = useState<string[]>([]);
   const [showCompare, setShowCompare] = useState(false);
 
-  // Period compare (B4) — for detail view
-  const [periodA, setPeriodA] = useState({ start: '', end: '' });
-  const [periodB, setPeriodB] = useState({ start: '', end: '' });
+  // Trend period toggle for "매출 추이" chart
+  const [trendPeriod, setTrendPeriod] = useState<'monthly' | 'weekly' | 'daily'>('monthly');
+
+  // Product-level detail data for multi-product groups
+  const [productDetails, setProductDetails] = useState<Map<string, TitleDetailData>>(new Map());
 
   // ============================================================
   // Title master map
@@ -384,6 +384,8 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
     setDetailLoading(true);
     setSelectedTitle(titleJP);
     setSelectedGroup(group ?? null);
+    setTrendPeriod('monthly');
+    setProductDetails(new Map());
     // Pick main product: prefer original, fallback to first
     const mainTitleJP = group
       ? (group.products.find(p => p.product_type === 'オリジナル') ?? group.products[0])?.title_jp ?? titleJP
@@ -391,13 +393,18 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
     try {
       const data = await fetchTitleDetail(mainTitleJP);
       setDetailData(data);
-      // Initialize period comparison defaults from monthly trend
-      if (data?.monthly_trend && data.monthly_trend.length >= 2) {
-        const months = data.monthly_trend;
-        const last = months[months.length - 1].month;
-        const prev = months[months.length - 2].month;
-        setPeriodA({ start: prev, end: prev });
-        setPeriodB({ start: last, end: last });
+
+      // For multi-product groups, fetch detail for each product
+      if (group && group.products.length > 1) {
+        const detailMap = new Map<string, TitleDetailData>();
+        const fetches = group.products.map(async (p) => {
+          try {
+            const d = await fetchTitleDetail(p.title_jp);
+            if (d) detailMap.set(p.title_jp, d);
+          } catch { /* skip failed fetches */ }
+        });
+        await Promise.all(fetches);
+        setProductDetails(detailMap);
       }
     } catch (err) {
       console.error('Failed to load title detail:', err);
@@ -481,10 +488,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
       ...p,
       color: getPlatformColor(p.channel),
     }));
-    const dailyRecent = (detailData?.daily_recent ?? []).map((d) => ({
-      label: d.date.slice(5),
-      sales: d.sales,
-    }));
+    const dailyRecent = detailData?.daily_recent ?? [];
 
     const trendLen = monthlyTrend.length;
     const recentMonth = trendLen > 0 ? monthlyTrend[trendLen - 1].sales : 0;
@@ -496,6 +500,159 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
     const totalSales = selectedGroup ? selectedGroup.total_sales : (detailData?.total_sales ?? selectedTitleInfo?.total_sales ?? 0);
     const perEpisodeSales = epCount && epCount > 0 ? totalSales / epCount : null;
 
+    // === 1. Daily sales chart data with first-sale / peak markers ===
+    const dailyChartData = dailyRecent.map((d) => ({
+      label: d.date.slice(5),
+      date: d.date,
+      sales: d.sales,
+    }));
+    const firstSaleDay = dailyChartData.find((d) => d.sales > 0);
+    const peakDay = dailyChartData.length > 0
+      ? dailyChartData.reduce((max, d) => d.sales > max.sales ? d : max, dailyChartData[0])
+      : null;
+
+    // === 2. Trend chart: product-type lines + period toggle ===
+    const hasMultipleProducts = selectedGroup != null && selectedGroup.products.length > 1;
+    const PRODUCT_COLORS: Record<string, string> = {
+      'オリジナル': '#818cf8',
+      'ノベル': '#f472b6',
+      '完全版': '#34d399',
+      '分冊版': '#fbbf24',
+      '版面': '#f87171',
+      'LDF': '#38bdf8',
+      '特装版': '#a78bfa',
+      '連載版': '#fb923c',
+    };
+
+    // Helper: aggregate daily data to weekly
+    const aggregateWeekly = (daily: Array<{ date: string; sales: number }>) => {
+      const weeks = new Map<string, number>();
+      daily.forEach((d) => {
+        const dt = new Date(d.date);
+        const day = dt.getDay();
+        const monday = new Date(dt);
+        monday.setDate(dt.getDate() - ((day + 6) % 7));
+        const weekKey = monday.toISOString().slice(0, 10);
+        weeks.set(weekKey, (weeks.get(weekKey) ?? 0) + d.sales);
+      });
+      return Array.from(weeks.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([week, sales]) => ({ label: week, sales }));
+    };
+
+    // Build trend data based on selected period
+    const buildTrendData = () => {
+      if (!hasMultipleProducts) {
+        // Single product: just total line
+        if (trendPeriod === 'monthly') {
+          return monthlyTrend.map((d) => ({ label: d.month, total: d.sales }));
+        } else if (trendPeriod === 'daily') {
+          return dailyRecent.map((d) => ({ label: d.date.slice(5), total: d.sales }));
+        } else {
+          return aggregateWeekly(dailyRecent).map((d) => ({ label: d.label, total: d.sales }));
+        }
+      }
+
+      // Multiple products: build per-product lines + total
+      const productTypes = selectedGroup!.products.map((p) => p.product_type);
+
+      if (trendPeriod === 'monthly') {
+        const allMonths = new Set<string>();
+        const productMonthly = new Map<string, Map<string, number>>();
+        for (const product of selectedGroup!.products) {
+          const detail = productDetails.get(product.title_jp);
+          if (!detail) continue;
+          const monthMap = new Map<string, number>();
+          detail.monthly_trend.forEach((m) => { monthMap.set(m.month, m.sales); allMonths.add(m.month); });
+          productMonthly.set(product.product_type, monthMap);
+        }
+        const sortedMonths = Array.from(allMonths).sort();
+        return sortedMonths.map((month) => {
+          const row: Record<string, unknown> = { label: month };
+          let total = 0;
+          productTypes.forEach((pt) => {
+            const val = productMonthly.get(pt)?.get(month) ?? 0;
+            row[pt] = val;
+            total += val;
+          });
+          row.total = total;
+          return row;
+        });
+      } else {
+        // daily or weekly from daily_recent
+        const allDates = new Set<string>();
+        const productDaily = new Map<string, Map<string, number>>();
+        for (const product of selectedGroup!.products) {
+          const detail = productDetails.get(product.title_jp);
+          if (!detail) continue;
+          const dateMap = new Map<string, number>();
+          detail.daily_recent.forEach((d) => { dateMap.set(d.date, d.sales); allDates.add(d.date); });
+          productDaily.set(product.product_type, dateMap);
+        }
+        const sortedDates = Array.from(allDates).sort();
+
+        if (trendPeriod === 'daily') {
+          return sortedDates.map((date) => {
+            const row: Record<string, unknown> = { label: date.slice(5) };
+            let total = 0;
+            productTypes.forEach((pt) => {
+              const val = productDaily.get(pt)?.get(date) ?? 0;
+              row[pt] = val;
+              total += val;
+            });
+            row.total = total;
+            return row;
+          });
+        } else {
+          // weekly aggregation
+          const weekData = new Map<string, Record<string, number>>();
+          sortedDates.forEach((date) => {
+            const dt = new Date(date);
+            const day = dt.getDay();
+            const monday = new Date(dt);
+            monday.setDate(dt.getDate() - ((day + 6) % 7));
+            const weekKey = monday.toISOString().slice(0, 10);
+            if (!weekData.has(weekKey)) weekData.set(weekKey, {});
+            const row = weekData.get(weekKey)!;
+            productTypes.forEach((pt) => {
+              const val = productDaily.get(pt)?.get(date) ?? 0;
+              row[pt] = (row[pt] ?? 0) + val;
+            });
+          });
+          return Array.from(weekData.entries())
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([week, vals]) => {
+              const row: Record<string, unknown> = { label: week };
+              let total = 0;
+              productTypes.forEach((pt) => { const v = vals[pt] ?? 0; row[pt] = v; total += v; });
+              row.total = total;
+              return row;
+            });
+        }
+      }
+    };
+
+    const trendData = buildTrendData();
+    const productTypes = hasMultipleProducts
+      ? selectedGroup!.products.map((p) => p.product_type)
+      : [];
+
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    const renderTooltip = ({ active, payload, label }: any) => {
+      if (!active || !payload) return null;
+      return (
+        <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-glass-border)', borderRadius: 12, padding: '10px 14px' }}>
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: 12, marginBottom: 6 }}>{label}</p>
+          {payload.map((entry: any) => (
+            <p key={entry.name} style={{ color: entry.color, fontSize: 13, fontWeight: 600 }}>
+              {entry.name}: {formatCurrency(entry.value)}
+            </p>
+          ))}
+        </div>
+      );
+    };
+    /* eslint-enable @typescript-eslint/no-explicit-any */
+
     return (
       <AnimatePresence mode="wait">
       <motion.div key={selectedTitle} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.35 }} style={{ minHeight: '100vh' }}>
@@ -504,7 +661,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => { setSelectedTitle(null); setDetailData(null); setSelectedGroup(null); }}
+            onClick={() => { setSelectedTitle(null); setDetailData(null); setSelectedGroup(null); setProductDetails(new Map()); }}
             className="w-10 h-10 rounded-xl flex items-center justify-center cursor-pointer"
             style={{ ...GLASS_CARD }}
           >
@@ -515,10 +672,9 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
               <h1 className="text-xl font-bold truncate" style={{ color: 'var(--color-text-primary)' }}>
                 {selectedGroup ? selectedGroup.base_title : selectedTitle}
               </h1>
-              {/* B3: New badge */}
               {selectedTitleInfo?.isNew && (
                 <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ background: '#22c55e20', color: '#22c55e' }}>
-                  🆕 {t('신작', '新作')}
+                  {t('신작', '新作')}
                 </span>
               )}
             </div>
@@ -527,7 +683,6 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                 {detailData?.title_kr || selectedTitleInfo?.title_kr}
               </p>
             )}
-            {/* Master info badges */}
             <div className="flex flex-wrap gap-1 mt-1">
               {selectedTitleInfo?.genre_name && (
                 <span className="px-2 py-0.5 rounded-full text-[10px]" style={{ background: 'var(--color-glass)', color: 'var(--color-text-secondary)' }}>
@@ -567,7 +722,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
           </div>
         ) : (
           <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-6">
-            {/* KPI Cards — now 4 columns with B7 */}
+            {/* KPI Cards */}
             <div className={`grid grid-cols-1 gap-4 ${perEpisodeSales !== null ? 'sm:grid-cols-4' : 'sm:grid-cols-3'}`}>
               {[
                 { label: t('누적 매출', '累計売上'), value: formatCurrency(totalSales) },
@@ -577,7 +732,6 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                   value: prevMonth > 0 ? `${periodChange > 0 ? '+' : ''}${periodChange.toFixed(1)}%` : '-',
                   color: periodChange >= 0 ? '#22c55e' : '#ef4444',
                 },
-                // B7: Per-episode sales
                 ...(perEpisodeSales !== null ? [{
                   label: t('에피소드당 매출', 'エピソード当たり売上'),
                   value: formatCurrency(perEpisodeSales),
@@ -633,35 +787,98 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
               </motion.div>
             )}
 
-            {/* B8: Lifecycle Timeline */}
-            {monthlyTrend.length > 0 && (
-              <TitleLifecycle
-                firstDate={selectedTitleInfo?.first_date ?? monthlyTrend[0].month}
-                monthlyTrend={monthlyTrend}
-                t={t}
-              />
-            )}
-
-            {/* Monthly Trend Chart */}
-            {monthlyTrend.length > 0 && (
+            {/* 1. Daily Sales Trend (일별 매출 추이) — replaces TitleLifecycle */}
+            {dailyChartData.length > 0 && (
               <motion.div variants={cardVariants} className="rounded-2xl p-6" style={GLASS_CARD}>
-                <h2 className="text-lg font-semibold mb-6" style={{ color: 'var(--color-text-primary)' }}>
-                  {t('월별 매출 추이', '月別売上推移')}
+                <h2 className="text-base font-semibold mb-6" style={{ color: 'var(--color-text-primary)' }}>
+                  {t('일별 매출 추이', '日別売上推移')}
                 </h2>
-                <ResponsiveContainer width="100%" height={320}>
-                  <AreaChart data={monthlyTrend.map((d) => ({ label: d.month, sales: d.sales }))}>
+                <ResponsiveContainer width="100%" height={300}>
+                  <AreaChart data={dailyChartData}>
                     <defs>
-                      <linearGradient id="titleGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#818cf8" stopOpacity={0.3} />
-                        <stop offset="100%" stopColor="#818cf8" stopOpacity={0} />
+                      <linearGradient id="dailyTrendGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#34d399" stopOpacity={0.3} />
+                        <stop offset="100%" stopColor="#34d399" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
-                    <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={60} />
-                    <ReTooltip {...darkTooltipStyle} formatter={(v: unknown) => [formatCurrency(Number(v ?? 0)), t('매출', '売上')]} />
-                    <Area type="monotone" dataKey="sales" stroke="#818cf8" strokeWidth={2} fill="url(#titleGrad)" />
+                    <ReTooltip content={renderTooltip} />
+                    <Area type="monotone" dataKey="sales" name={t('매출', '売上')} stroke="#34d399" strokeWidth={2} fill="url(#dailyTrendGrad)" />
+                    {/* First sale marker */}
+                    {firstSaleDay && (
+                      <ReferenceDot x={firstSaleDay.label} y={firstSaleDay.sales} r={6} fill="#34d399" stroke="#fff" strokeWidth={2}>
+                        <text x={0} y={-12} textAnchor="middle" fill="#34d399" fontSize={10} fontWeight={600}>
+                          {t('첫 판매', '初売上')}
+                        </text>
+                      </ReferenceDot>
+                    )}
+                    {/* Peak day marker */}
+                    {peakDay && peakDay.sales > 0 && peakDay.label !== firstSaleDay?.label && (
+                      <ReferenceDot x={peakDay.label} y={peakDay.sales} r={6} fill="#fbbf24" stroke="#fff" strokeWidth={2}>
+                        <text x={0} y={-12} textAnchor="middle" fill="#fbbf24" fontSize={10} fontWeight={600}>
+                          {t('최고 매출', '最高売上')}
+                        </text>
+                      </ReferenceDot>
+                    )}
                   </AreaChart>
+                </ResponsiveContainer>
+              </motion.div>
+            )}
+
+            {/* 2. Sales Trend (매출 추이) — monthly/weekly/daily toggle + product type lines */}
+            {(monthlyTrend.length > 0 || dailyRecent.length > 0) && trendData.length > 0 && (
+              <motion.div variants={cardVariants} className="rounded-2xl p-6" style={GLASS_CARD}>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                    {t('매출 추이', '売上推移')}
+                  </h2>
+                  <div className="flex gap-1">
+                    {(['monthly', 'weekly', 'daily'] as const).map((period) => (
+                      <button
+                        key={period}
+                        onClick={() => setTrendPeriod(period)}
+                        className="px-3 py-1 rounded-lg text-[11px] font-medium cursor-pointer transition-all"
+                        style={{
+                          background: trendPeriod === period ? 'var(--color-accent-blue, #818cf8)' : 'var(--color-glass)',
+                          color: trendPeriod === period ? '#fff' : 'var(--color-text-muted)',
+                        }}
+                      >
+                        {period === 'monthly' ? t('월별', '月別') : period === 'weekly' ? t('주별', '週別') : t('일별', '日別')}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <ResponsiveContainer width="100%" height={320}>
+                  {hasMultipleProducts ? (
+                    <LineChart data={trendData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
+                      <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={60} />
+                      <ReTooltip content={renderTooltip} />
+                      <Legend wrapperStyle={{ fontSize: '11px' }} />
+                      <Line type="monotone" dataKey="total" name={t('총합', '合計')} stroke="#818cf8" strokeWidth={3} dot={false} />
+                      {productTypes.map((pt) => (
+                        <Line key={pt} type="monotone" dataKey={pt} name={pt}
+                          stroke={PRODUCT_COLORS[pt] ?? '#94a3b8'} strokeWidth={1.5} dot={false} strokeDasharray="4 2" />
+                      ))}
+                    </LineChart>
+                  ) : (
+                    <AreaChart data={trendData}>
+                      <defs>
+                        <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#818cf8" stopOpacity={0.3} />
+                          <stop offset="100%" stopColor="#818cf8" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
+                      <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={60} />
+                      <ReTooltip content={renderTooltip} />
+                      <Area type="monotone" dataKey="total" name={t('매출', '売上')} stroke="#818cf8" strokeWidth={2} fill="url(#trendGrad)" />
+                    </AreaChart>
+                  )}
                 </ResponsiveContainer>
               </motion.div>
             )}
@@ -677,8 +894,8 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" horizontal={false} />
                     <XAxis type="number" tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatShort} />
                     <YAxis type="category" dataKey="channel" tick={{ fill: 'var(--color-text-secondary)', fontSize: 12 }} axisLine={false} tickLine={false} width={80} />
-                    <ReTooltip {...darkTooltipStyle} formatter={(v: unknown) => [formatCurrency(Number(v ?? 0)), t('매출', '売上')]} />
-                    <Bar dataKey="sales" radius={[0, 6, 6, 0]} barSize={24}>
+                    <ReTooltip content={renderTooltip} />
+                    <Bar dataKey="sales" name={t('매출', '売上')} radius={[0, 6, 6, 0]} barSize={24}>
                       {platformBreakdown.map((entry, idx) => (
                         <Cell key={idx} fill={entry.color} fillOpacity={0.8} />
                       ))}
@@ -688,57 +905,12 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
               </motion.div>
             )}
 
-            {/* Platform Contribution: month-over-month change */}
-            {platformBreakdown.length > 0 && monthlyTrend.length >= 2 && (
-              <PlatformContribution
-                currentBreakdown={platformBreakdown}
-                monthlyTrend={monthlyTrend}
-                t={t}
-              />
-            )}
-
-            {/* B10: Platform Time Series */}
+            {/* Platform Time Series (4. tooltip fixed in PlatformTimeSeries component) */}
             <PlatformTimeSeries
               titleJP={selectedTitle}
               channels={detailData?.channels ?? selectedTitleInfo?.channels ?? []}
               t={t}
             />
-
-            {/* Daily Recent */}
-            {dailyRecent.length > 0 && (
-              <motion.div variants={cardVariants} className="rounded-2xl p-6" style={GLASS_CARD}>
-                <h2 className="text-base font-semibold mb-6" style={{ color: 'var(--color-text-primary)' }}>
-                  {t('최근 일별 매출', '直近の日別売上')}
-                </h2>
-                <ResponsiveContainer width="100%" height={280}>
-                  <AreaChart data={dailyRecent}>
-                    <defs>
-                      <linearGradient id="dailyGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#34d399" stopOpacity={0.3} />
-                        <stop offset="100%" stopColor="#34d399" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
-                    <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={60} />
-                    <ReTooltip {...darkTooltipStyle} formatter={(v: unknown) => [formatCurrency(Number(v ?? 0)), t('매출', '売上')]} />
-                    <Area type="monotone" dataKey="sales" stroke="#34d399" strokeWidth={2} fill="url(#dailyGrad)" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </motion.div>
-            )}
-
-            {/* B4: Period Comparison */}
-            {monthlyTrend.length >= 2 && (
-              <PeriodCompare
-                monthlyTrend={monthlyTrend}
-                periodA={periodA}
-                periodB={periodB}
-                setPeriodA={setPeriodA}
-                setPeriodB={setPeriodB}
-                t={t}
-              />
-            )}
           </motion.div>
         )}
       </motion.div>
