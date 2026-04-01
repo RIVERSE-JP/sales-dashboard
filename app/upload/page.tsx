@@ -679,33 +679,58 @@ export default function DataUploadPage() {
       setDetectedFormat(null);
 
       try {
-        const isCSV = file.name.toLowerCase().endsWith('.csv');
-        const isTSV = file.name.toLowerCase().endsWith('.tsv');
-        const isExcel = file.name.toLowerCase().endsWith('.xlsx') || file.name.toLowerCase().endsWith('.xls');
+        const lower = file.name.toLowerCase();
+        const buffer = await file.arrayBuffer();
 
-        // Read a header sample for header-based detection (CSV/TSV only)
+        // 1단계: 파일 내용을 읽어서 실제 포맷 판별
+        let isExcel = false;
+        let textContent = '';
         let headerSample = '';
-        if (isCSV || isTSV) {
-          const buffer = await file.arrayBuffer();
-          // Try Shift-JIS first (for Piccoma), then UTF-8
+
+        // Excel 판별: 파일 시그니처(매직 바이트) 확인
+        const magic = new Uint8Array(buffer.slice(0, 4));
+        const isZip = magic[0] === 0x50 && magic[1] === 0x4B; // PK (xlsx = zip)
+        const isOle = magic[0] === 0xD0 && magic[1] === 0xCF; // OLE (xls)
+
+        if (isZip || isOle || lower.endsWith('.xlsx') || lower.endsWith('.xls')) {
+          isExcel = true;
+        } else {
+          // 텍스트 파일로 간주 — Shift-JIS 또는 UTF-8 디코딩
           try {
             const sjisDecoder = new TextDecoder('shift_jis');
-            const sjisText = sjisDecoder.decode(buffer);
-            headerSample = sjisText.slice(0, 500);
+            textContent = sjisDecoder.decode(buffer);
           } catch {
-            const text = await file.text();
-            headerSample = text.slice(0, 500);
+            textContent = new TextDecoder('utf-8').decode(buffer);
+          }
+          headerSample = textContent.slice(0, 500);
+        }
+
+        // 2단계: 파일명 + 헤더로 포맷 감지
+        const fmt = detectFormat(file.name, headerSample);
+
+        // 3단계: 헤더 기반 추가 감지 (파일명으로 못 잡은 경우)
+        if (fmt.type === 'unknown' && textContent) {
+          // 텍스트 파일인데 unknown → 헤더 내용으로 한번 더 시도
+          if (textContent.includes('日付') && textContent.includes('ブック名') && textContent.includes('購入ポイント数')) {
+            Object.assign(fmt, { type: 'piccoma_sokuhochi', platform: '', isPreliminary: true, confidence: 'medium', label: '속보치 CSV' });
+          } else if (textContent.includes('コンテンツID') && textContent.includes('タイトル名')) {
+            Object.assign(fmt, { type: 'cmoa_sokuhochi', platform: 'cmoa', isPreliminary: true, confidence: 'medium', label: 'cmoa 속보치' });
+          } else if (textContent.includes('Title') && textContent.includes('Channel') && textContent.includes('Date')) {
+            Object.assign(fmt, { type: 'weekly_report', platform: '', isPreliminary: false, confidence: 'medium', label: 'Weekly Report CSV' });
           }
         }
 
-        const fmt = detectFormat(file.name, headerSample);
+        if (fmt.type === 'unknown' && isExcel) {
+          // 엑셀인데 파일명으로 못 잡은 경우 → Weekly Report로 시도
+          Object.assign(fmt, { type: 'weekly_report', platform: '', isPreliminary: false, confidence: 'low', label: 'Excel' });
+        }
 
         if (fmt.type === 'unknown') {
           setStatus('error');
           setErrorMessage(
             t(
-              '이 파일 형식은 자동 분석이 지원되지 않습니다. 지원 형식: Piccoma 속보치 CSV, cmoa 속보치 TSV, Weekly Report Excel',
-              'このファイル形式は自動解析に対応していません。対応形式: Piccoma速報値CSV、cmoa速報値TSV、Weekly Report Excel',
+              '이 파일의 형식을 인식할 수 없습니다. 속보치 CSV/TSV 또는 Weekly Report Excel 파일을 업로드해 주세요.',
+              'このファイルの形式を認識できません。速報値CSV/TSVまたはWeekly Report Excelファイルをアップロードしてください。',
             ),
           );
           return;
@@ -714,34 +739,25 @@ export default function DataUploadPage() {
         let rows: ParsedRow[] = [];
 
         if (fmt.type === 'piccoma_sokuhochi') {
-          const buffer = await file.arrayBuffer();
           if (isExcel) {
             rows = await parseSokuhochiExcel(buffer);
             rows = rows.map((r) => ({ ...r, channel: fmt.platform }));
           } else {
-            // Shift-JIS decode for Piccoma CSV
-            const decoder = new TextDecoder('shift_jis');
-            const text = decoder.decode(buffer);
-            rows = parseCSVSokuhochi(text, fmt.platform);
+            rows = parseCSVSokuhochi(textContent, fmt.platform);
           }
         } else if (fmt.type === 'cmoa_sokuhochi') {
-          // cmoa is TSV, may be Shift-JIS or UTF-8
-          const buffer = await file.arrayBuffer();
-          let text = '';
-          try {
-            const decoder = new TextDecoder('shift_jis');
-            text = decoder.decode(buffer);
-          } catch {
-            text = await file.text();
-          }
-          rows = parseCmoaSokuhochi(text);
-        } else if (fmt.type === 'weekly_report') {
-          if (isCSV) {
-            const text = await file.text();
-            rows = parseCSVWeeklyReport(text);
+          if (isExcel) {
+            // cmoa가 엑셀로 올 수도 있음 — 일반 속보치 엑셀 파서로 시도
+            rows = await parseSokuhochiExcel(buffer);
+            rows = rows.map((r) => ({ ...r, channel: 'cmoa' }));
           } else {
-            const buffer = await file.arrayBuffer();
+            rows = parseCmoaSokuhochi(textContent);
+          }
+        } else if (fmt.type === 'weekly_report') {
+          if (isExcel) {
             rows = await parseWeeklyReport(buffer);
+          } else {
+            rows = parseCSVWeeklyReport(textContent);
           }
         }
 
@@ -759,10 +775,8 @@ export default function DataUploadPage() {
       e.preventDefault();
       setDragOver(false);
       const file = e.dataTransfer.files[0];
-      if (file && (file.name.endsWith('.xlsx') || file.name.endsWith('.xls') || file.name.endsWith('.csv') || file.name.endsWith('.tsv'))) {
+      if (file) {
         handleFile(file);
-      } else {
-        setErrorMessage(t('.xlsx / .csv / .tsv 파일만 지원됩니다', '.xlsx / .csv / .tsv ファイルのみ対応しています'));
       }
     },
     [handleFile, t],
@@ -996,9 +1010,9 @@ export default function DataUploadPage() {
                   {t('또는 클릭하여 파일 선택', 'またはクリックしてファイルを選択')}
                 </p>
                 <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                  {t('지원 형식: Piccoma 속보치 CSV, cmoa 속보치 TSV, Weekly Report .xlsx', '対応形式: Piccoma速報値CSV、cmoa速報値TSV、Weekly Report .xlsx')}
+                  {t('파일을 올리면 자동으로 형식을 분석합니다 (CSV, TSV, Excel 등)', 'ファイルをアップロードすると自動的に形式を分析します（CSV、TSV、Excel等）')}
                 </p>
-                <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv,.tsv" onChange={handleFileInput} className="hidden" />
+                <input ref={fileInputRef} type="file" onChange={handleFileInput} className="hidden" />
               </motion.div>
             )}
 
