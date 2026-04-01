@@ -68,7 +68,7 @@ interface UploadResult {
 }
 
 interface DetectedFormat {
-  type: 'piccoma_sokuhochi' | 'cmoa_sokuhochi' | 'weekly_report' | 'unknown';
+  type: 'piccoma_sokuhochi' | 'piccoma_kpi' | 'cmoa_sokuhochi' | 'cmoa_excel' | 'weekly_report' | 'unknown';
   platform: string;
   isPreliminary: boolean;
   confidence: 'high' | 'medium' | 'low';
@@ -168,53 +168,63 @@ function guessPlatformFromFileName(fileName: string): string {
   return '';
 }
 
-function detectFormat(fileName: string, headerSample?: string): DetectedFormat {
+function detectFormat(fileName: string, headerSample?: string, isExcel?: boolean): DetectedFormat {
   const lower = fileName.toLowerCase();
   const name = fileName;
+  const guessedPlatform = guessPlatformFromFileName(fileName);
 
-  // ── 1단계: 파일명으로 플랫폼 + 포맷 확정 가능한 경우 ──
+  // ── 1단계: 파일명으로 확정 가능한 경우 ──
 
-  // cmoa — 파일명에 'cmoa' 또는 'シーモア' 포함
-  if (lower.includes('cmoa') || lower.includes('シーモア') || lower.includes('시모아')) {
-    return { type: 'cmoa_sokuhochi', platform: 'cmoa', isPreliminary: true, confidence: 'high', label: 'cmoa 속보치' };
-  }
-  // Weekly Report — 파일명으로 확정
+  // Weekly Report
   if (name.includes('Weekly Report') || lower.includes('weekly_report') || lower.includes('weekly report')) {
     return { type: 'weekly_report', platform: '', isPreliminary: false, confidence: 'high', label: 'Weekly Report' };
   }
 
-  // ── 2단계: daily_sales_log 패턴 — 파일명에서 플랫폼 추측 시도 ──
+  // 픽코마 Product KPI CSV (TOTAL_Product_KPI_*)
+  if (lower.includes('product_kpi')) {
+    return { type: 'piccoma_kpi' as DetectedFormat['type'], platform: guessedPlatform || 'piccoma', isPreliminary: true, confidence: 'high', label: 'Piccoma KPI 속보치' };
+  }
+
+  // daily_sales_log 패턴 (픽코마/메챠코믹 등 공통 포맷)
   if (lower.includes('daily_sales_log') || lower.includes('sokuhochi') || lower.includes('速報')) {
-    const guessedPlatform = guessPlatformFromFileName(fileName);
     const subType = lower.includes('kan_daily') ? '単行本' : (lower.includes('sp_') ? 'SP' : lower.includes('app_') ? 'APP' : '');
-    const label = subType ? `${subType} 속보치` : '속보치';
     return {
       type: 'piccoma_sokuhochi',
       platform: guessedPlatform,
       isPreliminary: true,
       confidence: guessedPlatform ? 'high' : 'medium',
-      label,
+      label: subType ? `${subType} 속보치` : '속보치',
     };
   }
 
-  // ── 3단계: 헤더 내용으로 포맷 감지 ──
-  if (headerSample) {
-    const guessedPlatform = guessPlatformFromFileName(fileName);
+  // 시모아 — 파일명에 시모아/cmoa/シーモア 포함
+  if (lower.includes('cmoa') || lower.includes('シーモア') || lower.includes('시모아')) {
+    return { type: 'cmoa_sokuhochi', platform: 'cmoa', isPreliminary: true, confidence: 'high', label: 'cmoa 속보치' };
+  }
 
+  // ── 2단계: 헤더/내용으로 포맷 감지 ──
+  if (headerSample) {
+    // 픽코마 daily_sales_log 포맷
     if (headerSample.includes('日付') && headerSample.includes('ブック名') && headerSample.includes('購入ポイント数')) {
       return { type: 'piccoma_sokuhochi', platform: guessedPlatform, isPreliminary: true, confidence: guessedPlatform ? 'high' : 'medium', label: '속보치 CSV' };
     }
+    // 픽코마 Product KPI 포맷
+    if (headerSample.includes('作品名') && headerSample.includes('Total売上')) {
+      return { type: 'piccoma_kpi' as DetectedFormat['type'], platform: guessedPlatform || 'piccoma', isPreliminary: true, confidence: 'high', label: 'Piccoma KPI 속보치' };
+    }
+    // cmoa TSV 포맷
     if (headerSample.includes('コンテンツID') && headerSample.includes('タイトル名')) {
       return { type: 'cmoa_sokuhochi', platform: 'cmoa', isPreliminary: true, confidence: 'high', label: 'cmoa 속보치' };
     }
+    // Weekly Report CSV
     if (headerSample.includes('Title') && headerSample.includes('Channel') && headerSample.includes('Date')) {
       return { type: 'weekly_report', platform: '', isPreliminary: false, confidence: 'medium', label: 'Weekly Report CSV' };
     }
   }
 
-  // ── 4단계: 확장자 힌트 ──
-  if (lower.endsWith('.xlsx') || lower.endsWith('.xls')) {
-    return { type: 'weekly_report', platform: '', isPreliminary: false, confidence: 'medium', label: 'Excel' };
+  // ── 3단계: 확장자/바이너리 힌트 ──
+  if (isExcel) {
+    return { type: 'weekly_report', platform: guessedPlatform, isPreliminary: false, confidence: 'low', label: 'Excel' };
   }
 
   return { type: 'unknown', platform: '', isPreliminary: false, confidence: 'low', label: '알 수 없음' };
@@ -412,6 +422,145 @@ function parseCmoaSokuhochi(text: string): ParsedRow[] {
     const dateMap = salesMap.get(titleJP)!;
     dateMap.set(saleDate, (dateMap.get(saleDate) || 0) + amount);
   }
+
+  const rows: ParsedRow[] = [];
+  for (const [titleJP, dateMap] of salesMap) {
+    for (const [date, amount] of dateMap) {
+      rows.push({
+        title_jp: titleJP,
+        title_kr: '',
+        channel_title_jp: titleJP,
+        channel: 'cmoa',
+        sale_date: date,
+        sales_amount: amount,
+      });
+    }
+  }
+
+  return rows;
+}
+
+/**
+ * Piccoma Product KPI CSV parser
+ * Header: id, 作品名, 出版社, カテゴリ, APP販売タイプ, WEB販売タイプ, 販売話数, 販売巻数, MM-DD RU, MM-DD FRU, MM-DD Total売上, ...
+ * 날짜별/월별 Total売上 컬럼에서 매출 추출
+ */
+function parsePiccomaKPI(text: string, channel: string): ParsedRow[] {
+  // BOM 제거
+  const cleaned = text.replace(/^\uFEFF/, '');
+  const lines = parseCSVText(cleaned);
+  if (lines.length < 2) return [];
+
+  // 헤더에서 "MM-DD Total売上" 패턴 컬럼 찾기
+  const header = lines[0];
+  const dailySalesColumns: Array<{ idx: number; date: string }> = [];
+  const monthlySalesColumns: Array<{ idx: number; month: string }> = [];
+
+  // 파일명에서 연도 추출 시도
+  const yearMatch = text.match(/(\d{4})/);
+  const year = yearMatch ? yearMatch[1] : new Date().getFullYear().toString();
+
+  header.forEach((col, idx) => {
+    const stripped = col.replace(/"/g, '');
+    // "03-23 Total売上" 패턴 (일별)
+    const dailyMatch = stripped.match(/^(\d{2})-(\d{2})\s+Total売上$/);
+    if (dailyMatch) {
+      const saleDate = `${year}-${dailyMatch[1]}-${dailyMatch[2]}`;
+      dailySalesColumns.push({ idx, date: saleDate });
+      return;
+    }
+    // "03月 Total売上" 패턴 (월별) — 일별이 없을 때 폴백
+    const monthlyMatch = stripped.match(/^(\d{2})月\s+Total売上$/);
+    if (monthlyMatch) {
+      monthlySalesColumns.push({ idx, month: `${year}-${monthlyMatch[1]}-01` });
+    }
+  });
+
+  // 일별 데이터가 있으면 일별 사용, 없으면 월별 사용
+  const targetColumns = dailySalesColumns.length > 0 ? dailySalesColumns : monthlySalesColumns.map(c => ({ idx: c.idx, date: c.month }));
+
+  if (targetColumns.length === 0) return [];
+
+  const rows: ParsedRow[] = [];
+  for (let i = 1; i < lines.length; i++) {
+    const vals = lines[i];
+    const titleJP = (vals[1] ?? '').replace(/"/g, '').trim();
+    if (!titleJP) continue;
+
+    for (const col of targetColumns) {
+      const rawAmount = (vals[col.idx] ?? '').replace(/"/g, '').trim();
+      const amount = parseInt(rawAmount.replace(/[¥,]/g, ''), 10) || 0;
+      if (amount > 0) {
+        rows.push({
+          title_jp: titleJP,
+          title_kr: '',
+          channel_title_jp: titleJP,
+          channel,
+          sale_date: col.date,
+          sales_amount: amount,
+        });
+      }
+    }
+  }
+
+  return rows;
+}
+
+/**
+ * cmoa Excel parser (시모아 xlsx)
+ * Sheet "Q003_売上": 헤더 타イトル名(col4), 1日~31日(col10~40) = 일별 매출
+ * 파일명 또는 시트명에서 월 추출
+ */
+async function parseCmoaExcel(buffer: ArrayBuffer, fileName: string): Promise<ParsedRow[]> {
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(buffer);
+
+  // Q003_売上 시트 찾기
+  const salesSheet = wb.worksheets.find(ws => ws.name.includes('売上')) ?? wb.worksheets[0];
+  if (!salesSheet) return [];
+
+  // 파일명에서 연월 추출 (202603 → 2026-03)
+  const monthMatch = fileName.match(/(\d{4})(\d{2})/);
+  const yearMonth = monthMatch ? `${monthMatch[1]}-${monthMatch[2]}` : '';
+  if (!yearMonth) {
+    return []; // 월 정보 없으면 파싱 불가
+  }
+
+  // 헤더 확인 — タイトル名 위치 찾기
+  let titleColIdx = 4; // 기본값 (0-indexed: col E = index 4 in 1-based = vals[5])
+  let dayStartIdx = 10; // 1日 컬럼 시작 (1-based: col K = vals[11])
+
+  const headerRow = salesSheet.getRow(1);
+  const headerVals = headerRow.values as (string | null | undefined)[];
+  headerVals.forEach((v, idx) => {
+    if (typeof v === 'string' && v === 'タイトル名') titleColIdx = idx;
+    if (typeof v === 'string' && v === '1日') dayStartIdx = idx;
+  });
+
+  // 작품별 일별 매출 집계
+  const salesMap = new Map<string, Map<string, number>>();
+
+  salesSheet.eachRow((row, rowNumber) => {
+    if (rowNumber <= 1) return;
+    const vals = row.values as (string | number | null | undefined)[];
+    const titleJP = String(vals[titleColIdx] ?? '').trim();
+    if (!titleJP) return;
+
+    // 1日~31日 컬럼 순회
+    for (let day = 0; day < 31; day++) {
+      const colIdx = dayStartIdx + day;
+      const rawVal = vals[colIdx];
+      const amount = typeof rawVal === 'number' ? rawVal : parseInt(String(rawVal ?? '0'), 10) || 0;
+      if (amount <= 0) continue;
+
+      const dayStr = String(day + 1).padStart(2, '0');
+      const saleDate = `${yearMonth}-${dayStr}`;
+
+      if (!salesMap.has(titleJP)) salesMap.set(titleJP, new Map());
+      const dateMap = salesMap.get(titleJP)!;
+      dateMap.set(saleDate, (dateMap.get(saleDate) || 0) + amount);
+    }
+  });
 
   const rows: ParsedRow[] = [];
   for (const [titleJP, dateMap] of salesMap) {
@@ -702,40 +851,70 @@ export default function DataUploadPage() {
       setDetectedFormat(null);
 
       try {
-        const lower = file.name.toLowerCase();
         const buffer = await file.arrayBuffer();
 
-        // 1단계: 파일 내용을 읽어서 실제 포맷 판별
-        let isExcel = false;
+        // 1단계: Excel 여부 판별 (매직 바이트)
+        const magic = new Uint8Array(buffer.slice(0, 4));
+        const isZip = magic[0] === 0x50 && magic[1] === 0x4B;
+        const isOle = magic[0] === 0xD0 && magic[1] === 0xCF;
+        const isExcel = isZip || isOle;
+
+        // 2단계: 텍스트 파일이면 디코딩 (UTF-8 먼저, 실패 시 Shift-JIS)
         let textContent = '';
         let headerSample = '';
-
-        // Excel 판별: 파일 시그니처(매직 바이트) 확인
-        const magic = new Uint8Array(buffer.slice(0, 4));
-        const isZip = magic[0] === 0x50 && magic[1] === 0x4B; // PK (xlsx = zip)
-        const isOle = magic[0] === 0xD0 && magic[1] === 0xCF; // OLE (xls)
-
-        if (isZip || isOle || lower.endsWith('.xlsx') || lower.endsWith('.xls')) {
-          isExcel = true;
-        } else {
-          // 텍스트 파일로 간주 — Shift-JIS 또는 UTF-8 디코딩
-          try {
-            const sjisDecoder = new TextDecoder('shift_jis');
-            textContent = sjisDecoder.decode(buffer);
-          } catch {
+        if (!isExcel) {
+          // UTF-8 BOM(EF BB BF) 또는 ASCII 범위 확인으로 인코딩 추측
+          const firstBytes = new Uint8Array(buffer.slice(0, 3));
+          const hasBOM = firstBytes[0] === 0xEF && firstBytes[1] === 0xBB && firstBytes[2] === 0xBF;
+          if (hasBOM) {
             textContent = new TextDecoder('utf-8').decode(buffer);
+          } else {
+            // Shift-JIS 특유의 바이트 패턴 감지 (0x80-0x9F 범위의 첫 바이트)
+            const sample = new Uint8Array(buffer.slice(0, 100));
+            const hasShiftJIS = sample.some(b => (b >= 0x80 && b <= 0x9F) || (b >= 0xE0 && b <= 0xEF));
+            if (hasShiftJIS) {
+              textContent = new TextDecoder('shift_jis').decode(buffer);
+            } else {
+              textContent = new TextDecoder('utf-8').decode(buffer);
+            }
           }
           headerSample = textContent.slice(0, 500);
         }
 
-        // 2단계: 파일명 + 헤더로 포맷 감지
-        const fmt = detectFormat(file.name, headerSample);
+        // 3단계: Excel이면 시트 헤더로 포맷 추가 판별
+        let excelHeaderHint = '';
+        if (isExcel) {
+          try {
+            const wb = new ExcelJS.Workbook();
+            await wb.xlsx.load(buffer);
+            // 시트명과 첫 행에서 힌트 추출
+            for (const ws of wb.worksheets) {
+              if (ws.name.includes('売上') || ws.name.includes('DL')) {
+                excelHeaderHint = 'cmoa_excel';
+                break;
+              }
+            }
+            if (!excelHeaderHint) {
+              const firstSheet = wb.worksheets[0];
+              if (firstSheet) {
+                const row1 = firstSheet.getRow(1).values as (string | null | undefined)[];
+                const row1Str = row1.filter(Boolean).join(' ');
+                if (row1Str.includes('タイトル名') && row1Str.includes('日')) excelHeaderHint = 'cmoa_excel';
+                else if (row1Str.includes('Title') || row1Str.includes('Channel')) excelHeaderHint = 'weekly_report';
+              }
+            }
+          } catch { /* Excel 읽기 실패 — 아래에서 처리 */ }
+        }
 
-        // 3단계: 헤더 기반 추가 감지 (파일명으로 못 잡은 경우)
+        // 4단계: 포맷 감지
+        let fmt = detectFormat(file.name, headerSample, isExcel);
+
+        // 추가 감지: 텍스트 내용으로 (detectFormat에서 못 잡은 경우)
         if (fmt.type === 'unknown' && textContent) {
-          // 텍스트 파일인데 unknown → 헤더 내용으로 한번 더 시도
           if (textContent.includes('日付') && textContent.includes('ブック名') && textContent.includes('購入ポイント数')) {
-            Object.assign(fmt, { type: 'piccoma_sokuhochi', platform: '', isPreliminary: true, confidence: 'medium', label: '속보치 CSV' });
+            Object.assign(fmt, { type: 'piccoma_sokuhochi', platform: guessPlatformFromFileName(file.name), isPreliminary: true, confidence: 'medium', label: '속보치 CSV' });
+          } else if (textContent.includes('作品名') && textContent.includes('Total売上')) {
+            Object.assign(fmt, { type: 'piccoma_kpi', platform: guessPlatformFromFileName(file.name) || 'piccoma', isPreliminary: true, confidence: 'medium', label: 'KPI 속보치' });
           } else if (textContent.includes('コンテンツID') && textContent.includes('タイトル名')) {
             Object.assign(fmt, { type: 'cmoa_sokuhochi', platform: 'cmoa', isPreliminary: true, confidence: 'medium', label: 'cmoa 속보치' });
           } else if (textContent.includes('Title') && textContent.includes('Channel') && textContent.includes('Date')) {
@@ -743,17 +922,21 @@ export default function DataUploadPage() {
           }
         }
 
+        // Excel 시트 기반 감지
         if (fmt.type === 'unknown' && isExcel) {
-          // 엑셀인데 파일명으로 못 잡은 경우 → Weekly Report로 시도
-          Object.assign(fmt, { type: 'weekly_report', platform: '', isPreliminary: false, confidence: 'low', label: 'Excel' });
+          if (excelHeaderHint === 'cmoa_excel') {
+            fmt = { type: 'cmoa_excel', platform: 'cmoa', isPreliminary: true, confidence: 'high', label: 'cmoa 속보치 Excel' };
+          } else {
+            Object.assign(fmt, { type: 'weekly_report', platform: '', isPreliminary: false, confidence: 'low', label: 'Excel' });
+          }
         }
 
         if (fmt.type === 'unknown') {
           setStatus('error');
           setErrorMessage(
             t(
-              '이 파일의 형식을 인식할 수 없습니다. 속보치 CSV/TSV 또는 Weekly Report Excel 파일을 업로드해 주세요.',
-              'このファイルの形式を認識できません。速報値CSV/TSVまたはWeekly Report Excelファイルをアップロードしてください。',
+              '이 파일의 형식을 인식할 수 없습니다. 파일을 확인해 주세요.',
+              'このファイルの形式を認識できません。ファイルを確認してください。',
             ),
           );
           return;
@@ -768,14 +951,16 @@ export default function DataUploadPage() {
           } else {
             rows = parseCSVSokuhochi(textContent, fmt.platform);
           }
+        } else if (fmt.type === 'piccoma_kpi') {
+          rows = parsePiccomaKPI(textContent, fmt.platform);
         } else if (fmt.type === 'cmoa_sokuhochi') {
           if (isExcel) {
-            // cmoa가 엑셀로 올 수도 있음 — 일반 속보치 엑셀 파서로 시도
-            rows = await parseSokuhochiExcel(buffer);
-            rows = rows.map((r) => ({ ...r, channel: 'cmoa' }));
+            rows = await parseCmoaExcel(buffer, file.name);
           } else {
             rows = parseCmoaSokuhochi(textContent);
           }
+        } else if (fmt.type === 'cmoa_excel') {
+          rows = await parseCmoaExcel(buffer, file.name);
         } else if (fmt.type === 'weekly_report') {
           if (isExcel) {
             rows = await parseWeeklyReport(buffer);
