@@ -39,7 +39,7 @@ export function TitleLifecycle({ firstDate, monthlyTrend, t }: TitleLifecyclePro
       label: t('현재', '現在'),
       date: now,
       detail: '',
-      color: '#3B6FF6',
+      color: '#1A2B5E',
     });
 
     return items;

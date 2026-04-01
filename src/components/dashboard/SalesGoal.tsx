@@ -38,7 +38,7 @@ export default function SalesGoal({ currentSales, goal, onGoalChange }: SalesGoa
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Target size={18} style={{ color: '#3B6FF6' }} />
+          <Target size={18} style={{ color: '#1A2B5E' }} />
           <h2 className="text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>
             {t('매출 목표 달성률', '売上目標達成率')}
           </h2>
@@ -74,7 +74,7 @@ export default function SalesGoal({ currentSales, goal, onGoalChange }: SalesGoa
           <button
             onClick={handleSave}
             className="px-4 py-2 rounded-lg text-sm font-medium text-white"
-            style={{ background: 'linear-gradient(135deg, #1A2B5E, #3B6FF6)' }}
+            style={{ background: '#1A2B5E' }}
           >
             {t('저장', '保存')}
           </button>
@@ -85,7 +85,7 @@ export default function SalesGoal({ currentSales, goal, onGoalChange }: SalesGoa
         <>
           <div className="flex justify-between items-end mb-2">
             <p className="text-3xl font-bold" style={{
-              color: overRate >= 100 ? '#22c55e' : overRate >= 70 ? '#3B6FF6' : '#f59e0b',
+              color: overRate >= 100 ? '#22c55e' : overRate >= 70 ? '#1A2B5E' : '#f59e0b',
             }}>
               {overRate.toFixed(1)}%
             </p>
@@ -98,10 +98,10 @@ export default function SalesGoal({ currentSales, goal, onGoalChange }: SalesGoa
               className="h-full rounded-full"
               style={{
                 background: overRate >= 100
-                  ? 'linear-gradient(90deg, #22c55e, #4ade80)'
+                  ? '#22c55e'
                   : overRate >= 70
-                    ? 'linear-gradient(90deg, #3B6FF6, #60a5fa)'
-                    : 'linear-gradient(90deg, #f59e0b, #fbbf24)',
+                    ? '#1A2B5E'
+                    : '#f59e0b',
               }}
               initial={{ width: 0 }}
               animate={{ width: `${rate}%` }}

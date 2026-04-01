@@ -32,10 +32,10 @@ interface Insight {
 
 const CATEGORY_CONFIG: Record<InsightCategory, { label: [string, string]; color: string }> = {
   sales:    { label: ['매출', '売上'],       color: '#1A2B5E' },
-  title:    { label: ['작품', 'タイトル'],   color: '#3B6FF6' },
-  platform: { label: ['플랫폼', 'PF'],      color: '#0891b2' },
-  genre:    { label: ['장르', 'ジャンル'],   color: '#7c3aed' },
-  company:  { label: ['제작사', '制作会社'], color: '#059669' },
+  title:    { label: ['작품', 'タイトル'],   color: '#1A2B5E' },
+  platform: { label: ['플랫폼', 'PF'],      color: '#1A2B5E' },
+  genre:    { label: ['장르', 'ジャンル'],   color: '#1A2B5E' },
+  company:  { label: ['제작사', '制作会社'], color: '#1A2B5E' },
   risk:     { label: ['리스크', 'リスク'],   color: '#dc2626' },
 };
 
@@ -77,7 +77,7 @@ function buildInsights(
         `매출이 전월 대비 ${Math.abs(kpis.mom_change).toFixed(1)}% 소폭 감소했습니다.`,
         `売上が前月比${Math.abs(kpis.mom_change).toFixed(1)}%微減しました。`,
       ),
-      highlights: [{ word: `${Math.abs(kpis.mom_change).toFixed(1)}%`, color: '#f59e0b' }],
+      highlights: [{ word: `${Math.abs(kpis.mom_change).toFixed(1)}%`, color: '#1A2B5E' }],
     });
   } else if (kpis.mom_change >= 20) {
     insights.push({
@@ -116,7 +116,7 @@ function buildInsights(
             `${topPf.channel}の売上比率が${topShare.toFixed(0)}%と偏重しています。プラットフォーム分散を検討してください。`,
           ),
           highlights: [
-            { word: topPf.channel, color: '#0891b2' },
+            { word: topPf.channel, color: '#1A2B5E' },
             { word: `${topShare.toFixed(0)}%`, color: '#dc2626' },
           ],
         });
@@ -129,7 +129,7 @@ function buildInsights(
             `${topPf.channel}が全体売上の${topShare.toFixed(0)}%を占めています。`,
           ),
           highlights: [
-            { word: topPf.channel, color: '#0891b2' },
+            { word: topPf.channel, color: '#1A2B5E' },
             { word: `${topShare.toFixed(0)}%`, color: '#1A2B5E' },
           ],
         });
@@ -198,7 +198,7 @@ function buildInsights(
           `상위 3개 작품이 전체 매출의 ${top3Share.toFixed(0)}%를 차지합니다. 매출 기반 확대가 필요합니다.`,
           `上位3タイトルが全体売上の${top3Share.toFixed(0)}%を占めています。売上基盤の拡大が必要です。`,
         ),
-        highlights: [{ word: `${top3Share.toFixed(0)}%`, color: '#f59e0b' }],
+        highlights: [{ word: `${top3Share.toFixed(0)}%`, color: '#1A2B5E' }],
       });
     }
   }
@@ -238,7 +238,7 @@ function buildInsights(
           `${topGenre.genre_kr || topGenre.genre_code}ジャンルが売上1位 (${formatCurrency(topGenre.total_sales)}、${topGenre.title_count}タイトル)`,
         ),
         highlights: [
-          { word: topGenre.genre_kr || topGenre.genre_code, color: '#7c3aed' },
+          { word: topGenre.genre_kr || topGenre.genre_code, color: '#1A2B5E' },
         ],
       });
     }
@@ -296,7 +296,7 @@ function buildInsights(
           `목표 달성률이 ${goalRate.toFixed(1)}%입니다. 매출 가속 전략이 필요합니다.`,
           `目標達成率が${goalRate.toFixed(1)}%です。売上加速戦略が必要です。`,
         ),
-        highlights: [{ word: `${goalRate.toFixed(1)}%`, color: '#f59e0b' }],
+        highlights: [{ word: `${goalRate.toFixed(1)}%`, color: '#1A2B5E' }],
       });
     }
   }

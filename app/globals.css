@@ -163,7 +163,7 @@ select:focus-visible,
 
 /* Light theme: gradient text stays readable */
 .theme-light .gradient-text {
-  background: linear-gradient(135deg, #1A2B5E, #2A3F7E);
+  background: #1A2B5E;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -229,7 +229,7 @@ select:focus-visible,
 
 /* Page icon */
 .page-icon-glow {
-  background: linear-gradient(135deg, #1A2B5E, #3B6FF6);
+  background: #1A2B5E;
   box-shadow: 0 4px 16px rgba(26, 43, 94, 0.35);
 }
 
@@ -244,7 +244,7 @@ select:focus-visible,
 
 /* Gradient text */
 .gradient-text {
-  background: linear-gradient(135deg, #1A2B5E, #3B6FF6);
+  background: #1A2B5E;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -259,7 +259,7 @@ select:focus-visible,
 
 /* Button gradient - navy */
 .btn-gradient {
-  background: linear-gradient(135deg, #1A2B5E, #3B6FF6);
+  background: #1A2B5E;
   color: #fff;
   border: none;
   transition: all 0.2s ease;

@@ -871,7 +871,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                         onClick={() => setTrendPeriod(period)}
                         className="px-4 py-1.5 text-[13px] font-medium cursor-pointer transition-all"
                         style={{
-                          background: trendPeriod === period ? 'linear-gradient(135deg, #1A2B5E, #3B6FF6)' : 'transparent',
+                          background: trendPeriod === period ? '#1A2B5E' : 'transparent',
                           color: trendPeriod === period ? '#fff' : 'var(--color-text-secondary)',
                           borderRight: period !== 'daily' ? '1px solid var(--color-glass-border)' : 'none',
                         }}
@@ -1081,7 +1081,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
             }}
             className="px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all"
             style={{
-              background: periodPreset === preset.id ? 'linear-gradient(135deg, #1A2B5E, #3B6FF6)' : 'var(--color-glass)',
+              background: periodPreset === preset.id ? '#1A2B5E' : 'var(--color-glass)',
               color: periodPreset === preset.id ? '#fff' : 'var(--color-text-secondary)',
               border: `1px solid ${periodPreset === preset.id ? 'transparent' : 'var(--color-glass-border)'}`,
             }}
@@ -1116,7 +1116,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
             onClick={() => setShowCompare(true)}
             disabled={compareList.length < 2}
             className="px-3 py-1.5 rounded-lg text-[13px] font-medium cursor-pointer disabled:opacity-40"
-            style={{ background: '#3B6FF6', color: '#fff' }}
+            style={{ background: '#1A2B5E', color: '#fff' }}
           >
             {t('비교하기', '比較する')}
           </motion.button>

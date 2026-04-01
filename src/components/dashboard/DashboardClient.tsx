@@ -125,7 +125,7 @@ function AreaChartTooltip({ active, payload, label, fmtCurrency }: {
     }}>
       <p style={{ color: 'var(--color-tooltip-label)', fontSize: 13, marginBottom: 8, fontWeight: 600 }}>{label}</p>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'linear-gradient(135deg, #3b82f6, #60a5fa)', boxShadow: '0 0 6px rgba(99,102,241,0.5)', flexShrink: 0 }} />
+        <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#1A2B5E', boxShadow: '0 0 6px rgba(26,43,94,0.4)', flexShrink: 0 }} />
         <p style={{ color: 'var(--color-tooltip-value)', fontSize: 16, fontWeight: 700, margin: 0 }}>
           {fmtCurrency(payload[0].value)}
         </p>
@@ -458,7 +458,7 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
               }}
               className="px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all"
               style={{
-                background: activePreset === preset.id ? 'linear-gradient(135deg, #1A2B5E, #3B6FF6)' : 'var(--color-glass)',
+                background: activePreset === preset.id ? '#1A2B5E' : 'var(--color-glass)',
                 color: activePreset === preset.id ? '#fff' : 'var(--color-text-secondary)',
                 border: `1px solid ${activePreset === preset.id ? 'transparent' : 'var(--color-glass-border)'}`,
               }}
@@ -668,7 +668,7 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
                     onClick={() => setTrendMode(mode)}
                     className="px-3 py-1.5 text-[13px] font-medium transition-all"
                     style={{
-                      background: trendMode === mode ? 'linear-gradient(135deg, #1A2B5E, #3B6FF6)' : 'transparent',
+                      background: trendMode === mode ? '#1A2B5E' : 'transparent',
                       color: trendMode === mode ? '#fff' : 'var(--color-text-secondary)',
                     }}
                   >
@@ -965,7 +965,7 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
                       className="cursor-pointer transition-colors hover:brightness-110"
                       onClick={() => router.push(`/titles?highlight=${encodeURIComponent(title.title_jp)}`)}
                     >
-                      <td className="py-3 px-2 font-bold text-[14px]" style={{ color: idx < 3 ? '#3B6FF6' : 'var(--color-text-muted)' }}>
+                      <td className="py-3 px-2 font-bold text-[14px]" style={{ color: idx < 3 ? '#1A2B5E' : 'var(--color-text-muted)' }}>
                         {idx + 1}
                       </td>
                       <td className="py-3 px-2" style={{ maxWidth: 220 }}>

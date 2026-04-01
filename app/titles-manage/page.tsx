@@ -582,7 +582,7 @@ export default function TitlesManagePage() {
           <span className="text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
             {selected.size}{t('건 선택', '件選択')}
           </span>
-          <button onClick={() => { setBatchUpdates({}); setBatchOpen(true); }} className="bulk-btn" style={bulkBtnStyle('#3B6FF6')}>
+          <button onClick={() => { setBatchUpdates({}); setBatchOpen(true); }} className="bulk-btn" style={bulkBtnStyle('#1A2B5E')}>
             <Layers size={14} /> {t('일괄 수정', '一括編集')}
           </button>
           <button onClick={confirmDeactivate} className="bulk-btn" style={bulkBtnStyle('#f59e0b')}>

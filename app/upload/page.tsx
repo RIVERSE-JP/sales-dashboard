@@ -997,7 +997,7 @@ export default function DataUploadPage() {
                 <Loader2 size={40} color="#3B6FF6" className="animate-spin mb-4" />
                 <p className="text-sm font-semibold mb-2" style={{ color: 'var(--color-text-primary)' }}>{t('업로드 중...', 'アップロード中...')}</p>
                 <div className="w-48 h-2 rounded-full overflow-hidden" style={{ background: 'var(--color-glass-border)' }}>
-                  <motion.div className="h-full rounded-full" style={{ background: 'linear-gradient(90deg, #1A2B5E, #3B6FF6)' }} initial={{ width: 0 }} animate={{ width: `${uploadProgress}%` }} transition={{ duration: 0.3 }} />
+                  <motion.div className="h-full rounded-full" style={{ background: '#1A2B5E' }} initial={{ width: 0 }} animate={{ width: `${uploadProgress}%` }} transition={{ duration: 0.3 }} />
                 </div>
                 <p className="text-xs mt-2" style={{ color: 'var(--color-text-muted)' }}>{uploadProgress}%</p>
               </motion.div>

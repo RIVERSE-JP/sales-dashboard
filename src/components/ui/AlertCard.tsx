@@ -17,7 +17,7 @@ const platformColors: Record<string, string> = {
   めちゃコミック: '#FF4081',
   mechacomic: '#FF4081',
   booklive: '#2196F3',
-  default: '#3B6FF6',
+  default: '#1A2B5E',
 };
 
 function getPlatformColor(platform: string): string {
