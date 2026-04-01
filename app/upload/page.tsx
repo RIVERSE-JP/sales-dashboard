@@ -151,47 +151,70 @@ function ConfirmDialog({ message, onConfirm, onCancel }: { message: string; onCo
 // Format Detection
 // ============================================================
 
+// 파일명에서 플랫폼 추측
+function guessPlatformFromFileName(fileName: string): string {
+  const lower = fileName.toLowerCase();
+  // 파일명에 플랫폼명이 직접 포함된 경우
+  if (lower.includes('piccoma') || lower.includes('ピッコマ') || lower.includes('피코마')) return 'piccoma';
+  if (lower.includes('mechacomic') || lower.includes('mecha') || lower.includes('メチャ') || lower.includes('めちゃ') || lower.includes('메챠')) return 'Mechacomic';
+  if (lower.includes('cmoa') || lower.includes('シーモア') || lower.includes('시모아')) return 'cmoa';
+  if (lower.includes('line') && lower.includes('manga') || lower.includes('lineマンガ') || lower.includes('linemannga')) return 'LINEマンガ';
+  if (lower.includes('ebookjapan') || lower.includes('ebook')) return 'ebookjapan';
+  if (lower.includes('fanza')) return 'DMM（FANZA）';
+  if (lower.includes('renta')) return 'Renta';
+  if (lower.includes('u-next') || lower.includes('unext')) return 'U-NEXT';
+  if (lower.includes('dmm') && !lower.includes('fanza')) return 'DMM';
+  if (lower.includes('まんが王国') || lower.includes('mangaoukoku') || lower.includes('만화왕국')) return 'まんが王国';
+  return '';
+}
+
 function detectFormat(fileName: string, headerSample?: string): DetectedFormat {
   const lower = fileName.toLowerCase();
   const name = fileName;
 
-  // cmoa — 파일명에 'cmoa' 포함 시 확정
-  if (lower.includes('cmoa')) {
-    return { type: 'cmoa_sokuhochi', platform: 'cmoa', isPreliminary: true, confidence: 'high', label: 'cmoa 속보치 TSV' };
+  // ── 1단계: 파일명으로 플랫폼 + 포맷 확정 가능한 경우 ──
+
+  // cmoa — 파일명에 'cmoa' 또는 'シーモア' 포함
+  if (lower.includes('cmoa') || lower.includes('シーモア') || lower.includes('시모아')) {
+    return { type: 'cmoa_sokuhochi', platform: 'cmoa', isPreliminary: true, confidence: 'high', label: 'cmoa 속보치' };
   }
   // Weekly Report — 파일명으로 확정
   if (name.includes('Weekly Report') || lower.includes('weekly_report') || lower.includes('weekly report')) {
-    return { type: 'weekly_report', platform: '', isPreliminary: false, confidence: 'high', label: 'Weekly Report Excel' };
+    return { type: 'weekly_report', platform: '', isPreliminary: false, confidence: 'high', label: 'Weekly Report' };
   }
 
-  // daily_sales_log 패턴 — 픽코마, 메챠코믹 등 여러 플랫폼에서 동일 형식 사용
-  // 플랫폼 자동 확정 불가 → confidence: 'medium', 플랫폼 선택 필요
-  if (lower.includes('sp_kan_daily_sales_log')) {
-    return { type: 'piccoma_sokuhochi', platform: '', isPreliminary: true, confidence: 'medium', label: 'SP単行本 속보치 CSV' };
-  }
-  if (lower.includes('app_kan_daily_sales_log')) {
-    return { type: 'piccoma_sokuhochi', platform: '', isPreliminary: true, confidence: 'medium', label: 'APP単行本 속보치 CSV' };
-  }
-  if (lower.includes('sp_daily_sales_log')) {
-    return { type: 'piccoma_sokuhochi', platform: '', isPreliminary: true, confidence: 'medium', label: 'SP 속보치 CSV' };
-  }
-  if (lower.includes('app_daily_sales_log')) {
-    return { type: 'piccoma_sokuhochi', platform: '', isPreliminary: true, confidence: 'medium', label: 'APP 속보치 CSV' };
-  }
-
-  // .xlsx with no other clue → likely Weekly Report
-  if (lower.endsWith('.xlsx') || lower.endsWith('.xls')) {
-    return { type: 'weekly_report', platform: '', isPreliminary: false, confidence: 'medium', label: 'Weekly Report Excel' };
+  // ── 2단계: daily_sales_log 패턴 — 파일명에서 플랫폼 추측 시도 ──
+  if (lower.includes('daily_sales_log') || lower.includes('sokuhochi') || lower.includes('速報')) {
+    const guessedPlatform = guessPlatformFromFileName(fileName);
+    const subType = lower.includes('kan_daily') ? '単行本' : (lower.includes('sp_') ? 'SP' : lower.includes('app_') ? 'APP' : '');
+    const label = subType ? `${subType} 속보치` : '속보치';
+    return {
+      type: 'piccoma_sokuhochi',
+      platform: guessedPlatform,
+      isPreliminary: true,
+      confidence: guessedPlatform ? 'high' : 'medium',
+      label,
+    };
   }
 
-  // CSV/TSV header-based detection
+  // ── 3단계: 헤더 내용으로 포맷 감지 ──
   if (headerSample) {
+    const guessedPlatform = guessPlatformFromFileName(fileName);
+
     if (headerSample.includes('日付') && headerSample.includes('ブック名') && headerSample.includes('購入ポイント数')) {
-      return { type: 'piccoma_sokuhochi', platform: '', isPreliminary: true, confidence: 'medium', label: '속보치 CSV' };
+      return { type: 'piccoma_sokuhochi', platform: guessedPlatform, isPreliminary: true, confidence: guessedPlatform ? 'high' : 'medium', label: '속보치 CSV' };
     }
-    if (headerSample.includes('コンテンツID') && headerSample.includes('タイトル名') && headerSample.includes('消費PT')) {
-      return { type: 'cmoa_sokuhochi', platform: 'cmoa', isPreliminary: true, confidence: 'medium', label: 'cmoa 속보치 TSV' };
+    if (headerSample.includes('コンテンツID') && headerSample.includes('タイトル名')) {
+      return { type: 'cmoa_sokuhochi', platform: 'cmoa', isPreliminary: true, confidence: 'high', label: 'cmoa 속보치' };
     }
+    if (headerSample.includes('Title') && headerSample.includes('Channel') && headerSample.includes('Date')) {
+      return { type: 'weekly_report', platform: '', isPreliminary: false, confidence: 'medium', label: 'Weekly Report CSV' };
+    }
+  }
+
+  // ── 4단계: 확장자 힌트 ──
+  if (lower.endsWith('.xlsx') || lower.endsWith('.xls')) {
+    return { type: 'weekly_report', platform: '', isPreliminary: false, confidence: 'medium', label: 'Excel' };
   }
 
   return { type: 'unknown', platform: '', isPreliminary: false, confidence: 'low', label: '알 수 없음' };
