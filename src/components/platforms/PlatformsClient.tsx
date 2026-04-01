@@ -165,10 +165,10 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
   }, [platformDetailSWR]);
   const detailLoading = platformDetailValidating && !platformDetailSWR;
 
-  // C1: Date range (default: this month)
-  // 기본: 전체 기간
+  // C1: Date range (default: 전체 기간)
   const [startDate, setStartDate] = useState('2025-03-01');
   const [endDate, setEndDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [activePreset, setActivePreset] = useState<string>('all');
 
   useEffect(() => {
     if (platformSummary.length > 0 && selectedPlatform === null) {
@@ -347,29 +347,38 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
           <div className="flex items-center gap-1 rounded-xl px-1 py-1" style={{ background: 'var(--color-glass)', border: '1px solid var(--color-glass-border)' }}>
             <button
               onClick={() => {
+                if (activePreset === 'all') return;
                 const d = new Date(startDate);
                 d.setMonth(d.getMonth() - 1);
                 const y = d.getFullYear(), m = d.getMonth();
                 setStartDate(`${y}-${String(m + 1).padStart(2, '0')}-01`);
                 setEndDate(new Date(y, m + 1, 0).toISOString().slice(0, 10));
+                setActivePreset('custom');
               }}
-              className="p-1.5 rounded-lg transition-colors hover:brightness-125"
-              style={{ color: 'var(--color-text-secondary)' }}
+              className="p-1.5 rounded-lg transition-colors"
+              style={{ color: activePreset !== 'all' ? 'var(--color-text-secondary)' : 'var(--color-text-subtle)', opacity: activePreset !== 'all' ? 1 : 0.3 }}
             ><ChevronLeft size={16} /></button>
             <span className="text-[15px] font-bold px-3 min-w-[130px] text-center" style={{ color: 'var(--color-text-primary)' }}>
-              {(() => { const d = new Date(startDate); return `${d.getFullYear()}${t('년', '年')} ${d.getMonth() + 1}${t('월', '月')}`; })()}
+              {(() => {
+                if (activePreset === 'all') return t('전체 기간', '全期間');
+                if (activePreset === 'thisYear') return `${new Date().getFullYear()}${t('년', '年')}`;
+                const d = new Date(startDate);
+                return `${d.getFullYear()}${t('년', '年')} ${d.getMonth() + 1}${t('월', '月')}`;
+              })()}
             </span>
             <button
               onClick={() => {
+                if (activePreset === 'all') return;
                 const d = new Date(startDate);
                 d.setMonth(d.getMonth() + 1);
                 const y = d.getFullYear(), m = d.getMonth();
                 setStartDate(`${y}-${String(m + 1).padStart(2, '0')}-01`);
                 const last = new Date(y, m + 1, 0), today = new Date();
                 setEndDate(last > today ? today.toISOString().slice(0, 10) : last.toISOString().slice(0, 10));
+                setActivePreset('custom');
               }}
-              className="p-1.5 rounded-lg transition-colors hover:brightness-125"
-              style={{ color: 'var(--color-text-secondary)' }}
+              className="p-1.5 rounded-lg transition-colors"
+              style={{ color: activePreset !== 'all' ? 'var(--color-text-secondary)' : 'var(--color-text-subtle)', opacity: activePreset !== 'all' ? 1 : 0.3 }}
             ><ChevronRight size={16} /></button>
           </div>
           {[
@@ -379,6 +388,7 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
             { id: 'all', ko: '전체', ja: '全体' },
           ].map((p) => (
             <button key={p.id} onClick={() => {
+              setActivePreset(p.id);
               const now = new Date();
               if (p.id === 'thisMonth') { setStartDate(`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`); setEndDate(now.toISOString().slice(0,10)); }
               else if (p.id === 'lastMonth') { const lm = new Date(now.getFullYear(), now.getMonth()-1, 1); setStartDate(`${lm.getFullYear()}-${String(lm.getMonth()+1).padStart(2,'0')}-01`); setEndDate(new Date(lm.getFullYear(), lm.getMonth()+1, 0).toISOString().slice(0,10)); }
@@ -386,7 +396,11 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
               else { setStartDate('2025-03-01'); setEndDate(now.toISOString().slice(0,10)); }
             }}
               className="px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all"
-              style={{ background: 'var(--color-glass)', color: 'var(--color-text-secondary)', border: '1px solid var(--color-glass-border)' }}
+              style={{
+                background: activePreset === p.id ? '#1A2B5E' : 'var(--color-glass)',
+                color: activePreset === p.id ? '#fff' : 'var(--color-text-secondary)',
+                border: `1px solid ${activePreset === p.id ? 'transparent' : 'var(--color-glass-border)'}`,
+              }}
             >{t(p.ko, p.ja)}</button>
           ))}
         </div>
