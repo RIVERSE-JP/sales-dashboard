@@ -155,39 +155,39 @@ function detectFormat(fileName: string, headerSample?: string): DetectedFormat {
   const lower = fileName.toLowerCase();
   const name = fileName;
 
-  // Piccoma SP 단행本
-  if (lower.includes('sp_kan_daily_sales_log')) {
-    return { type: 'piccoma_sokuhochi', platform: 'Piccoma', isPreliminary: true, confidence: 'high', label: 'Piccoma SP単行本 속보치 CSV' };
-  }
-  // Piccoma APP 단행本
-  if (lower.includes('app_kan_daily_sales_log')) {
-    return { type: 'piccoma_sokuhochi', platform: 'Piccoma', isPreliminary: true, confidence: 'high', label: 'Piccoma APP単行本 속보치 CSV' };
-  }
-  // Piccoma SP
-  if (lower.includes('sp_daily_sales_log')) {
-    return { type: 'piccoma_sokuhochi', platform: 'Piccoma', isPreliminary: true, confidence: 'high', label: 'Piccoma SP 속보치 CSV' };
-  }
-  // Piccoma APP
-  if (lower.includes('app_daily_sales_log')) {
-    return { type: 'piccoma_sokuhochi', platform: 'Piccoma', isPreliminary: true, confidence: 'high', label: 'Piccoma APP 속보치 CSV' };
-  }
-  // cmoa filename
+  // cmoa — 파일명에 'cmoa' 포함 시 확정
   if (lower.includes('cmoa')) {
     return { type: 'cmoa_sokuhochi', platform: 'cmoa', isPreliminary: true, confidence: 'high', label: 'cmoa 속보치 TSV' };
   }
-  // Weekly Report by filename
+  // Weekly Report — 파일명으로 확정
   if (name.includes('Weekly Report') || lower.includes('weekly_report') || lower.includes('weekly report')) {
     return { type: 'weekly_report', platform: '', isPreliminary: false, confidence: 'high', label: 'Weekly Report Excel' };
   }
+
+  // daily_sales_log 패턴 — 픽코마, 메챠코믹 등 여러 플랫폼에서 동일 형식 사용
+  // 플랫폼 자동 확정 불가 → confidence: 'medium', 플랫폼 선택 필요
+  if (lower.includes('sp_kan_daily_sales_log')) {
+    return { type: 'piccoma_sokuhochi', platform: '', isPreliminary: true, confidence: 'medium', label: 'SP単行本 속보치 CSV' };
+  }
+  if (lower.includes('app_kan_daily_sales_log')) {
+    return { type: 'piccoma_sokuhochi', platform: '', isPreliminary: true, confidence: 'medium', label: 'APP単行本 속보치 CSV' };
+  }
+  if (lower.includes('sp_daily_sales_log')) {
+    return { type: 'piccoma_sokuhochi', platform: '', isPreliminary: true, confidence: 'medium', label: 'SP 속보치 CSV' };
+  }
+  if (lower.includes('app_daily_sales_log')) {
+    return { type: 'piccoma_sokuhochi', platform: '', isPreliminary: true, confidence: 'medium', label: 'APP 속보치 CSV' };
+  }
+
   // .xlsx with no other clue → likely Weekly Report
   if (lower.endsWith('.xlsx') || lower.endsWith('.xls')) {
     return { type: 'weekly_report', platform: '', isPreliminary: false, confidence: 'medium', label: 'Weekly Report Excel' };
   }
 
-  // CSV header-based detection
+  // CSV/TSV header-based detection
   if (headerSample) {
     if (headerSample.includes('日付') && headerSample.includes('ブック名') && headerSample.includes('購入ポイント数')) {
-      return { type: 'piccoma_sokuhochi', platform: 'Piccoma', isPreliminary: true, confidence: 'medium', label: 'Piccoma 속보치 CSV' };
+      return { type: 'piccoma_sokuhochi', platform: '', isPreliminary: true, confidence: 'medium', label: '속보치 CSV' };
     }
     if (headerSample.includes('コンテンツID') && headerSample.includes('タイトル名') && headerSample.includes('消費PT')) {
       return { type: 'cmoa_sokuhochi', platform: 'cmoa', isPreliminary: true, confidence: 'medium', label: 'cmoa 속보치 TSV' };
