@@ -227,6 +227,7 @@ export async function upsertDailySales(
     channel: string;
     sale_date: string;
     sales_amount: number;
+    sales_amount_gross?: number;
   }>,
   source: 'weekly_report' | 'sokuhochi' | 'manual' = 'weekly_report',
   isPreliminary = false,

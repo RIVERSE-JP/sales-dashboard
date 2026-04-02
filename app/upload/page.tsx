@@ -49,7 +49,8 @@ interface ParsedRow {
   channel_title_jp: string;
   channel: string;
   sale_date: string;
-  sales_amount: number;
+  sales_amount: number;          // 세후 금액 (분석/표시용)
+  sales_amount_gross?: number;   // 세전 원본 금액 (있을 때만)
 }
 
 interface ValidationWarning {
@@ -341,26 +342,26 @@ function parseCSVSokuhochi(text: string, channel: string, divideByTax = false): 
     if (!rawDate || !titleJP) continue;
 
     const saleDate = parseDateString(rawDate);
-    const grossAmount = parseInt(rawAmount.replace(/[¥,]/g, ''), 10) || 0;
-    const amount = divideByTax ? Math.round(grossAmount / 1.1) : grossAmount;
+    const rawVal = parseInt(rawAmount.replace(/[¥,]/g, ''), 10) || 0;
 
-    if (!saleDate || amount <= 0) continue;
+    if (!saleDate || rawVal <= 0) continue;
 
     if (!salesMap.has(titleJP)) salesMap.set(titleJP, new Map());
     const dateMap = salesMap.get(titleJP)!;
-    dateMap.set(saleDate, (dateMap.get(saleDate) || 0) + amount);
+    dateMap.set(saleDate, (dateMap.get(saleDate) || 0) + rawVal);
   }
 
   const rows: ParsedRow[] = [];
   for (const [titleJP, dateMap] of salesMap) {
-    for (const [date, amount] of dateMap) {
+    for (const [date, grossAmount] of dateMap) {
       rows.push({
         title_jp: titleJP,
         title_kr: '',
         channel_title_jp: titleJP,
         channel,
         sale_date: date,
-        sales_amount: amount,
+        sales_amount: divideByTax ? Math.round(grossAmount / 1.1) : grossAmount,
+        sales_amount_gross: divideByTax ? grossAmount : undefined,
       });
     }
   }
@@ -493,15 +494,16 @@ function parsePiccomaKPI(text: string, channel: string, fileName?: string): Pars
       const rawAmount = (vals[col.idx] ?? '').replace(/"/g, '').trim();
       const grossAmount = parseInt(rawAmount.replace(/[¥,]/g, ''), 10) || 0;
       // 세전 → 세후 변환 (÷1.1)
-      const amount = Math.round(grossAmount / 1.1);
-      if (amount > 0) {
+      const netAmount = Math.round(grossAmount / 1.1);
+      if (netAmount > 0) {
         rows.push({
           title_jp: titleJP,
           title_kr: '',
           channel_title_jp: titleJP,
           channel,
           sale_date: col.date,
-          sales_amount: amount,
+          sales_amount: netAmount,
+          sales_amount_gross: grossAmount,
         });
       }
     }
