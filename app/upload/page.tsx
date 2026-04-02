@@ -157,7 +157,7 @@ function ConfirmDialog({ message, onConfirm, onCancel }: { message: string; onCo
 function guessPlatformFromFileName(fileName: string): string {
   const lower = fileName.toLowerCase();
   // 파일명에 플랫폼명이 직접 포함된 경우
-  if (lower.includes('piccoma') || lower.includes('ピッコマ') || lower.includes('피코마')) return 'piccoma';
+  if (lower.includes('piccoma') || lower.includes('ピッコマ') || lower.includes('피코마')) return 'Piccoma';
   if (lower.includes('mechacomic') || lower.includes('mecha') || lower.includes('メチャ') || lower.includes('めちゃ') || lower.includes('메챠')) return 'Mechacomic';
   if (lower.includes('cmoa') || lower.includes('シーモア') || lower.includes('시모아')) return 'cmoa';
   if (lower.includes('line') && lower.includes('manga') || lower.includes('lineマンガ') || lower.includes('linemannga')) return 'LINEマンガ';
@@ -184,7 +184,7 @@ function detectFormat(fileName: string, headerSample?: string, isExcel?: boolean
 
   // 픽코마 Product KPI CSV (TOTAL_Product_KPI_*)
   if (lower.includes('product_kpi')) {
-    return { type: 'piccoma_kpi' as DetectedFormat['type'], platform: guessedPlatform || 'piccoma', isPreliminary: true, confidence: 'high', label: 'Piccoma KPI 속보치' };
+    return { type: 'piccoma_kpi' as DetectedFormat['type'], platform: guessedPlatform || 'Piccoma', isPreliminary: true, confidence: 'high', label: 'Piccoma KPI 속보치' };
   }
 
   // daily_sales_log 패턴 (픽코마/메챠코믹 등 공통 포맷)
@@ -212,7 +212,7 @@ function detectFormat(fileName: string, headerSample?: string, isExcel?: boolean
     }
     // 픽코마 Product KPI 포맷
     if (headerSample.includes('作品名') && headerSample.includes('Total売上')) {
-      return { type: 'piccoma_kpi' as DetectedFormat['type'], platform: guessedPlatform || 'piccoma', isPreliminary: true, confidence: 'high', label: 'Piccoma KPI 속보치' };
+      return { type: 'piccoma_kpi' as DetectedFormat['type'], platform: guessedPlatform || 'Piccoma', isPreliminary: true, confidence: 'high', label: 'Piccoma KPI 속보치' };
     }
     // cmoa TSV 포맷
     if (headerSample.includes('コンテンツID') && headerSample.includes('タイトル名')) {

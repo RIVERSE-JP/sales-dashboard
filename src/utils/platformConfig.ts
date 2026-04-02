@@ -14,8 +14,17 @@ export interface PlatformBrand {
 }
 
 export const PLATFORM_BRANDS: Record<string, PlatformBrand> = {
-  piccoma: {
+  Piccoma: {
     color: '#F2C811',        // 옐로우 (말풍선)
+    bgColor: '#FFF9E0',
+    borderColor: '#F5E08A',
+    icon: 'P',
+    logo: '/icons/piccoma.png',
+    nameKR: '피코마',
+    nameJP: 'ピッコマ',
+  },
+  piccoma: {
+    color: '#F2C811',
     bgColor: '#FFF9E0',
     borderColor: '#F5E08A',
     icon: 'P',
@@ -106,21 +115,30 @@ export const PLATFORM_BRANDS: Record<string, PlatformBrand> = {
   },
 };
 
-// 채널명 정규화: DB에 저장된 다양한 표기를 PLATFORM_BRANDS 키로 통일
+// 채널명 정규화: 모든 변형 → DB channel 값으로 통일
 const CHANNEL_ALIASES: Record<string, string> = {
-  'Piccoma': 'piccoma',
-  'piccoma': 'piccoma',
-  'ピッコマ': 'piccoma',
+  // Piccoma (DB: 'Piccoma')
+  'Piccoma': 'Piccoma',
+  'piccoma': 'Piccoma',
+  'PICCOMA': 'Piccoma',
+  'ピッコマ': 'Piccoma',
+  // Mechacomic (DB: 'Mechacomic')
+  'Mechacomic': 'Mechacomic',
+  'mechacomic': 'Mechacomic',
+  'MECHACOMIC': 'Mechacomic',
+  'めちゃコミック': 'Mechacomic',
+  'めちゃコミ': 'Mechacomic',
+  // cmoa (DB: 'cmoa')
+  'cmoa': 'cmoa',
   'CMOA': 'cmoa',
   'Cmoa': 'cmoa',
   'コミックシーモア': 'cmoa',
-  'mechacomic': 'Mechacomic',
-  'Mechacomic': 'Mechacomic',
-  'めちゃコミック': 'Mechacomic',
-  'めちゃコミ': 'Mechacomic',
+  // 기타 플랫폼
   'renta': 'Renta',
+  'Renta': 'Renta',
   'Renta!': 'Renta',
   'dmm': 'DMM',
+  'DMM': 'DMM',
   'DMMブックス': 'DMM',
   'u-next': 'U-NEXT',
   'U-NEXT': 'U-NEXT',
