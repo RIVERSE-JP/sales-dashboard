@@ -229,7 +229,7 @@ export async function upsertDailySales(
     sales_amount: number;
     sales_amount_gross?: number;
   }>,
-  source: 'weekly_report' | 'sokuhochi' | 'manual' = 'weekly_report',
+  source: string = 'weekly_report',
   isPreliminary = false,
 ) {
   return apiFetch<{ inserted: number; updated: number }>('/api/sales/upload', {
