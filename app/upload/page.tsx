@@ -741,30 +741,40 @@ export default function DataUploadPage() {
   // Known platforms (for validation + manual selection dropdown)
   const [knownPlatforms, setKnownPlatforms] = useState<string[]>([]);
 
-  // 디버그 로그: 원본 파일 + 메타데이터를 서버에 저장
+  // 디버그 로그: upload_logs 테이블 + Storage(가능하면) 저장
   const saveDebugLog = useCallback(async (meta: {
     status: string;
     errorMessage?: string;
     uploadType?: string;
     platform?: string;
     rowCount?: number;
-    dateStart?: string;
-    dateEnd?: string;
     detectedLabel?: string;
   }) => {
     const file = currentFileRef.current;
-    if (!file) return;
     try {
-      const form = new FormData();
-      form.append('file', file);
-      form.append('metadata', JSON.stringify({
-        ...meta,
-        fileName: file.name,
-        fileSize: file.size,
-      }));
-      await fetch('/api/upload-debug', { method: 'POST', body: form });
+      // 1. upload_logs에 직접 기록 (항상 성공해야 함)
+      await supabase.from('upload_logs').insert({
+        upload_type: meta.uploadType || 'sokuhochi',
+        source_file: file?.name || 'unknown',
+        row_count: meta.rowCount ?? 0,
+        status: meta.status === 'success' ? 'completed' : meta.status === 'preview' ? 'processing' : 'failed',
+        error_message: meta.errorMessage
+          ? `[${meta.detectedLabel || '?'}] ${meta.errorMessage}`
+          : meta.detectedLabel ? `[${meta.detectedLabel}] ${meta.status}` : null,
+        platforms: meta.platform ? [meta.platform] : null,
+      });
+
+      // 2. Storage에 원본 파일 저장 시도 (실패해도 무시)
+      if (file) {
+        try {
+          const form = new FormData();
+          form.append('file', file);
+          form.append('metadata', JSON.stringify({ ...meta, fileName: file.name, fileSize: file.size }));
+          await fetch('/api/upload-debug', { method: 'POST', body: form });
+        } catch { /* Storage 실패 무시 */ }
+      }
     } catch {
-      // 디버그 로그 실패는 무시
+      // 로그 실패는 무시
     }
   }, []);
 
@@ -889,8 +899,10 @@ export default function DataUploadPage() {
       setWarnings(warns);
       if (warns.length > 0) setShowWarnings(true);
       setStatus('preview');
+      // 프리뷰 도달 로그
+      saveDebugLog({ status: 'preview', detectedLabel: fmt.label, platform: fmt.platform, rowCount: rows.length });
     },
-    [detectNewTitles, validateRows, knownPlatforms, t],
+    [detectNewTitles, validateRows, knownPlatforms, saveDebugLog, t],
   );
 
   const handleFile = useCallback(
@@ -1098,12 +1110,6 @@ export default function DataUploadPage() {
         platform: effectivePlatform,
         rowCount: rowsToUpload.length,
         detectedLabel: detectedFormat?.label,
-      });
-      await supabase.from('upload_logs').insert({
-        upload_type: fileType,
-        source_file: fileName,
-        row_count: rowsToUpload.length,
-        status: 'success',
       });
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : t('업로드에 실패했습니다', 'アップロードに失敗しました');
