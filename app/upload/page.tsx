@@ -14,6 +14,7 @@ import {
   X,
   Info,
   Tag,
+  Download,
 } from 'lucide-react';
 import { supabase, upsertDailySales } from '@/lib/supabase';
 import { useApp } from '@/context/AppContext';
@@ -1899,6 +1900,33 @@ export default function DataUploadPage() {
                                   {log.error_message}
                                 </div>
                               )}
+                              {/* 원본 파일 다운로드 */}
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    const safeName = (log.source_file ?? '').replace(/[^a-zA-Z0-9가-힣ぁ-んァ-ヶ一-龠._-]/g, '_');
+                                    if (!safeName) { alert(t('파일명 정보가 없습니다', 'ファイル名情報がありません')); return; }
+                                    // Storage에서 파일명으로 검색
+                                    const { data: files } = await supabase.storage.from('upload-debug').list('uploads', {
+                                      search: safeName,
+                                      limit: 5,
+                                      sortBy: { column: 'created_at', order: 'desc' },
+                                    });
+                                    if (files && files.length > 0) {
+                                      const { data: urlData } = await supabase.storage.from('upload-debug').createSignedUrl(`uploads/${files[0].name}`, 3600);
+                                      if (urlData?.signedUrl) { window.open(urlData.signedUrl, '_blank'); return; }
+                                    }
+                                    alert(t('파일을 찾을 수 없습니다 (Storage에 저장된 파일이 없을 수 있습니다)', 'ファイルが見つかりません'));
+                                  } catch {
+                                    alert(t('다운로드에 실패했습니다', 'ダウンロードに失敗しました'));
+                                  }
+                                }}
+                                className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-all"
+                                style={{ background: 'rgba(26, 43, 94, 0.08)', color: '#1A2B5E', border: '1px solid rgba(26, 43, 94, 0.15)' }}
+                              >
+                                <Download size={12} />
+                                {t('원본 파일 다운로드', '元ファイルをダウンロード')}
+                              </button>
                             </div>
                           </td>
                         </tr>
