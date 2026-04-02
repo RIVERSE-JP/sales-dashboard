@@ -954,17 +954,9 @@ export default function DataUploadPage() {
     [detectNewTitles, validateRows, knownPlatforms, saveDebugLog, t],
   );
 
-  const handleFile = useCallback(
-    async (file: File) => {
-      setStatus('parsing');
-      setFileName(file.name);
-      setErrorMessage('');
-      setUploadResult(null);
-      setWarnings([]);
-      setNewTitles([]);
-      setManualPlatform('');
-      setDetectedFormat(null);
-      currentFileRef.current = file;
+  // 단일 파일 파싱 (내부용)
+  const parseOneFile = useCallback(
+    async (file: File): Promise<{ rows: ParsedRow[]; fmt: DetectedFormat }> => {
 
       try {
         const buffer = await file.arrayBuffer();
@@ -1047,15 +1039,7 @@ export default function DataUploadPage() {
         }
 
         if (fmt.type === 'unknown') {
-          saveDebugLog({ status: 'failed', errorMessage: 'Format unknown. isExcel=' + isExcel + ', headerSample=' + headerSample.slice(0, 200) });
-          setStatus('error');
-          setErrorMessage(
-            t(
-              '이 파일의 형식을 인식할 수 없습니다. 파일을 확인해 주세요.',
-              'このファイルの形式を認識できません。ファイルを確認してください。',
-            ),
-          );
-          return;
+          throw new Error(`${file.name}: 형식을 인식할 수 없습니다`);
         }
 
         let rows: ParsedRow[] = [];
@@ -1085,7 +1069,72 @@ export default function DataUploadPage() {
           }
         }
 
-        finalizeParsed(rows, fmt);
+        return { rows, fmt };
+      } catch (err) {
+        throw err;
+      }
+    },
+    [t],
+  );
+
+  // 여러 파일 처리 (합산 지원)
+  const handleFiles = useCallback(
+    async (files: File[]) => {
+      setStatus('parsing');
+      setFileName(files.map(f => f.name).join(', '));
+      setErrorMessage('');
+      setUploadResult(null);
+      setWarnings([]);
+      setNewTitles([]);
+      setManualPlatform('');
+      setDetectedFormat(null);
+      currentFileRef.current = files[0]; // 디버그용 첫 파일
+
+      try {
+        let allRows: ParsedRow[] = [];
+        let lastFmt: DetectedFormat | null = null;
+        const fileNames: string[] = [];
+
+        for (const file of files) {
+          const result = await parseOneFile(file);
+          if (result) {
+            allRows = allRows.concat(result.rows);
+            lastFmt = result.fmt;
+            fileNames.push(file.name);
+          }
+        }
+
+        if (!lastFmt) {
+          setStatus('error');
+          setErrorMessage(t('파일을 분석할 수 없습니다', 'ファイルを解析できません'));
+          return;
+        }
+
+        // 여러 파일일 경우: 같은 (title_jp, channel, sale_date)를 합산
+        if (files.length > 1) {
+          const mergeMap = new Map<string, ParsedRow>();
+          for (const row of allRows) {
+            const key = `${row.title_jp}|${row.channel}|${row.sale_date}`;
+            const existing = mergeMap.get(key);
+            if (existing) {
+              existing.sales_amount += row.sales_amount;
+              if (row.sales_amount_gross && existing.sales_amount_gross) {
+                existing.sales_amount_gross += row.sales_amount_gross;
+              }
+            } else {
+              mergeMap.set(key, { ...row });
+            }
+          }
+          allRows = Array.from(mergeMap.values());
+        }
+
+        // 파일명 표시 업데이트
+        setFileName(files.length > 1 ? `${fileNames.length}개 파일 (${fileNames[0]} 외 ${fileNames.length - 1}개)` : fileNames[0] || '');
+        if (files.length > 1 && lastFmt) {
+          lastFmt = { ...lastFmt, label: `${lastFmt.label} (${files.length}개 파일 합산)` };
+        }
+
+        finalizeParsed(allRows, lastFmt);
       } catch (err) {
         const errMsg = err instanceof Error ? err.message : t('파일 분석에 실패했습니다', 'ファイルの解析に失敗しました');
         saveDebugLog({ status: 'failed', errorMessage: errMsg });
@@ -1093,27 +1142,27 @@ export default function DataUploadPage() {
         setErrorMessage(errMsg);
       }
     },
-    [finalizeParsed, saveDebugLog, t],
+    [parseOneFile, finalizeParsed, saveDebugLog, t],
   );
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
       setDragOver(false);
-      const file = e.dataTransfer.files[0];
-      if (file) {
-        handleFile(file);
+      const files = Array.from(e.dataTransfer.files);
+      if (files.length > 0) {
+        handleFiles(files);
       }
     },
-    [handleFile, t],
+    [handleFiles],
   );
 
   const handleFileInput = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file) handleFile(file);
+      const files = e.target.files ? Array.from(e.target.files) : [];
+      if (files.length > 0) handleFiles(files);
     },
-    [handleFile],
+    [handleFiles],
   );
 
   // Determine the effective platform at upload time
@@ -1339,9 +1388,9 @@ export default function DataUploadPage() {
                   {t('또는 클릭하여 파일 선택', 'またはクリックしてファイルを選択')}
                 </p>
                 <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                  {t('파일을 올리면 자동으로 형식을 분석합니다 (CSV, TSV, Excel 등)', 'ファイルをアップロードすると自動的に形式を分析します（CSV、TSV、Excel等）')}
+                  {t('파일을 올리면 자동 분석합니다. 여러 파일을 한번에 올리면 합산됩니다.', 'ファイルをドロップすると自動分析します。複数ファイルは合算されます。')}
                 </p>
-                <input ref={fileInputRef} type="file" onChange={handleFileInput} className="hidden" />
+                <input ref={fileInputRef} type="file" multiple onChange={handleFileInput} className="hidden" />
               </motion.div>
             )}
 
