@@ -55,11 +55,36 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'rows array is required' }, { status: 400 });
   }
 
-  // 채널명 강제 정규화
-  const normalizedRows = rows.map((row: Record<string, unknown>) => ({
-    ...row,
-    channel: normalizeChannel(String(row.channel || '')),
-  }));
+  // title_master에서 title_kr 매핑 로드
+  const { data: masterData } = await supabaseServer.from('titles').select('title_jp, title_kr');
+  const krExact = new Map<string, string>();
+  const krCore = new Map<string, string>();
+  const toCore = (s: string) => s
+    .replace(/～[^～]*～/g, '').replace(/〜[^〜]*〜/g, '')
+    .replace(/【[^】]*】/g, '').replace(/\[[^\]]*\]/g, '')
+    .replace(/（[^）]*）/g, '').replace(/\([^)]*\)/g, '')
+    .replace(/\s+/g, '').trim();
+  if (masterData) {
+    masterData.forEach((m: { title_jp: string; title_kr: string | null }) => {
+      if (m.title_jp && m.title_kr) {
+        krExact.set(m.title_jp, m.title_kr);
+        const c = toCore(m.title_jp);
+        if (c && !krCore.has(c)) krCore.set(c, m.title_kr);
+      }
+    });
+  }
+
+  // 채널명 정규화 + title_kr 자동 매칭
+  const normalizedRows = rows.map((row: Record<string, unknown>) => {
+    const titleJp = String(row.title_jp || '');
+    const existingKr = row.title_kr ? String(row.title_kr) : '';
+    const matchedKr = existingKr || krExact.get(titleJp) || krCore.get(toCore(titleJp)) || '';
+    return {
+      ...row,
+      channel: normalizeChannel(String(row.channel || '')),
+      title_kr: matchedKr,
+    };
+  });
 
   let totalInserted = 0;
   let totalUpdated = 0;
