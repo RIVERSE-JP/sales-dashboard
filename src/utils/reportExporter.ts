@@ -5,6 +5,7 @@
 import type { CellFormulaValue } from 'exceljs';
 import { saveAs } from 'file-saver';
 import type { DailySale } from '@/types';
+import { normalizeChannel } from '@/utils/platformConfig';
 
 // ============================================================
 // Types
@@ -78,7 +79,7 @@ export async function generateWeeklyReport(
     r.getCell(1).value = row.title_jp;
     r.getCell(2).value = row.title_kr || '';
     r.getCell(3).value = row.title_jp; // channel_title_jp fallback
-    r.getCell(4).value = row.channel;
+    r.getCell(4).value = normalizeChannel(row.channel);
 
     // 날짜: 시간 없이 날짜만 (원본과 동일)
     const parts = row.sale_date.split('-');
@@ -141,11 +142,12 @@ export async function generatePlatformReport(
   // Group by platform
   const platformMap = new Map<string, { sales: number; titles: Set<string>; days: Set<string> }>();
   data.forEach((row) => {
-    const entry = platformMap.get(row.channel) ?? { sales: 0, titles: new Set(), days: new Set() };
+    const ch = normalizeChannel(row.channel);
+    const entry = platformMap.get(ch) ?? { sales: 0, titles: new Set(), days: new Set() };
     entry.sales += row.sales_amount;
     entry.titles.add(row.title_jp);
     entry.days.add(row.sale_date);
-    platformMap.set(row.channel, entry);
+    platformMap.set(ch, entry);
   });
 
   const ExcelJS = (await import('exceljs')).default;
@@ -203,7 +205,7 @@ export async function generateTitleReport(
   data.forEach((row) => {
     const entry = titleMap.get(row.title_jp) ?? { title_kr: row.title_kr, sales: 0, channels: new Set(), days: new Set() };
     entry.sales += row.sales_amount;
-    entry.channels.add(row.channel);
+    entry.channels.add(normalizeChannel(row.channel));
     entry.days.add(row.sale_date);
     titleMap.set(row.title_jp, entry);
   });
@@ -265,7 +267,7 @@ export function generateCSV(data: DailySale[], options: ReportOptions): void {
     csvRows.push([
       `"${(row.title_jp || '').replace(/"/g, '""')}"`,
       `"${(row.title_kr || '').replace(/"/g, '""')}"`,
-      `"${row.channel}"`,
+      `"${normalizeChannel(row.channel)}"`,
       row.sale_date,
       String(row.sales_amount),
     ].join(','));
