@@ -149,6 +149,13 @@ export default function DataPage() {
   // Tab state
   const [activeTab, setActiveTab] = useState<'sales' | 'titles' | 'settings'>('sales');
 
+  // 매출 삭제 모달
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteMode, setDeleteMode] = useState<'all' | 'range'>('all');
+  const [deleteStartDate, setDeleteStartDate] = useState('');
+  const [deleteEndDate, setDeleteEndDate] = useState('');
+  const [deleting, setDeleting] = useState(false);
+
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<DailySale[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -411,6 +418,153 @@ export default function DataPage() {
         )}
       </AnimatePresence>
 
+      {/* 매출 삭제 모달 */}
+      <AnimatePresence>
+        {deleteModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center"
+            style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}
+            onClick={() => !deleting && setDeleteModalOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="rounded-2xl p-6 w-full max-w-md mx-4"
+              style={{ background: 'var(--color-surface)', border: '1px solid var(--color-glass-border)' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-lg font-bold mb-4" style={{ color: 'var(--color-text-primary)' }}>
+                {t('매출 데이터 삭제', '売上データ削除')}
+              </h3>
+
+              {/* 삭제 모드 선택 */}
+              <div className="flex gap-2 mb-4">
+                <button
+                  onClick={() => setDeleteMode('all')}
+                  className="flex-1 py-2 rounded-lg text-sm font-medium cursor-pointer transition-all"
+                  style={{
+                    background: deleteMode === 'all' ? '#1A2B5E' : 'var(--color-glass)',
+                    color: deleteMode === 'all' ? '#fff' : 'var(--color-text-secondary)',
+                    border: `1px solid ${deleteMode === 'all' ? 'transparent' : 'var(--color-glass-border)'}`,
+                  }}
+                >
+                  {t('전체 삭제', '全削除')}
+                </button>
+                <button
+                  onClick={() => setDeleteMode('range')}
+                  className="flex-1 py-2 rounded-lg text-sm font-medium cursor-pointer transition-all"
+                  style={{
+                    background: deleteMode === 'range' ? '#1A2B5E' : 'var(--color-glass)',
+                    color: deleteMode === 'range' ? '#fff' : 'var(--color-text-secondary)',
+                    border: `1px solid ${deleteMode === 'range' ? 'transparent' : 'var(--color-glass-border)'}`,
+                  }}
+                >
+                  {t('기간별 삭제', '期間別削除')}
+                </button>
+              </div>
+
+              {/* 기간 선택 (range 모드) */}
+              {deleteMode === 'range' && (
+                <div className="flex gap-3 mb-4">
+                  <div className="flex-1">
+                    <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--color-text-muted)' }}>
+                      {t('시작일', '開始日')}
+                    </label>
+                    <input
+                      type="date"
+                      value={deleteStartDate}
+                      onChange={(e) => setDeleteStartDate(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg text-sm"
+                      style={{ background: 'var(--color-input-bg)', border: '1px solid var(--color-input-border)', color: 'var(--color-text-primary)' }}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--color-text-muted)' }}>
+                      {t('종료일', '終了日')}
+                    </label>
+                    <input
+                      type="date"
+                      value={deleteEndDate}
+                      onChange={(e) => setDeleteEndDate(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg text-sm"
+                      style={{ background: 'var(--color-input-bg)', border: '1px solid var(--color-input-border)', color: 'var(--color-text-primary)' }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* 경고 메시지 */}
+              <div className="rounded-lg p-3 mb-4 text-sm" style={{ background: 'rgba(220,38,38,0.08)', color: '#dc2626', border: '1px solid rgba(220,38,38,0.15)' }}>
+                {deleteMode === 'all'
+                  ? t('모든 매출 데이터와 업로드 이력이 삭제됩니다. 이 작업은 되돌릴 수 없습니다.', '全売上データとアップロード履歴が削除されます。この操作は元に戻せません。')
+                  : deleteStartDate || deleteEndDate
+                    ? t(`${deleteStartDate || '처음'} ~ ${deleteEndDate || '끝'} 기간의 매출 데이터가 삭제됩니다.`, `${deleteStartDate || '最初'} ~ ${deleteEndDate || '最後'}の売上データが削除されます。`)
+                    : t('기간을 선택해주세요.', '期間を選択してください。')
+                }
+              </div>
+
+              {/* 버튼 */}
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => setDeleteModalOpen(false)}
+                  disabled={deleting}
+                  className="px-4 py-2 rounded-xl text-sm font-medium cursor-pointer"
+                  style={{ background: 'var(--color-glass)', color: 'var(--color-text-secondary)', border: '1px solid var(--color-glass-border)' }}
+                >
+                  {t('취소', 'キャンセル')}
+                </button>
+                <button
+                  onClick={async () => {
+                    if (deleteMode === 'range' && !deleteStartDate && !deleteEndDate) return;
+                    const confirmMsg = deleteMode === 'all'
+                      ? t('최종 확인: 정말 전체 삭제하시겠습니까?', '最終確認: 本当に全削除しますか？')
+                      : t('정말 삭제하시겠습니까?', '本当に削除しますか？');
+                    if (!confirm(confirmMsg)) return;
+
+                    setDeleting(true);
+                    try {
+                      const body: Record<string, string> = { password: 'CLINK' };
+                      if (deleteMode === 'range') {
+                        if (deleteStartDate) body.startDate = deleteStartDate;
+                        if (deleteEndDate) body.endDate = deleteEndDate;
+                      }
+                      const res = await fetch('/api/manage/reset-sales', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(body),
+                      });
+                      const data = await res.json();
+                      if (res.ok) {
+                        setToast({ message: data.message || t('삭제 완료', '削除完了'), type: 'success' });
+                        setDeleteModalOpen(false);
+                        void loadPage();
+                      } else {
+                        setToast({ message: data.error || t('실패', '失敗'), type: 'error' });
+                      }
+                    } catch {
+                      setToast({ message: t('삭제 실패', '削除に失敗'), type: 'error' });
+                    }
+                    setDeleting(false);
+                  }}
+                  disabled={deleting || (deleteMode === 'range' && !deleteStartDate && !deleteEndDate)}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold cursor-pointer"
+                  style={{
+                    background: '#dc2626', color: '#fff',
+                    opacity: deleting || (deleteMode === 'range' && !deleteStartDate && !deleteEndDate) ? 0.4 : 1,
+                  }}
+                >
+                  {deleting ? t('삭제 중...', '削除中...') : t('삭제 실행', '削除実行')}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <div
@@ -429,46 +583,12 @@ export default function DataPage() {
         {activeTab === 'sales' && (
           <div className="flex items-center gap-2">
             <button
-              onClick={async () => {
+              onClick={() => {
                 if (!verifyPassword(t)) return;
-                // 기간별 삭제 or 전체 삭제 선택
-                const choice = prompt(
-                  t(
-                    '삭제 범위를 선택하세요:\n\n1. 전체 삭제\n2. 기간별 삭제\n\n번호를 입력하세요 (1 또는 2):',
-                    '削除範囲を選択してください:\n\n1. 全削除\n2. 期間別削除\n\n番号を入力 (1 or 2):',
-                  ),
-                );
-                if (!choice) return;
-
-                let startDate: string | undefined;
-                let endDate: string | undefined;
-
-                if (choice === '2') {
-                  startDate = prompt(t('시작일 (YYYY-MM-DD):', '開始日 (YYYY-MM-DD):')) || undefined;
-                  endDate = prompt(t('종료일 (YYYY-MM-DD):', '終了日 (YYYY-MM-DD):')) || undefined;
-                  if (!startDate && !endDate) { alert(t('날짜를 입력해주세요', '日付を入力してください')); return; }
-                  if (!confirm(t(`${startDate || '처음'} ~ ${endDate || '끝'} 기간의 매출 데이터를 삭제합니다.`, `${startDate || '最初'} ~ ${endDate || '最後'} の売上データを削除します。`))) return;
-                } else if (choice === '1') {
-                  if (!confirm(t('전체 매출 데이터를 삭제합니다. 되돌릴 수 없습니다.', '全売上データを削除します。元に戻せません。'))) return;
-                  if (!confirm(t('최종 확인: 정말 삭제하시겠습니까?', '最終確認: 本当に削除しますか？'))) return;
-                } else { return; }
-
-                try {
-                  const res = await fetch('/api/manage/reset-sales', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ password: 'CLINK', startDate, endDate }),
-                  });
-                  const data = await res.json();
-                  if (res.ok) {
-                    setToast({ message: data.message || t('삭제 완료', '削除完了'), type: 'success' });
-                    void loadPage();
-                  } else {
-                    setToast({ message: data.error || t('실패', '失敗'), type: 'error' });
-                  }
-                } catch {
-                  setToast({ message: t('삭제 실패', '削除に失敗しました'), type: 'error' });
-                }
+                setDeleteMode('all');
+                setDeleteStartDate('');
+                setDeleteEndDate('');
+                setDeleteModalOpen(true);
               }}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium cursor-pointer transition-all"
               style={{ background: 'rgba(220, 38, 38, 0.1)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.25)' }}
