@@ -194,8 +194,11 @@ export default function DataPage() {
   useEffect(() => {
     fetch('/api/sales/platforms')
       .then((res) => res.json())
-      .then((data: string[]) => {
-        if (data) setPlatformNames(data);
+      .then((data: Array<Record<string, unknown>>) => {
+        if (data && Array.isArray(data)) {
+          const names = data.map((d) => String(d.code || d.name_jp || '')).filter(Boolean);
+          setPlatformNames(names);
+        }
       })
       .catch((err) => console.error('Failed to load platforms:', err));
   }, []);
