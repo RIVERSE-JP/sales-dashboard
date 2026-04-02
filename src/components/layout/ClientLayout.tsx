@@ -79,24 +79,18 @@ function ToggleButton({
   active,
   onClick,
   children,
-  isLight,
 }: {
   active: boolean;
   onClick: () => void;
   children: React.ReactNode;
-  isLight?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
-      className="px-3 py-1.5 text-[12px] font-semibold transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:ring-offset-1"
+      className="px-2.5 py-1 text-[11px] font-semibold transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:ring-offset-1"
       style={{
-        background: active
-          ? (isLight ? 'rgba(255,255,255,0.25)' : '#1A2B5E')
-          : 'transparent',
-        color: active
-          ? '#ffffff'
-          : (isLight ? 'rgba(255,255,255,0.5)' : 'var(--color-text-secondary)'),
+        background: active ? '#1A2B5E' : 'transparent',
+        color: active ? '#ffffff' : 'var(--color-text-muted)',
         borderRadius: '6px',
         border: 'none',
       }}
@@ -339,84 +333,7 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
 
-        {/* Theme, Language, Currency toggles */}
-        {!collapsed && (
-          <div
-            className="px-4 py-3 space-y-2.5"
-            style={{
-              borderTop: isLight ? '1px solid rgba(255,255,255,0.15)' : '1px solid var(--color-glass-border)',
-            }}
-          >
-            {/* Theme toggle */}
-            <div className="flex items-center justify-between">
-              <span
-                className="text-[12px] font-medium tracking-wider"
-                style={{ color: isLight ? 'rgba(255,255,255,0.5)' : 'var(--color-text-muted)' }}
-              >
-                THEME
-              </span>
-              <div
-                className="flex rounded-lg overflow-hidden"
-                style={{
-                  border: isLight ? '1px solid rgba(255,255,255,0.20)' : '1px solid var(--color-glass-border)',
-                }}
-              >
-                <ToggleButton active={theme === 'dark'} onClick={() => setTheme('dark')} isLight={isLight}>
-                  Dark
-                </ToggleButton>
-                <ToggleButton active={theme === 'light'} onClick={() => setTheme('light')} isLight={isLight}>
-                  Light
-                </ToggleButton>
-              </div>
-            </div>
-
-            {/* Lang toggle */}
-            <div className="flex items-center justify-between">
-              <span
-                className="text-[12px] font-medium tracking-wider"
-                style={{ color: isLight ? 'rgba(255,255,255,0.5)' : 'var(--color-text-muted)' }}
-              >
-                LANG
-              </span>
-              <div
-                className="flex rounded-lg overflow-hidden"
-                style={{
-                  border: isLight ? '1px solid rgba(255,255,255,0.20)' : '1px solid var(--color-glass-border)',
-                }}
-              >
-                <ToggleButton active={lang === 'ko'} onClick={() => setLang('ko')} isLight={isLight}>
-                  KO
-                </ToggleButton>
-                <ToggleButton active={lang === 'ja'} onClick={() => setLang('ja')} isLight={isLight}>
-                  JA
-                </ToggleButton>
-              </div>
-            </div>
-
-            {/* Currency toggle */}
-            <div className="flex items-center justify-between">
-              <span
-                className="text-[12px] font-medium tracking-wider"
-                style={{ color: isLight ? 'rgba(255,255,255,0.5)' : 'var(--color-text-muted)' }}
-              >
-                CURRENCY
-              </span>
-              <div
-                className="flex rounded-lg overflow-hidden"
-                style={{
-                  border: isLight ? '1px solid rgba(255,255,255,0.20)' : '1px solid var(--color-glass-border)',
-                }}
-              >
-                <ToggleButton active={currency === 'JPY'} onClick={() => setCurrency('JPY')} isLight={isLight}>
-                  JPY
-                </ToggleButton>
-                <ToggleButton active={currency === 'KRW'} onClick={() => setCurrency('KRW')} isLight={isLight}>
-                  KRW
-                </ToggleButton>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* 토글은 헤더 우측으로 이동 */}
 
         {/* Collapse toggle (desktop only) */}
         <div className="hidden md:flex px-3 pb-4">
@@ -484,8 +401,45 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
               </span>
             </div>
 
-            {/* 글로벌 헤더 버튼 제거 — 각 페이지에서 기간 선택 */}
-            <div className="ml-auto" />
+            {/* 우측: Theme / Lang / Currency 토글 */}
+            <div className="ml-auto hidden sm:flex items-center gap-3">
+              {/* Theme */}
+              <div
+                className="flex rounded-lg overflow-hidden"
+                style={{ border: '1px solid var(--color-glass-border)' }}
+              >
+                <ToggleButton active={theme === 'dark'} onClick={() => setTheme('dark')}>
+                  Dark
+                </ToggleButton>
+                <ToggleButton active={theme === 'light'} onClick={() => setTheme('light')}>
+                  Light
+                </ToggleButton>
+              </div>
+              {/* Lang */}
+              <div
+                className="flex rounded-lg overflow-hidden"
+                style={{ border: '1px solid var(--color-glass-border)' }}
+              >
+                <ToggleButton active={lang === 'ko'} onClick={() => setLang('ko')}>
+                  KO
+                </ToggleButton>
+                <ToggleButton active={lang === 'ja'} onClick={() => setLang('ja')}>
+                  JA
+                </ToggleButton>
+              </div>
+              {/* Currency */}
+              <div
+                className="flex rounded-lg overflow-hidden"
+                style={{ border: '1px solid var(--color-glass-border)' }}
+              >
+                <ToggleButton active={currency === 'JPY'} onClick={() => setCurrency('JPY')}>
+                  JPY
+                </ToggleButton>
+                <ToggleButton active={currency === 'KRW'} onClick={() => setCurrency('KRW')}>
+                  KRW
+                </ToggleButton>
+              </div>
+            </div>
           </div>
           {/* Animated gradient border at bottom */}
           <div
