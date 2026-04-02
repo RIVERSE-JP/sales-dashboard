@@ -1455,14 +1455,7 @@ export default function DataUploadPage() {
                         >
                           {detectedFormat.label}
                         </span>
-                        {detectedFormat.isPreliminary && (
-                          <span
-                            className="text-xs font-medium px-2 py-0.5 rounded-lg"
-                            style={{ background: 'rgba(251,191,36,0.15)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.3)' }}
-                          >
-                            {t('속보치', '速報値')}
-                          </span>
-                        )}
+{/* 속보치 뱃지 제거 */}
                         {detectedFormat.confidence !== 'high' && (
                           <span
                             className="text-xs font-medium px-2 py-0.5 rounded-lg flex items-center gap-1"
@@ -1945,8 +1938,8 @@ export default function DataUploadPage() {
                           <span
                             className="text-[10px] px-2 py-0.5 rounded-full font-medium"
                             style={{
-                              background: log.upload_type === 'sokuhochi' ? 'rgba(251,191,36,0.15)' : 'rgba(26,43,94,0.15)',
-                              color: log.upload_type === 'sokuhochi' ? '#fbbf24' : '#1A2B5E',
+                              background: 'rgba(26,43,94,0.10)',
+                              color: '#1A2B5E',
                             }}
                           >
                             {log.upload_type === 'weekly_report' ? 'WR' : t('속보', '速報')}
