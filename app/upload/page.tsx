@@ -318,7 +318,7 @@ function parseCSVWeeklyReport(text: string): ParsedRow[] {
  * Header: 日付,取次店書籍ID,ブックID,ブック名,チャプタID/巻ID,チャプタ名/巻名,話数番号/巻番号,著者名,出版社名,価格,購入件数,購入ポイント数
  * Aggregate by (ブック名, 日付) summing 購入ポイント数
  */
-function parseCSVSokuhochi(text: string, channel: string): ParsedRow[] {
+function parseCSVSokuhochi(text: string, channel: string, divideByTax = false): ParsedRow[] {
   const lines = parseCSVText(text);
   if (lines.length < 2) return [];
 
@@ -341,7 +341,8 @@ function parseCSVSokuhochi(text: string, channel: string): ParsedRow[] {
     if (!rawDate || !titleJP) continue;
 
     const saleDate = parseDateString(rawDate);
-    const amount = parseInt(rawAmount.replace(/[¥,]/g, ''), 10) || 0;
+    const grossAmount = parseInt(rawAmount.replace(/[¥,]/g, ''), 10) || 0;
+    const amount = divideByTax ? Math.round(grossAmount / 1.1) : grossAmount;
 
     if (!saleDate || amount <= 0) continue;
 
@@ -446,7 +447,7 @@ function parseCmoaSokuhochi(text: string): ParsedRow[] {
  * Header: id, 作品名, 出版社, カテゴリ, APP販売タイプ, WEB販売タイプ, 販売話数, 販売巻数, MM-DD RU, MM-DD FRU, MM-DD Total売上, ...
  * 날짜별/월별 Total売上 컬럼에서 매출 추출
  */
-function parsePiccomaKPI(text: string, channel: string): ParsedRow[] {
+function parsePiccomaKPI(text: string, channel: string, fileName?: string): ParsedRow[] {
   // BOM 제거
   const cleaned = text.replace(/^\uFEFF/, '');
   const lines = parseCSVText(cleaned);
@@ -457,9 +458,9 @@ function parsePiccomaKPI(text: string, channel: string): ParsedRow[] {
   const dailySalesColumns: Array<{ idx: number; date: string }> = [];
   const monthlySalesColumns: Array<{ idx: number; month: string }> = [];
 
-  // 파일명에서 연도 추출 시도
-  const yearMatch = text.match(/(\d{4})/);
-  const year = yearMatch ? yearMatch[1] : new Date().getFullYear().toString();
+  // 파일명에서 연도 추출 (YYYYMMDD 패턴)
+  const fnYearMatch = (fileName ?? '').match(/(\d{4})\d{4}/);
+  const year = fnYearMatch ? fnYearMatch[1] : new Date().getFullYear().toString();
 
   header.forEach((col, idx) => {
     const stripped = col.replace(/"/g, '');
@@ -490,7 +491,9 @@ function parsePiccomaKPI(text: string, channel: string): ParsedRow[] {
 
     for (const col of targetColumns) {
       const rawAmount = (vals[col.idx] ?? '').replace(/"/g, '').trim();
-      const amount = parseInt(rawAmount.replace(/[¥,]/g, ''), 10) || 0;
+      const grossAmount = parseInt(rawAmount.replace(/[¥,]/g, ''), 10) || 0;
+      // 세전 → 세후 변환 (÷1.1)
+      const amount = Math.round(grossAmount / 1.1);
       if (amount > 0) {
         rows.push({
           title_jp: titleJP,
@@ -782,14 +785,16 @@ export default function DataUploadPage() {
   }, []);
 
   useEffect(() => {
-    fetch('/api/sales/title-master')
-      .then((res) => res.json())
-      .then((data: Array<{ title_jp?: string }>) => {
-        if (data && Array.isArray(data)) {
-          setKnownTitles(new Set(data.map((d) => d.title_jp || '').filter(Boolean)));
-        }
-      })
-      .catch(() => {});
+    // title_master + 기존 매출 데이터 양쪽에서 기존 작품명 수집
+    Promise.all([
+      fetch('/api/sales/title-master').then(r => r.json()).catch(() => []),
+      fetch('/api/sales/title-summaries').then(r => r.json()).catch(() => []),
+    ]).then(([masterData, salesData]) => {
+      const set = new Set<string>();
+      if (Array.isArray(masterData)) masterData.forEach((d: Record<string, unknown>) => { if (d.title_jp) set.add(String(d.title_jp)); });
+      if (Array.isArray(salesData)) salesData.forEach((d: Record<string, unknown>) => { if (d.title_jp) set.add(String(d.title_jp)); });
+      setKnownTitles(set);
+    });
   }, []);
 
   useEffect(() => {
@@ -1000,7 +1005,7 @@ export default function DataUploadPage() {
             rows = parseCSVSokuhochi(textContent, fmt.platform);
           }
         } else if (fmt.type === 'piccoma_kpi') {
-          rows = parsePiccomaKPI(textContent, fmt.platform);
+          rows = parsePiccomaKPI(textContent, fmt.platform, file.name);
         } else if (fmt.type === 'cmoa_sokuhochi') {
           if (isExcel) {
             rows = await parseCmoaExcel(buffer, file.name);
