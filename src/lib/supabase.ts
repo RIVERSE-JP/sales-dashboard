@@ -17,10 +17,15 @@ export function extractBaseTitle(titleJp: string): string {
     .replace(/（版面）|\(版面\)/g, '')
     .replace(/（LDF）|\(LDF\)/g, '')
     .replace(/\[完全版\]/g, '')
+    .replace(/\[分冊版\]/g, '')
+    .replace(/\[特装版\]/g, '')
+    .replace(/\[連載版\]/g, '')
     .replace(/【分冊版】/g, '')
     .replace(/【特装版】/g, '')
     .replace(/【連載版】/g, '')
     .replace(/【完全版】/g, '')
+    .replace(/【タテヨミ】/g, '')
+    .replace(/\s+/g, ' ')
     .trim();
 }
 

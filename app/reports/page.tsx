@@ -7,7 +7,7 @@ import {
   CheckSquare, Square, X, ChevronDown, ChevronUp,
   BarChart3,
 } from 'lucide-react';
-import { fetchAllDailySales } from '@/lib/supabase';
+import { fetchAllDailySales, extractBaseTitle } from '@/lib/supabase';
 import {
   generateWeeklyReport,
   generateCSV,
@@ -161,18 +161,24 @@ export default function ReportsPage() {
           fetchAllDailySales(),
           fetch('/api/sales/title-master').then(r => r.json()).catch(() => []),
         ]);
-        // title_kr 매핑 구축
+        // title_kr 매핑 구축: 정확한 제목 + base title(접미어 제거) 양쪽으로 매핑
         const krMap = new Map<string, string>();
+        const krBaseMap = new Map<string, string>();
         if (Array.isArray(masterData)) {
           masterData.forEach((m: Record<string, unknown>) => {
-            if (m.title_jp && m.title_kr) krMap.set(String(m.title_jp), String(m.title_kr));
+            if (m.title_jp && m.title_kr) {
+              const jp = String(m.title_jp);
+              const kr = String(m.title_kr);
+              krMap.set(jp, kr);
+              krBaseMap.set(extractBaseTitle(jp), kr);
+            }
           });
         }
         setTitleKrMap(krMap);
-        // title_kr가 없는 행에 title_master에서 매칭
+        // title_kr가 없는 행에 title_master에서 매칭 (정확히 → base title 순서)
         const enriched = data.map(row => ({
           ...row,
-          title_kr: row.title_kr || krMap.get(row.title_jp) || null,
+          title_kr: row.title_kr || krMap.get(row.title_jp) || krBaseMap.get(extractBaseTitle(row.title_jp)) || null,
         }));
         setAllData(enriched);
       } catch (err) {
