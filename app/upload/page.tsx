@@ -522,9 +522,19 @@ async function parseCmoaExcel(buffer: ArrayBuffer, fileName: string): Promise<Pa
 
   // 파일명에서 연월 추출 (202603 → 2026-03)
   const monthMatch = fileName.match(/(\d{4})(\d{2})/);
-  const yearMonth = monthMatch ? `${monthMatch[1]}-${monthMatch[2]}` : '';
+  let yearMonth = monthMatch ? `${monthMatch[1]}-${monthMatch[2]}` : '';
+
+  // 파일명에서 못 찾으면 시트명에서 시도 (예: "2026年03月")
   if (!yearMonth) {
-    return []; // 월 정보 없으면 파싱 불가
+    for (const ws of wb.worksheets) {
+      const m = ws.name.match(/(\d{4}).*?(\d{2})/);
+      if (m) { yearMonth = `${m[1]}-${m[2]}`; break; }
+    }
+  }
+  // 그래도 없으면 현재 월 사용
+  if (!yearMonth) {
+    const now = new Date();
+    yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   }
 
   // 헤더 확인 — タイトル名 위치 찾기
@@ -756,10 +766,16 @@ export default function DataUploadPage() {
   useEffect(() => {
     fetch('/api/sales/platforms')
       .then((res) => res.json())
-      .then((data: Array<{ channel_name?: string; name?: string } | string>) => {
+      .then((data: Array<Record<string, unknown>>) => {
         if (data && Array.isArray(data)) {
-          const names = data.map((d) => (typeof d === 'string' ? d : d.channel_name || d.name || ''));
-          setKnownPlatforms(names.filter(Boolean));
+          // platforms 테이블: code, name_jp, name_kr 등
+          const names = data.map((d) => String(d.code || d.channel_name || d.name_jp || d.name || '')).filter(Boolean);
+          // code 외에 name_jp도 추가 (중복 제거)
+          const nameSet = new Set(names);
+          data.forEach((d) => {
+            if (d.name_jp) nameSet.add(String(d.name_jp));
+          });
+          setKnownPlatforms(Array.from(nameSet));
         }
       })
       .catch(() => {});
@@ -954,13 +970,12 @@ export default function DataUploadPage() {
           }
         }
 
-        // Excel 시트 기반 감지
+        // Excel 시트 기반 감지 — 시트명에 '売上'/'DL'이 있으면 cmoa로 확정 (Weekly Report보다 우선)
+        if (isExcel && excelHeaderHint === 'cmoa_excel' && fmt.type !== 'cmoa_sokuhochi' && fmt.type !== 'cmoa_excel') {
+          fmt = { type: 'cmoa_excel', platform: 'cmoa', isPreliminary: true, confidence: 'high', label: 'cmoa 속보치 Excel' };
+        }
         if (fmt.type === 'unknown' && isExcel) {
-          if (excelHeaderHint === 'cmoa_excel') {
-            fmt = { type: 'cmoa_excel', platform: 'cmoa', isPreliminary: true, confidence: 'high', label: 'cmoa 속보치 Excel' };
-          } else {
-            Object.assign(fmt, { type: 'weekly_report', platform: '', isPreliminary: false, confidence: 'low', label: 'Excel' });
-          }
+          Object.assign(fmt, { type: 'weekly_report', platform: '', isPreliminary: false, confidence: 'low', label: 'Excel' });
         }
 
         if (fmt.type === 'unknown') {
