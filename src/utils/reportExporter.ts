@@ -23,9 +23,24 @@ export interface ReportOptions {
 // ============================================================
 
 export async function generateWeeklyReport(
-  data: DailySale[],
+  rawData: DailySale[],
   options: ReportOptions,
 ): Promise<void> {
+  // 같은 (title_jp, channel, sale_date) 합산 + title_kr 보존
+  const mergeMap = new Map<string, DailySale>();
+  for (const row of rawData) {
+    const ch = normalizeChannel(row.channel);
+    const key = `${row.title_jp}|${ch}|${row.sale_date}`;
+    const existing = mergeMap.get(key);
+    if (existing) {
+      existing.sales_amount += row.sales_amount;
+      if (!existing.title_kr && row.title_kr) existing.title_kr = row.title_kr;
+    } else {
+      mergeMap.set(key, { ...row, channel: ch });
+    }
+  }
+  const data = Array.from(mergeMap.values());
+
   const ExcelJS = (await import('exceljs')).default;
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet('Daily_raw');
@@ -259,7 +274,22 @@ export async function generateTitleReport(
 // CSV Export
 // ============================================================
 
-export function generateCSV(data: DailySale[], options: ReportOptions): void {
+export function generateCSV(rawData: DailySale[], options: ReportOptions): void {
+  // 같은 (title_jp, channel, sale_date) 합산
+  const mergeMap = new Map<string, DailySale>();
+  for (const row of rawData) {
+    const ch = normalizeChannel(row.channel);
+    const key = `${row.title_jp}|${ch}|${row.sale_date}`;
+    const existing = mergeMap.get(key);
+    if (existing) {
+      existing.sales_amount += row.sales_amount;
+      if (!existing.title_kr && row.title_kr) existing.title_kr = row.title_kr;
+    } else {
+      mergeMap.set(key, { ...row, channel: ch });
+    }
+  }
+  const data = Array.from(mergeMap.values());
+
   const headers = ['Title(JP)', 'Title(KR)', 'Channel', 'Date', 'Sales(without tax)'];
   const csvRows = [headers.join(',')];
 

@@ -96,6 +96,7 @@ export default function ReportsPage() {
   // All data
   const [allData, setAllData] = useState<DailySale[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [, setTitleKrMap] = useState<Map<string, string>>(new Map());
 
   // Filters
   const [startDate, setStartDate] = useState('');
@@ -151,13 +152,29 @@ export default function ReportsPage() {
     return sorted.slice(0, 100);
   }, [filteredData]);
 
-  // Load all data on mount
+  // Load all data + title_kr map on mount
   useEffect(() => {
     (async () => {
       setLoadingData(true);
       try {
-        const data = await fetchAllDailySales();
-        setAllData(data);
+        const [data, masterData] = await Promise.all([
+          fetchAllDailySales(),
+          fetch('/api/sales/title-master').then(r => r.json()).catch(() => []),
+        ]);
+        // title_kr 매핑 구축
+        const krMap = new Map<string, string>();
+        if (Array.isArray(masterData)) {
+          masterData.forEach((m: Record<string, unknown>) => {
+            if (m.title_jp && m.title_kr) krMap.set(String(m.title_jp), String(m.title_kr));
+          });
+        }
+        setTitleKrMap(krMap);
+        // title_kr가 없는 행에 title_master에서 매칭
+        const enriched = data.map(row => ({
+          ...row,
+          title_kr: row.title_kr || krMap.get(row.title_jp) || null,
+        }));
+        setAllData(enriched);
       } catch (err) {
         console.error('Failed to load data:', err);
       }
