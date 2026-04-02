@@ -119,6 +119,7 @@ export interface UploadLog {
   source_file: string | null;
   row_count: number;
   status: string;
+  error_message: string | null;
   created_at: string;
 }
 

@@ -704,6 +704,7 @@ export default function DataUploadPage() {
   const [uploadLogs, setUploadLogs] = useState<UploadLog[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const currentFileRef = useRef<File | null>(null);
   const [lastUploadTime, setLastUploadTime] = useState<string | null>(null);
 
   // New title detection
@@ -723,6 +724,33 @@ export default function DataUploadPage() {
 
   // Known platforms (for validation + manual selection dropdown)
   const [knownPlatforms, setKnownPlatforms] = useState<string[]>([]);
+
+  // 디버그 로그: 원본 파일 + 메타데이터를 서버에 저장
+  const saveDebugLog = useCallback(async (meta: {
+    status: string;
+    errorMessage?: string;
+    uploadType?: string;
+    platform?: string;
+    rowCount?: number;
+    dateStart?: string;
+    dateEnd?: string;
+    detectedLabel?: string;
+  }) => {
+    const file = currentFileRef.current;
+    if (!file) return;
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      form.append('metadata', JSON.stringify({
+        ...meta,
+        fileName: file.name,
+        fileSize: file.size,
+      }));
+      await fetch('/api/upload-debug', { method: 'POST', body: form });
+    } catch {
+      // 디버그 로그 실패는 무시
+    }
+  }, []);
 
   useEffect(() => {
     fetch('/api/sales/platforms')
@@ -821,9 +849,11 @@ export default function DataUploadPage() {
   const finalizeParsed = useCallback(
     (rows: ParsedRow[], fmt: DetectedFormat) => {
       if (rows.length === 0) {
+        const errMsg = t('데이터를 찾을 수 없습니다. 파일 형식을 확인해주세요.', 'データが見つかりませんでした。ファイル形式を確認してください。');
+        saveDebugLog({ status: 'failed', errorMessage: `0 rows parsed. Detected: ${fmt.label} (${fmt.type})`, detectedLabel: fmt.label });
         setStatus('error');
         setErrorMessage(
-          t('데이터를 찾을 수 없습니다. 파일 형식을 확인해주세요.', 'データが見つかりませんでした。ファイル形式を確認してください。'),
+          errMsg,
         );
         return;
       }
@@ -849,6 +879,7 @@ export default function DataUploadPage() {
       setNewTitles([]);
       setManualPlatform('');
       setDetectedFormat(null);
+      currentFileRef.current = file;
 
       try {
         const buffer = await file.arrayBuffer();
@@ -932,6 +963,7 @@ export default function DataUploadPage() {
         }
 
         if (fmt.type === 'unknown') {
+          saveDebugLog({ status: 'failed', errorMessage: 'Format unknown. isExcel=' + isExcel + ', headerSample=' + headerSample.slice(0, 200) });
           setStatus('error');
           setErrorMessage(
             t(
@@ -971,11 +1003,13 @@ export default function DataUploadPage() {
 
         finalizeParsed(rows, fmt);
       } catch (err) {
+        const errMsg = err instanceof Error ? err.message : t('파일 분석에 실패했습니다', 'ファイルの解析に失敗しました');
+        saveDebugLog({ status: 'failed', errorMessage: errMsg });
         setStatus('error');
-        setErrorMessage(err instanceof Error ? err.message : t('파일 분석에 실패했습니다', 'ファイルの解析に失敗しました'));
+        setErrorMessage(errMsg);
       }
     },
-    [finalizeParsed, t],
+    [finalizeParsed, saveDebugLog, t],
   );
 
   const handleDrop = useCallback(
@@ -1035,6 +1069,13 @@ export default function DataUploadPage() {
       setLastUploadTime(now);
       setUploadResult({ inserted: totalInserted, updated: totalUpdated, errors: 0 });
       setStatus('success');
+      saveDebugLog({
+        status: 'success',
+        uploadType: fileType,
+        platform: effectivePlatform,
+        rowCount: rowsToUpload.length,
+        detectedLabel: detectedFormat?.label,
+      });
       await supabase.from('upload_logs').insert({
         upload_type: fileType,
         source_file: fileName,
@@ -1042,8 +1083,10 @@ export default function DataUploadPage() {
         status: 'success',
       });
     } catch (err) {
+      const errMsg = err instanceof Error ? err.message : t('업로드에 실패했습니다', 'アップロードに失敗しました');
+      saveDebugLog({ status: 'failed', errorMessage: errMsg, uploadType: fileType, platform: effectivePlatform });
       setStatus('error');
-      setErrorMessage(err instanceof Error ? err.message : t('업로드에 실패했습니다', 'アップロードに失敗しました'));
+      setErrorMessage(errMsg);
     }
   };
 
@@ -1850,6 +1893,12 @@ export default function DataUploadPage() {
                                 <span className="font-medium">{t('타입', 'タイプ')}:</span>{' '}
                                 {log.upload_type === 'weekly_report' ? 'Weekly Report' : t('속보치', '速報値')}
                               </div>
+                              {log.error_message && (
+                                <div style={{ color: '#dc2626' }}>
+                                  <span className="font-medium">{t('실패 사유', '失敗理由')}:</span>{' '}
+                                  {log.error_message}
+                                </div>
+                              )}
                             </div>
                           </td>
                         </tr>
