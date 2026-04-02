@@ -1822,6 +1822,22 @@ export default function DataUploadPage() {
             <h2 className="text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>
               {t('업로드 이력', 'アップロード履歴')}
             </h2>
+            {uploadLogs.length > 0 && (
+              <button
+                onClick={async () => {
+                  const pw = prompt(t('삭제 비밀번호를 입력하세요', '削除パスワードを入力'));
+                  if (pw !== 'CLINK') { if (pw !== null) alert(t('비밀번호가 일치하지 않습니다', 'パスワードが一致しません')); return; }
+                  if (!confirm(t('업로드 이력을 전체 삭제하시겠습니까?', 'アップロード履歴を全削除しますか？'))) return;
+                  await supabase.from('upload_logs').delete().gte('created_at', '2000-01-01');
+                  setUploadLogs([]);
+                  setToast({ message: t('이력 삭제 완료', '履歴を削除しました'), type: 'success' });
+                }}
+                className="ml-auto text-[12px] px-3 py-1 rounded-lg cursor-pointer transition-all"
+                style={{ background: 'rgba(220,38,38,0.08)', color: '#dc2626', border: '1px solid rgba(220,38,38,0.15)' }}
+              >
+                {t('전체 삭제', '全削除')}
+              </button>
+            )}
           </div>
           {uploadLogs.length > 0 ? (
             <div className="overflow-x-auto">
@@ -1886,25 +1902,36 @@ export default function DataUploadPage() {
                             className="text-[10px] px-2 py-0.5 rounded-full font-medium"
                             style={{
                               background:
-                                log.status === 'success'
+                                (log.status === 'success' || log.status === 'completed')
                                   ? 'rgba(34,197,94,0.15)'
-                                  : log.status === 'cancelled'
-                                    ? 'rgba(156,163,175,0.15)'
-                                    : 'rgba(239,68,68,0.15)',
+                                  : log.status === 'processing'
+                                    ? 'rgba(59,111,246,0.15)'
+                                    : (log.status === 'cancelled' || log.status === 'superseded')
+                                      ? 'rgba(156,163,175,0.15)'
+                                      : 'rgba(239,68,68,0.15)',
                               color:
-                                log.status === 'success'
+                                (log.status === 'success' || log.status === 'completed')
                                   ? '#22c55e'
-                                  : log.status === 'cancelled'
-                                    ? '#9ca3af'
-                                    : '#ef4444',
+                                  : log.status === 'processing'
+                                    ? '#3B6FF6'
+                                    : (log.status === 'cancelled' || log.status === 'superseded')
+                                      ? '#9ca3af'
+                                      : '#ef4444',
                             }}
                           >
-                            {log.status === 'success'
+                            {(log.status === 'success' || log.status === 'completed')
                               ? t('성공', '成功')
-                              : log.status === 'cancelled'
-                                ? t('취소됨', 'キャンセル済')
-                                : t('오류', 'エラー')}
+                              : log.status === 'processing'
+                                ? t('분석완료', '分析済')
+                                : (log.status === 'cancelled' || log.status === 'superseded')
+                                  ? t('취소됨', 'キャンセル済')
+                                  : t('오류', 'エラー')}
                           </span>
+                          {log.error_message && log.status === 'failed' && (
+                            <div className="text-[10px] mt-1 max-w-[150px] truncate" style={{ color: '#dc2626' }} title={log.error_message}>
+                              {log.error_message.replace(/^\[.*?\]\s*/, '').slice(0, 40)}
+                            </div>
+                          )}
                         </td>
                         <td className="py-2.5 px-2 text-center">
                           <div className="flex items-center gap-1 justify-center">
