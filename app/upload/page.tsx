@@ -838,7 +838,8 @@ export default function DataUploadPage() {
       const avgAmount = amounts.length > 0 ? amounts.reduce((a, b) => a + b, 0) / amounts.length : 0;
 
       rows.forEach((row, idx) => {
-        if (platforms.length > 0 && row.channel && !platforms.includes(row.channel)) {
+        const channelLower = (row.channel || '').toLowerCase();
+        if (platforms.length > 0 && row.channel && !platforms.some(p => p.toLowerCase() === channelLower)) {
           warns.push({
             rowIndex: idx,
             type: 'platform',
