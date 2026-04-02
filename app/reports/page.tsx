@@ -13,6 +13,7 @@ import {
   generateCSV,
 } from '@/utils/reportExporter';
 import type { DailySale } from '@/types';
+import { normalizeChannel } from '@/utils/platformConfig';
 import { PlatformBadge } from '@/components/PlatformBadge';
 import { useApp } from '@/context/AppContext';
 
@@ -106,7 +107,7 @@ export default function ReportsPage() {
   // Unique values
   const platforms = useMemo(() => {
     const set = new Set<string>();
-    allData.forEach((r) => set.add(r.channel));
+    allData.forEach((r) => set.add(normalizeChannel(r.channel)));
     return [...set].sort();
   }, [allData]);
 
@@ -129,7 +130,7 @@ export default function ReportsPage() {
     let d = allData;
     if (startDate) d = d.filter((r) => r.sale_date >= startDate);
     if (endDate) d = d.filter((r) => r.sale_date <= endDate);
-    if (selectedPlatforms.size > 0) d = d.filter((r) => selectedPlatforms.has(r.channel));
+    if (selectedPlatforms.size > 0) d = d.filter((r) => selectedPlatforms.has(normalizeChannel(r.channel)));
     if (selectedTitles.size > 0) d = d.filter((r) => selectedTitles.has(r.title_jp));
     return d;
   }, [allData, startDate, endDate, selectedPlatforms, selectedTitles]);
@@ -137,7 +138,7 @@ export default function ReportsPage() {
   // Summary stats
   const totalSales = useMemo(() => filteredData.reduce((s, r) => s + r.sales_amount, 0), [filteredData]);
   const uniqueTitles = useMemo(() => new Set(filteredData.map((r) => r.title_jp)).size, [filteredData]);
-  const uniquePlatforms = useMemo(() => new Set(filteredData.map((r) => r.channel)).size, [filteredData]);
+  const uniquePlatforms = useMemo(() => new Set(filteredData.map((r) => normalizeChannel(r.channel))).size, [filteredData]);
 
   // Preview data (top 100)
   const previewData = useMemo(() => {

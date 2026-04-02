@@ -106,18 +106,40 @@ export const PLATFORM_BRANDS: Record<string, PlatformBrand> = {
   },
 };
 
-// Alias map: DB channel names that differ from platformConfig keys
+// 채널명 정규화: DB에 저장된 다양한 표기를 PLATFORM_BRANDS 키로 통일
 const CHANNEL_ALIASES: Record<string, string> = {
   'Piccoma': 'piccoma',
+  'piccoma': 'piccoma',
+  'ピッコマ': 'piccoma',
   'CMOA': 'cmoa',
+  'Cmoa': 'cmoa',
+  'コミックシーモア': 'cmoa',
   'mechacomic': 'Mechacomic',
+  'Mechacomic': 'Mechacomic',
+  'めちゃコミック': 'Mechacomic',
+  'めちゃコミ': 'Mechacomic',
   'renta': 'Renta',
+  'Renta!': 'Renta',
   'dmm': 'DMM',
+  'DMMブックス': 'DMM',
   'u-next': 'U-NEXT',
+  'U-NEXT': 'U-NEXT',
+  'LINEマンガ': 'LINEマンガ',
+  'line_manga': 'LINEマンガ',
+  'ebookjapan': 'ebookjapan',
+  'DMM（FANZA）': 'DMM（FANZA）',
+  'dmm_fanza': 'DMM（FANZA）',
+  'まんが王国': 'まんが王国',
+  'manga_oukoku': 'まんが王国',
 };
 
 function resolveChannelName(name: string): string {
   return CHANNEL_ALIASES[name] ?? name;
+}
+
+/** 채널명을 정규화 (외부에서 사용 가능) */
+export function normalizeChannel(name: string): string {
+  return resolveChannelName(name);
 }
 
 const DEFAULT_BRAND: PlatformBrand = {
