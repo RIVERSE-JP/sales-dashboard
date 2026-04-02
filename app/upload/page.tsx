@@ -1091,6 +1091,21 @@ export default function DataUploadPage() {
       currentFileRef.current = files[0]; // 디버그용 첫 파일
 
       try {
+        // 중복 파일 체크: 이미 업로드된 파일명이면 경고
+        const alreadyUploaded = files.filter(f =>
+          uploadLogs.some(log => log.source_file === f.name && (log.status === 'completed' || log.status === 'success'))
+        );
+        if (alreadyUploaded.length > 0) {
+          const names = alreadyUploaded.map(f => f.name).join(', ');
+          const proceed = confirm(
+            t(
+              `이미 업로드된 파일이 포함되어 있습니다:\n${names}\n\n계속하면 기존 데이터를 덮어씁니다. 계속하시겠습니까?`,
+              `既にアップロード済みのファイルが含まれています:\n${names}\n\n続行すると既存データが上書きされます。続行しますか？`,
+            ),
+          );
+          if (!proceed) { setStatus('idle'); return; }
+        }
+
         let allRows: ParsedRow[] = [];
         let lastFmt: DetectedFormat | null = null;
         const fileNames: string[] = [];
