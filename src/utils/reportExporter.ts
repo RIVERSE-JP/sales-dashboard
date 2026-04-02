@@ -96,16 +96,17 @@ export async function generateWeeklyReport(
     r.getCell(3).value = row.title_jp; // channel_title_jp fallback
     r.getCell(4).value = normalizeChannel(row.channel);
 
-    // 날짜: 시간 없이 날짜만 (원본과 동일)
+    // 날짜: UTC 정오(12:00)로 생성하여 타임존 -1일 오류 방지
     const parts = row.sale_date.split('-');
     if (parts.length === 3) {
-      r.getCell(5).value = new Date(
+      r.getCell(5).value = new Date(Date.UTC(
         Number(parts[0]),
         Number(parts[1]) - 1,
         Number(parts[2]),
-      );
+        12, 0, 0,
+      ));
     } else {
-      r.getCell(5).value = new Date(row.sale_date);
+      r.getCell(5).value = new Date(row.sale_date + 'T12:00:00Z');
     }
     r.getCell(5).numFmt = 'yyyy"/"mm"/"d';
 
