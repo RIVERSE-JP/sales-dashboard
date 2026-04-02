@@ -427,19 +427,67 @@ export default function DataPage() {
           </p>
         </div>
         {activeTab === 'sales' && (
-          <motion.button
-            whileHover={{ scale: 1.04 }}
-            whileTap={{ scale: 0.96 }}
-            onClick={handleDownload}
-            disabled={downloading}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-all btn-gradient"
-            style={{
-              opacity: downloading ? 0.6 : 1,
-            }}
-          >
-            {downloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-            Excel DL
-          </motion.button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={async () => {
+                if (!verifyPassword(t)) return;
+                // 기간별 삭제 or 전체 삭제 선택
+                const choice = prompt(
+                  t(
+                    '삭제 범위를 선택하세요:\n\n1. 전체 삭제\n2. 기간별 삭제\n\n번호를 입력하세요 (1 또는 2):',
+                    '削除範囲を選択してください:\n\n1. 全削除\n2. 期間別削除\n\n番号を入力 (1 or 2):',
+                  ),
+                );
+                if (!choice) return;
+
+                let startDate: string | undefined;
+                let endDate: string | undefined;
+
+                if (choice === '2') {
+                  startDate = prompt(t('시작일 (YYYY-MM-DD):', '開始日 (YYYY-MM-DD):')) || undefined;
+                  endDate = prompt(t('종료일 (YYYY-MM-DD):', '終了日 (YYYY-MM-DD):')) || undefined;
+                  if (!startDate && !endDate) { alert(t('날짜를 입력해주세요', '日付を入力してください')); return; }
+                  if (!confirm(t(`${startDate || '처음'} ~ ${endDate || '끝'} 기간의 매출 데이터를 삭제합니다.`, `${startDate || '最初'} ~ ${endDate || '最後'} の売上データを削除します。`))) return;
+                } else if (choice === '1') {
+                  if (!confirm(t('전체 매출 데이터를 삭제합니다. 되돌릴 수 없습니다.', '全売上データを削除します。元に戻せません。'))) return;
+                  if (!confirm(t('최종 확인: 정말 삭제하시겠습니까?', '最終確認: 本当に削除しますか？'))) return;
+                } else { return; }
+
+                try {
+                  const res = await fetch('/api/manage/reset-sales', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: 'CLINK', startDate, endDate }),
+                  });
+                  const data = await res.json();
+                  if (res.ok) {
+                    setToast({ message: data.message || t('삭제 완료', '削除完了'), type: 'success' });
+                    void loadPage();
+                  } else {
+                    setToast({ message: data.error || t('실패', '失敗'), type: 'error' });
+                  }
+                } catch {
+                  setToast({ message: t('삭제 실패', '削除に失敗しました'), type: 'error' });
+                }
+              }}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium cursor-pointer transition-all"
+              style={{ background: 'rgba(220, 38, 38, 0.1)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.25)' }}
+            >
+              <Trash2 size={14} />
+              {t('매출 삭제', '売上削除')}
+            </button>
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
+              onClick={handleDownload}
+              disabled={downloading}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-all btn-gradient"
+              style={{ opacity: downloading ? 0.6 : 1 }}
+            >
+              {downloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+              Excel DL
+            </motion.button>
+          </div>
         )}
       </div>
 

@@ -39,13 +39,18 @@ function getDatePreset(key: string): { start: string; end: string } {
 
   switch (key) {
     case 'this_week': {
+      // 월요일 시작 (getDay: 0=일, 1=월 ... 6=토)
       const d = new Date(today);
-      d.setDate(d.getDate() - d.getDay() + 1);
+      const dayOfWeek = d.getDay();
+      const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      d.setDate(d.getDate() - diffToMonday);
       return { start: fmt(d), end: fmt(today) };
     }
     case 'last_week': {
       const d = new Date(today);
-      d.setDate(d.getDate() - d.getDay() - 6);
+      const dayOfWeek = d.getDay();
+      const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      d.setDate(d.getDate() - diffToMonday - 7);
       const e = new Date(d);
       e.setDate(e.getDate() + 6);
       return { start: fmt(d), end: fmt(e) };

@@ -288,22 +288,37 @@ function parseTSVText(text: string): string[][] {
 function parseCSVWeeklyReport(text: string): ParsedRow[] {
   const lines = parseCSVText(text);
   if (lines.length < 2) return [];
-  const rows: ParsedRow[] = [];
+
+  // 헤더 행 찾기 + 컬럼 인덱스 동적 매핑
   let headerIdx = 0;
+  const col: Record<string, number> = { titleJP: 0, titleKR: 1, channelTitleJP: 2, channel: 3, date: 4, amount: 5 };
+
   for (let i = 0; i < Math.min(5, lines.length); i++) {
-    if (lines[i].some((c) => c.includes('Title') || c.includes('Channel') || c.includes('Date'))) {
+    const hasKeyword = lines[i].some((c) => c.includes('Title') || c.includes('Channel') || c.includes('Date') || c.includes('Sales'));
+    if (hasKeyword) {
       headerIdx = i;
+      lines[i].forEach((c, idx) => {
+        const lower = c.toLowerCase().trim();
+        if (lower.includes('title') && lower.includes('jp') || lower === 'title(jp)') col.titleJP = idx;
+        else if (lower.includes('title') && lower.includes('kr') || lower === 'title(kr)') col.titleKR = idx;
+        else if (lower.includes('channel') && lower.includes('title')) col.channelTitleJP = idx;
+        else if (lower.includes('channel') && !lower.includes('title')) col.channel = idx;
+        else if (lower.includes('date') || lower.includes('날짜')) col.date = idx;
+        else if (lower.includes('sales') || lower.includes('amount') || lower.includes('매출')) col.amount = idx;
+      });
       break;
     }
   }
+
+  const rows: ParsedRow[] = [];
   for (let i = headerIdx + 1; i < lines.length; i++) {
     const vals = lines[i];
-    const titleJP = (vals[0] ?? '').trim();
-    const titleKR = (vals[1] ?? '').trim();
-    const channelTitleJP = (vals[2] ?? '').trim();
-    const channel = (vals[3] ?? '').trim();
-    const rawDate = (vals[4] ?? '').trim();
-    const rawAmount = (vals[5] ?? '').trim();
+    const titleJP = (vals[col.titleJP] ?? '').trim();
+    const titleKR = (vals[col.titleKR] ?? '').trim();
+    const channelTitleJP = (vals[col.channelTitleJP] ?? '').trim();
+    const channel = (vals[col.channel] ?? '').trim();
+    const rawDate = (vals[col.date] ?? '').trim();
+    const rawAmount = (vals[col.amount] ?? '').trim();
     if (!titleJP || !channel) continue;
     const saleDate = parseDateString(rawDate);
     const salesAmount = parseInt(rawAmount.replace(/[¥,]/g, ''), 10) || 0;
@@ -617,24 +632,57 @@ async function parseWeeklyReport(buffer: ArrayBuffer): Promise<ParsedRow[]> {
   if (!dailySheet) return [];
 
   const rows: ParsedRow[] = [];
-  let headerRow = -1;
+
+  // 헤더 행 찾기 + 컬럼 인덱스 동적 매핑
+  let headerRowNum = -1;
+  const colMap: Record<string, number> = {};
+
   dailySheet.eachRow((row, rowNumber) => {
-    if (headerRow > 0) return;
+    if (headerRowNum > 0) return;
     const vals = row.values as (string | null | undefined)[];
-    if (vals.some((v) => typeof v === 'string' && (v.includes('Title') || v.includes('Channel') || v.includes('Date')))) {
-      headerRow = rowNumber;
+    // 헤더 행: Title, Channel, Date 등 키워드 포함
+    const hasKeyword = vals.some((v) => typeof v === 'string' && (
+      v.includes('Title') || v.includes('Channel') || v.includes('Date') || v.includes('Sales')
+    ));
+    if (hasKeyword) {
+      headerRowNum = rowNumber;
+      vals.forEach((v, idx) => {
+        if (typeof v !== 'string') return;
+        const lower = v.toLowerCase().trim();
+        if (lower.includes('title') && lower.includes('jp') || lower === 'title(jp)' || lower === 'title_jp') colMap.titleJP = idx;
+        else if (lower.includes('title') && lower.includes('kr') || lower === 'title(kr)' || lower === 'title_kr') colMap.titleKR = idx;
+        else if (lower.includes('channel') && lower.includes('title')) colMap.channelTitleJP = idx;
+        else if (lower.includes('channel') && !lower.includes('title')) colMap.channel = idx;
+        else if (lower.includes('date') || lower.includes('날짜') || lower.includes('日付')) colMap.date = idx;
+        else if (lower.includes('sales') || lower.includes('매출') || lower.includes('売上') || lower.includes('amount')) colMap.amount = idx;
+      });
+      // Title(JP)가 없으면 첫 번째 Title 컬럼을 사용
+      if (!colMap.titleJP) {
+        vals.forEach((v, idx) => {
+          if (typeof v === 'string' && v.toLowerCase().includes('title') && !colMap.titleJP) colMap.titleJP = idx;
+        });
+      }
     }
   });
-  if (headerRow < 0) headerRow = 2;
+
+  // 폴백: 헤더 못 찾으면 기본 순서 (A=1:JP, B=2:KR, C=3:ChTitleJP, D=4:Channel, E=5:Date, F=6:Amount)
+  if (headerRowNum < 0) headerRowNum = 2;
+  if (!colMap.titleJP) colMap.titleJP = 1;
+  if (!colMap.titleKR) colMap.titleKR = 2;
+  if (!colMap.channelTitleJP) colMap.channelTitleJP = 3;
+  if (!colMap.channel) colMap.channel = 4;
+  if (!colMap.date) colMap.date = 5;
+  if (!colMap.amount) colMap.amount = 6;
+
   dailySheet.eachRow((row, rowNumber) => {
-    if (rowNumber <= headerRow) return;
+    if (rowNumber <= headerRowNum) return;
     const vals = row.values as (string | number | Date | null | undefined)[];
-    const titleJP = String(vals[1] ?? '').trim();
-    const titleKR = String(vals[2] ?? '').trim();
-    const channelTitleJP = String(vals[3] ?? '').trim();
-    const channel = String(vals[4] ?? '').trim();
-    const rawDate = vals[5];
-    const rawAmount = vals[6];
+    const titleJP = String(vals[colMap.titleJP] ?? '').trim();
+    const titleKR = String(vals[colMap.titleKR] ?? '').trim();
+    const channelTitleJP = String(vals[colMap.channelTitleJP] ?? '').trim();
+    const channel = String(vals[colMap.channel] ?? '').trim();
+    const rawDate = vals[colMap.date];
+    const rawAmount = vals[colMap.amount];
     if (!titleJP || !channel) return;
     let saleDate = '';
     if (rawDate instanceof Date) {
@@ -648,8 +696,8 @@ async function parseWeeklyReport(buffer: ArrayBuffer): Promise<ParsedRow[]> {
     }
     const salesAmount =
       typeof rawAmount === 'number'
-        ? rawAmount
-        : parseInt(String(rawAmount ?? '0').replace(/[¥,]/g, ''), 10) || 0;
+        ? Math.round(rawAmount)
+        : parseInt(String(rawAmount ?? '0').replace(/[¥,\\\\]/g, ''), 10) || 0;
     if (saleDate && salesAmount > 0) {
       rows.push({ title_jp: titleJP, title_kr: titleKR, channel_title_jp: channelTitleJP, channel, sale_date: saleDate, sales_amount: salesAmount });
     }
