@@ -89,7 +89,7 @@ export async function fetchDailySalesPage(
   return apiFetch<{ rows: DailySale[]; count: number }>(`/api/sales/paginated?${params}`);
 }
 
-export async function fetchAllDailySales(limit = 10000): Promise<DailySale[]> {
+export async function fetchAllDailySales(limit = 200000): Promise<DailySale[]> {
   return apiFetch<DailySale[]>(`/api/sales/all?limit=${limit}`);
 }
 

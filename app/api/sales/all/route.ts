@@ -12,10 +12,10 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const limit = Math.min(parseInt(searchParams.get('limit') || '10000'), 50000);
+  const limit = Math.min(parseInt(searchParams.get('limit') || '200000'), 200000);
 
   const allRows: Record<string, unknown>[] = [];
-  const batchSize = 1000;
+  const batchSize = 5000;
   let offset = 0;
 
   while (allRows.length < limit) {
