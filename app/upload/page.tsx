@@ -1435,8 +1435,10 @@ export default function DataUploadPage() {
                                 {log.upload_type === 'weekly_report' ? 'Weekly Report' : t('속보치', '速報値')}
                               </div>
                               {log.error_message && (
-                                <div style={{ color: '#dc2626' }}>
-                                  <span className="font-medium">{t('실패 사유', '失敗理由')}:</span>{' '}
+                                <div style={{ color: log.status === 'failed' ? '#dc2626' : 'var(--color-text-muted)' }}>
+                                  <span className="font-medium">
+                                    {log.status === 'failed' ? t('실패 사유', '失敗理由') : t('메모', 'メモ')}:
+                                  </span>{' '}
                                   {log.error_message}
                                 </div>
                               )}
