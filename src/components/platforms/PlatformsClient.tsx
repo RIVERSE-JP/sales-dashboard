@@ -170,11 +170,7 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
   const [endDate, setEndDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [activePreset, setActivePreset] = useState<string>('all');
 
-  useEffect(() => {
-    if (platformSummary.length > 0 && selectedPlatform === null) {
-      setSelectedPlatform(platformSummary[0].channel); // eslint-disable-line react-hooks/set-state-in-effect
-    }
-  }, [platformSummary, selectedPlatform]);
+  // selectedPlatform 초기화는 displaySummary 뒤에서 처리
 
   // C2: Period-based platform summary
   const { data: periodSummaryRaw } = usePlatformSummaryForPeriod(startDate, endDate);
@@ -200,6 +196,13 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
     if (startDate && endDate && periodSummaryRaw) return periodSummaryRaw as PlatformSummaryRow[];
     return platformSummary;
   }, [startDate, endDate, periodSummaryRaw, platformSummary]);
+
+  // 기간 변경 시 1위 플랫폼 자동 선택
+  useEffect(() => {
+    if (displaySummary.length > 0) {
+      setSelectedPlatform(displaySummary[0].channel);
+    }
+  }, [displaySummary]);
 
   // Previous period data for growth calculation
   const prevSummary = useMemo<PlatformSummaryRow[]>(() => {
