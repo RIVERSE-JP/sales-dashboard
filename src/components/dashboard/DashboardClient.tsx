@@ -8,7 +8,7 @@ import {
 } from 'recharts';
 import {
   LayoutDashboard, TrendingUp, TrendingDown, AlertTriangle, Rocket,
-  Zap, ChevronRight, ChevronLeft, Activity, BarChart3,
+  ChevronRight, ChevronLeft, Activity, BarChart3,
   BookOpen,
 } from 'lucide-react';
 import {
@@ -295,7 +295,7 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
   const loading = !kpis;
 
   // Data freshness — simplified
-  const [hasPreliminary, setHasPreliminary] = useState(false);
+  const [, setHasPreliminary] = useState(false);
   useEffect(() => {
     fetch('/api/sales/paginated?page=1&pageSize=1&sortBy=sale_date&sortDir=desc')
       .then(r => r.ok ? r.json() : null)
@@ -467,14 +467,7 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
             </button>
           ))}
 
-          {/* 속보치 배지 */}
-          {hasPreliminary && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[12px] font-semibold"
-              style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b' }}>
-              <Zap size={12} />
-              {t('속보치', '速報値')}
-            </span>
-          )}
+{/* 속보치 뱃지 제거 */}
         </div>
       </div>
 
