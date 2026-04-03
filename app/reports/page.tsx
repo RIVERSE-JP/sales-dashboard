@@ -7,7 +7,8 @@ import {
   CheckSquare, Square, X, ChevronDown, ChevronUp,
   BarChart3,
 } from 'lucide-react';
-import { fetchAllDailySales, extractBaseTitle } from '@/lib/supabase';
+import { fetchAllDailySales } from '@/lib/supabase';
+import { buildTitleKrMaps, matchTitleKr } from '@/utils/titleMatcher';
 import {
   generateWeeklyReport,
   generateCSV,
@@ -162,40 +163,15 @@ export default function ReportsPage() {
           fetch('/api/sales/title-master').then(r => r.json()).catch(() => []),
         ]);
         // title_kr 매핑 구축: 정확 → base → 핵심어 순서로 폴백
-        const krExact = new Map<string, string>();  // 정확히 일치
-        const krBase = new Map<string, string>();   // base title (접미어 제거)
-        const krCore = new Map<string, string>();   // 핵심어 (부제/괄호/번호 모두 제거)
-        const toCore = (s: string) => s
-          .replace(/～[^～]*～/g, '')       // 부제 ～...～
-          .replace(/〜[^〜]*〜/g, '')       // 부제 〜...〜
-          .replace(/【[^】]*】/g, '')       // 【...】
-          .replace(/\[[^\]]*\]/g, '')       // [...]
-          .replace(/（[^）]*）/g, '')       // （...）
-          .replace(/\([^)]*\)/g, '')        // (...)
-          .replace(/\s+/g, '')
-          .trim();
-        if (Array.isArray(masterData)) {
-          masterData.forEach((m: Record<string, unknown>) => {
-            if (m.title_jp && m.title_kr) {
-              const jp = String(m.title_jp);
-              const kr = String(m.title_kr);
-              krExact.set(jp, kr);
-              krBase.set(extractBaseTitle(jp), kr);
-              const core = toCore(jp);
-              if (core && !krCore.has(core)) krCore.set(core, kr);
-            }
-          });
-        }
-        setTitleKrMap(krExact);
-        // title_kr 매칭: 정확 → base → 핵심어 순서
-        const enriched = data.map(row => {
-          if (row.title_kr) return row;
-          const kr = krExact.get(row.title_jp)
-            || krBase.get(extractBaseTitle(row.title_jp))
-            || krCore.get(toCore(row.title_jp))
-            || null;
-          return { ...row, title_kr: kr };
-        });
+        const masterArray = Array.isArray(masterData)
+          ? (masterData as Array<{ title_jp: string; title_kr: string | null }>)
+          : [];
+        const maps = buildTitleKrMaps(masterArray);
+        setTitleKrMap(maps.krExact);
+        const enriched = data.map(row => ({
+          ...row,
+          title_kr: row.title_kr || matchTitleKr(row.title_jp, maps) || null,
+        }));
         setAllData(enriched);
       } catch (err) {
         console.error('Failed to load data:', err);
