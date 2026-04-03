@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Database, Search, Download, ChevronLeft, ChevronRight,
+  Database, Search, Download,
   ChevronDown, ChevronUp, Loader2, Filter, Trash2, CheckCircle, X,
 } from 'lucide-react';
 import { fetchDailySalesPage, fetchAllDailySales } from '@/lib/supabase';
@@ -936,24 +936,29 @@ export default function DataPage() {
           </motion.div>
         )}
 
-        {/* Pagination */}
+        {/* Pagination: <<, <, 1, 2, 3, >, >> */}
         {totalPages > 1 && (
-          <motion.div variants={cardVariants} className="flex items-center justify-center gap-2">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+          <motion.div variants={cardVariants} className="flex items-center justify-center gap-1.5">
+            {/* << 첫 페이지 */}
+            <button
+              disabled={page === 0}
+              onClick={() => setPage(0)}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all"
+              style={{ background: 'var(--color-glass)', color: page === 0 ? 'var(--color-text-subtle)' : 'var(--color-text-secondary)', border: '1px solid var(--color-glass-border)', opacity: page === 0 ? 0.4 : 1 }}
+            >
+              {'<<'}
+            </button>
+            {/* < 이전 */}
+            <button
               disabled={page === 0}
               onClick={() => setPage(Math.max(0, page - 1))}
-              className="p-2 rounded-xl cursor-pointer transition-all"
-              style={{
-                ...GLASS_CARD,
-                opacity: page === 0 ? 0.3 : 1,
-              }}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all"
+              style={{ background: 'var(--color-glass)', color: page === 0 ? 'var(--color-text-subtle)' : 'var(--color-text-secondary)', border: '1px solid var(--color-glass-border)', opacity: page === 0 ? 0.4 : 1 }}
             >
-              <ChevronLeft size={16} color="var(--color-text-secondary)" />
-            </motion.button>
+              {'<'}
+            </button>
 
-            {/* Page number buttons */}
+            {/* 페이지 번호 */}
             {(() => {
               const buttons: number[] = [];
               const start = Math.max(0, page - 2);
@@ -963,13 +968,11 @@ export default function DataPage() {
                 <button
                   key={p}
                   onClick={() => setPage(p)}
-                  className="w-9 h-9 rounded-xl text-xs font-semibold cursor-pointer transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue"
-                  aria-label={`Page ${p + 1}`}
-                  aria-current={p === page ? 'page' : undefined}
+                  className="w-8 h-8 rounded-lg text-xs font-semibold cursor-pointer transition-all"
                   style={{
-                    background: p === page ? 'rgba(99, 102, 241, 0.2)' : 'var(--color-glass)',
-                    color: p === page ? '#a5b4fc' : 'var(--color-text-muted)',
-                    border: p === page ? '1px solid rgba(99, 102, 241, 0.3)' : '1px solid var(--color-glass-border)',
+                    background: p === page ? '#1A2B5E' : 'var(--color-glass)',
+                    color: p === page ? '#fff' : 'var(--color-text-muted)',
+                    border: p === page ? '1px solid transparent' : '1px solid var(--color-glass-border)',
                   }}
                 >
                   {p + 1}
@@ -977,19 +980,24 @@ export default function DataPage() {
               ));
             })()}
 
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+            {/* > 다음 */}
+            <button
               disabled={page >= totalPages - 1}
               onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
-              className="p-2 rounded-xl cursor-pointer transition-all"
-              style={{
-                ...GLASS_CARD,
-                opacity: page >= totalPages - 1 ? 0.3 : 1,
-              }}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all"
+              style={{ background: 'var(--color-glass)', color: page >= totalPages - 1 ? 'var(--color-text-subtle)' : 'var(--color-text-secondary)', border: '1px solid var(--color-glass-border)', opacity: page >= totalPages - 1 ? 0.4 : 1 }}
             >
-              <ChevronRight size={16} color="var(--color-text-secondary)" />
-            </motion.button>
+              {'>'}
+            </button>
+            {/* >> 끝 페이지 */}
+            <button
+              disabled={page >= totalPages - 1}
+              onClick={() => setPage(totalPages - 1)}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all"
+              style={{ background: 'var(--color-glass)', color: page >= totalPages - 1 ? 'var(--color-text-subtle)' : 'var(--color-text-secondary)', border: '1px solid var(--color-glass-border)', opacity: page >= totalPages - 1 ? 0.4 : 1 }}
+            >
+              {'>>'}
+            </button>
           </motion.div>
         )}
       </motion.div>}
