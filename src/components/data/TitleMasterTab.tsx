@@ -3,9 +3,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Search, ChevronLeft, ChevronRight, ChevronDown, ChevronUp,
+  Search, ChevronDown, ChevronUp,
   Filter, Pencil, X, Check, Plus, Trash2, Layers, AlertTriangle,
 } from 'lucide-react';
+import { Pagination } from '@/components/Pagination';
 import { useApp } from '@/context/AppContext';
 import { verifyPassword } from '@/utils/auth';
 
@@ -1121,52 +1122,7 @@ export default function TitleMasterTab() {
         )}
 
         {/* Pagination */}
-        {totalPages > 1 && (
-          <motion.div variants={cardVariants} className="flex items-center justify-center gap-2">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              disabled={page <= 1}
-              onClick={() => setPage(Math.max(1, page - 1))}
-              className="p-2 rounded-xl cursor-pointer transition-all"
-              style={{ ...GLASS_CARD, opacity: page <= 1 ? 0.3 : 1 }}
-            >
-              <ChevronLeft size={16} color="var(--color-text-secondary)" />
-            </motion.button>
-
-            {(() => {
-              const buttons: number[] = [];
-              const start = Math.max(1, page - 2);
-              const end = Math.min(totalPages, page + 2);
-              for (let i = start; i <= end; i++) buttons.push(i);
-              return buttons.map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setPage(p)}
-                  className="w-9 h-9 rounded-xl text-xs font-semibold cursor-pointer transition-all"
-                  style={{
-                    background: p === page ? 'rgba(99, 102, 241, 0.2)' : 'var(--color-glass)',
-                    color: p === page ? '#a5b4fc' : 'var(--color-text-muted)',
-                    border: p === page ? '1px solid rgba(99, 102, 241, 0.3)' : '1px solid var(--color-glass-border)',
-                  }}
-                >
-                  {p}
-                </button>
-              ));
-            })()}
-
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              disabled={page >= totalPages}
-              onClick={() => setPage(Math.min(totalPages, page + 1))}
-              className="p-2 rounded-xl cursor-pointer transition-all"
-              style={{ ...GLASS_CARD, opacity: page >= totalPages ? 0.3 : 1 }}
-            >
-              <ChevronRight size={16} color="var(--color-text-secondary)" />
-            </motion.button>
-          </motion.div>
-        )}
+        <Pagination page={page - 1} totalPages={totalPages} onPageChange={(p) => setPage(p + 1)} />
       </motion.div>
     </>
   );

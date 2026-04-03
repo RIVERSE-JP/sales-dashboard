@@ -4,9 +4,10 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, Plus, Trash2, ToggleLeft, CheckSquare, Square,
-  ChevronLeft, ChevronRight, X, AlertTriangle, ArrowUpDown,
+  X, AlertTriangle, ArrowUpDown,
   ArrowUp, ArrowDown, Layers, Save, Loader2,
 } from 'lucide-react';
+import { Pagination } from '@/components/Pagination';
 import { useApp } from '@/context/AppContext';
 import { GLASS_CARD } from '@/lib/design-tokens';
 
@@ -710,25 +711,7 @@ export default function TitlesManagePage() {
         </div>
 
         {/* Pagination */}
-        <div
-          className="flex items-center justify-between px-4 py-3"
-          style={{ borderTop: '1px solid var(--color-glass-border)' }}
-        >
-          <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-            {t('총', '合計')} {totalCount}{t('건', '件')}
-          </span>
-          <div className="flex items-center gap-1">
-            <PaginationBtn onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1}>
-              <ChevronLeft size={14} />
-            </PaginationBtn>
-            <span className="text-xs px-3" style={{ color: 'var(--color-text-secondary)' }}>
-              {page} / {totalPages}
-            </span>
-            <PaginationBtn onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>
-              <ChevronRight size={14} />
-            </PaginationBtn>
-          </div>
-        </div>
+        <Pagination page={page - 1} totalPages={totalPages} onPageChange={(p) => setPage(p + 1)} />
       </div>
 
       {/* ================================================================ */}
@@ -1291,22 +1274,5 @@ function StatusBadge({ status, t }: { status: string | null; t: (ko: string, ja:
     >
       {found ? t(found.ko, found.ja) : status || '-'}
     </span>
-  );
-}
-
-function PaginationBtn({ onClick, disabled, children }: { onClick: () => void; disabled: boolean; children: React.ReactNode }) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className="p-1.5 rounded-lg cursor-pointer disabled:opacity-30 disabled:cursor-default"
-      style={{
-        background: 'var(--color-glass)',
-        border: '1px solid var(--color-glass-border)',
-        color: 'var(--color-text-secondary)',
-      }}
-    >
-      {children}
-    </button>
   );
 }

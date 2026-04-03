@@ -13,6 +13,7 @@ import { getPlatformBrand } from '@/utils/platformConfig';
 import { PlatformBadge } from '@/components/PlatformBadge';
 import { useApp } from '@/context/AppContext';
 import { verifyPassword, resetPasswordSession } from '@/utils/auth';
+import { Pagination } from '@/components/Pagination';
 import dynamic from 'next/dynamic';
 
 const TitleMasterTab = dynamic(() => import('@/components/data/TitleMasterTab'), { ssr: false });
@@ -936,70 +937,8 @@ export default function DataPage() {
           </motion.div>
         )}
 
-        {/* Pagination: <<, <, 1, 2, 3, >, >> */}
-        {totalPages > 1 && (
-          <motion.div variants={cardVariants} className="flex items-center justify-center gap-1.5">
-            {/* << 첫 페이지 */}
-            <button
-              disabled={page === 0}
-              onClick={() => setPage(0)}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all"
-              style={{ background: 'var(--color-glass)', color: page === 0 ? 'var(--color-text-subtle)' : 'var(--color-text-secondary)', border: '1px solid var(--color-glass-border)', opacity: page === 0 ? 0.4 : 1 }}
-            >
-              {'<<'}
-            </button>
-            {/* < 이전 */}
-            <button
-              disabled={page === 0}
-              onClick={() => setPage(Math.max(0, page - 1))}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all"
-              style={{ background: 'var(--color-glass)', color: page === 0 ? 'var(--color-text-subtle)' : 'var(--color-text-secondary)', border: '1px solid var(--color-glass-border)', opacity: page === 0 ? 0.4 : 1 }}
-            >
-              {'<'}
-            </button>
-
-            {/* 페이지 번호 */}
-            {(() => {
-              const buttons: number[] = [];
-              const start = Math.max(0, page - 2);
-              const end = Math.min(totalPages - 1, page + 2);
-              for (let i = start; i <= end; i++) buttons.push(i);
-              return buttons.map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setPage(p)}
-                  className="w-8 h-8 rounded-lg text-xs font-semibold cursor-pointer transition-all"
-                  style={{
-                    background: p === page ? '#1A2B5E' : 'var(--color-glass)',
-                    color: p === page ? '#fff' : 'var(--color-text-muted)',
-                    border: p === page ? '1px solid transparent' : '1px solid var(--color-glass-border)',
-                  }}
-                >
-                  {p + 1}
-                </button>
-              ));
-            })()}
-
-            {/* > 다음 */}
-            <button
-              disabled={page >= totalPages - 1}
-              onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all"
-              style={{ background: 'var(--color-glass)', color: page >= totalPages - 1 ? 'var(--color-text-subtle)' : 'var(--color-text-secondary)', border: '1px solid var(--color-glass-border)', opacity: page >= totalPages - 1 ? 0.4 : 1 }}
-            >
-              {'>'}
-            </button>
-            {/* >> 끝 페이지 */}
-            <button
-              disabled={page >= totalPages - 1}
-              onClick={() => setPage(totalPages - 1)}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all"
-              style={{ background: 'var(--color-glass)', color: page >= totalPages - 1 ? 'var(--color-text-subtle)' : 'var(--color-text-secondary)', border: '1px solid var(--color-glass-border)', opacity: page >= totalPages - 1 ? 0.4 : 1 }}
-            >
-              {'>>'}
-            </button>
-          </motion.div>
-        )}
+        {/* Pagination */}
+        <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
       </motion.div>}
     </motion.div>
   );
