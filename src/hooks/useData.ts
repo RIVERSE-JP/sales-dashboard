@@ -41,9 +41,12 @@ export function useGrowthAlerts() {
   return useSWR('/api/dashboard/growth-alerts', fetcher, SWR_CONFIG);
 }
 
-export function usePlatformDetail(channel: string | null) {
+export function usePlatformDetail(channel: string | null, start?: string, end?: string) {
+  const params = channel ? new URLSearchParams({ channel }) : null;
+  if (params && start) params.set('start', start);
+  if (params && end) params.set('end', end);
   return useSWR(
-    channel ? `/api/dashboard/platform-detail?channel=${encodeURIComponent(channel)}` : null,
+    params ? `/api/dashboard/platform-detail?${params}` : null,
     fetcher,
     SWR_CONFIG
   );

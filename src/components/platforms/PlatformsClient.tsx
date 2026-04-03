@@ -154,16 +154,7 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
   // Auto-select first platform once data loads
   const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
 
-  // Use SWR for detail of selected platform (non-compare mode)
-  const { data: platformDetailSWR, isValidating: platformDetailValidating } = usePlatformDetail(
-    selectedPlatform && !loading ? selectedPlatform : null
-  );
-
-  // Derive detail state from SWR (no more separate useState + useEffect)
-  const detailData = useMemo<PlatformDetailData | null>(() => {
-    return (platformDetailSWR as PlatformDetailData) ?? null;
-  }, [platformDetailSWR]);
-  const detailLoading = platformDetailValidating && !platformDetailSWR;
+  // platformDetailSWR는 startDate 선언 이후로 이동
 
   // C1: Date range (default: 전체 기간)
   const [startDate, setStartDate] = useState('2025-03-01');
@@ -171,6 +162,17 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
   const [activePreset, setActivePreset] = useState<string>('all');
 
   // selectedPlatform 초기화는 displaySummary 뒤에서 처리
+
+  // 선택된 플랫폼 상세 (기간 필터 포함)
+  const { data: platformDetailSWR, isValidating: platformDetailValidating } = usePlatformDetail(
+    selectedPlatform && !loading ? selectedPlatform : null,
+    startDate,
+    endDate,
+  );
+  const detailData = useMemo<PlatformDetailData | null>(() => {
+    return (platformDetailSWR as PlatformDetailData) ?? null;
+  }, [platformDetailSWR]);
+  const detailLoading = platformDetailValidating && !platformDetailSWR;
 
   // C2: Period-based platform summary
   const { data: periodSummaryRaw } = usePlatformSummaryForPeriod(startDate, endDate);
