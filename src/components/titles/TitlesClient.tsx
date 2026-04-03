@@ -976,11 +976,11 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
               setCompareMode((prev) => !prev);
               if (compareMode) { setCompareList([]); setShowCompare(false); }
             }}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl text-[13px] font-medium cursor-pointer transition-all"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-semibold cursor-pointer transition-all"
             style={{
-              ...GLASS_CARD,
-              background: compareMode ? 'var(--color-accent-blue, #3B6FF6)' : 'var(--color-glass)',
-              color: compareMode ? '#fff' : 'var(--color-text-secondary)',
+              background: compareMode ? '#1A2B5E' : 'transparent',
+              color: compareMode ? '#fff' : '#1A2B5E',
+              border: compareMode ? '2px solid #1A2B5E' : '2px solid #1A2B5E',
             }}
           >
             <GitCompare size={14} />
