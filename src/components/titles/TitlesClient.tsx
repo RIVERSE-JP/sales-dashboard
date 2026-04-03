@@ -976,15 +976,15 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
               setCompareMode((prev) => !prev);
               if (compareMode) { setCompareList([]); setShowCompare(false); }
             }}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-semibold cursor-pointer transition-all"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-[14px] font-bold cursor-pointer transition-all shadow-sm hover:shadow-md"
             style={{
-              background: compareMode ? '#1A2B5E' : 'transparent',
+              background: compareMode ? '#1A2B5E' : '#FFFFFF',
               color: compareMode ? '#fff' : '#1A2B5E',
-              border: compareMode ? '2px solid #1A2B5E' : '2px solid #1A2B5E',
+              border: '2px solid #1A2B5E',
             }}
           >
-            <GitCompare size={14} />
-            {t('초동 매출 비교', '初動売上比較')}
+            <GitCompare size={16} />
+            {compareMode ? t('비교 모드 ON', '比較モード ON') : t('작품 비교하기', '作品を比較する')}
           </motion.button>
         </div>
         <p className="text-sm mt-1 ml-14" style={{ color: 'var(--color-text-muted)' }}>
