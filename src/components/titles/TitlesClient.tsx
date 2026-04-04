@@ -422,8 +422,15 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
   // URL-based drill-down: auto-select highlighted title
   useEffect(() => {
     if (highlightTitle && groupedTitles.length > 0 && !loading) {
-      // Find a group that contains the highlighted title
-      const foundGroup = groupedTitles.find(g => g.products.some(p => p.title_jp === highlightTitle));
+      // 정확히 일치 → base_title 일치 → 부분 일치 순서로 검색
+      let foundGroup = groupedTitles.find(g => g.products.some(p => p.title_jp === highlightTitle));
+      if (!foundGroup) {
+        foundGroup = groupedTitles.find(g => g.base_title === highlightTitle || g.base_title === extractBaseTitle(highlightTitle));
+      }
+      if (!foundGroup) {
+        const q = highlightTitle.toLowerCase();
+        foundGroup = groupedTitles.find(g => g.base_title.toLowerCase().includes(q) || g.products.some(p => p.title_jp.toLowerCase().includes(q)));
+      }
       if (foundGroup) {
         const mainProduct = foundGroup.products.find(p => p.product_type === 'オリジナル') ?? foundGroup.products[0];
         loadTitleDetail(mainProduct?.title_jp ?? highlightTitle, foundGroup); // eslint-disable-line react-hooks/set-state-in-effect
