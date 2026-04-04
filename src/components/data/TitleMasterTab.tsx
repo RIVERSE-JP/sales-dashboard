@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { Pagination } from '@/components/Pagination';
 import { useApp } from '@/context/AppContext';
-import { verifyPassword } from '@/utils/auth';
+
 
 // ============================================================
 // Types
@@ -340,7 +340,7 @@ export default function TitleMasterTab() {
 
   // Save edit
   const handleSave = async (value: string) => {
-    if (!verifyPassword(t)) return;
+
     if (!editModal) return;
     const { row, dbField } = editModal;
 
@@ -386,7 +386,7 @@ export default function TitleMasterTab() {
 
   // Create title
   const handleCreate = async () => {
-    if (!verifyPassword(t)) return;
+
     if (!createForm.title_jp.trim()) return;
     setCreateSaving(true);
     try {
@@ -408,7 +408,7 @@ export default function TitleMasterTab() {
 
   // Delete selected
   const handleDeleteSelected = () => {
-    if (!verifyPassword(t)) return;
+
     if (selected.size === 0) return;
     setConfirmDialog({
       message: t(`${selected.size}개 작품을 삭제하시겠습니까?`, `${selected.size}件のタイトルを削除しますか？`),
@@ -433,7 +433,7 @@ export default function TitleMasterTab() {
 
   // Batch update
   const handleBatchSave = async () => {
-    if (!verifyPassword(t)) return;
+
     const ids = Array.from(selected);
     const updates: Record<string, unknown> = {};
     if (batchUpdates.serial_status) updates.serial_status = batchUpdates.serial_status;
