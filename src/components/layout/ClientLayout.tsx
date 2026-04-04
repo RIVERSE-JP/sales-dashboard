@@ -16,9 +16,12 @@ import {
   ChevronRight,
   Menu,
   X,
+  LogOut,
+  User,
 } from 'lucide-react';
 import { SWRConfig } from 'swr';
 import { AppProvider, useApp } from '@/context/AppContext';
+import { useAuth } from '@/providers/AuthProvider';
 import { clearAllCache } from '@/lib/supabase';
 
 // ---------------------------------------------------------------------------
@@ -110,13 +113,14 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { lang, setLang, currency, setCurrency, theme, setTheme, t } = useApp();
+  const { user, logout } = useAuth();
 
   const sidebarWidth = collapsed ? 72 : 260;
   const isLight = theme === 'light';
 
   return (
     <div
-      className={`flex h-screen overflow-hidden ${isLight ? 'theme-light' : ''}`}
+      className={`flex h-screen overflow-hidden ${!isLight ? 'dark' : ''}`}
       style={{ backgroundColor: 'var(--color-background)' }}
     >
       {/* ---- Mobile overlay ---- */}
@@ -142,7 +146,7 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
         animate={{ width: sidebarWidth }}
         transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
         style={{
-          background: 'var(--color-sidebar-bg)',
+          background: 'var(--sidebar)',
           borderRight: isLight ? 'none' : '1px solid var(--color-glass-border)',
           boxShadow: isLight ? '2px 0 8px rgba(26, 43, 94, 0.10)' : 'none',
         }}
@@ -177,13 +181,13 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
               height: collapsed ? 26 : 30,
               width: 'auto',
               objectFit: 'contain',
-              filter: isLight ? 'brightness(0) invert(1)' : 'none',
+              filter: 'brightness(0) invert(1)',
             }}
           />
           {!collapsed && (
             <span
               className="ml-2 text-sm font-bold whitespace-nowrap"
-              style={{ color: isLight ? '#FFFFFF' : 'var(--color-text-primary)' }}
+              style={{ color: '#FFFFFF' }}
             >
               {t('매출 현황 보드', '売上現況ボード')}
             </span>
@@ -194,7 +198,7 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
             onClick={() => setMobileOpen(false)}
             className="ml-auto md:hidden p-1.5 rounded-lg hover:bg-[var(--color-glass-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue"
             style={{
-              color: isLight ? 'rgba(255,255,255,0.7)' : 'var(--color-text-muted)',
+              color: 'rgba(255,255,255,0.7)',
               background: 'transparent',
               border: 'none',
               cursor: 'pointer',
@@ -209,7 +213,7 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
         <div
           className="mx-4 mb-2"
           style={{
-            borderBottom: isLight ? '1px solid rgba(255,255,255,0.15)' : '1px solid var(--color-glass-border)',
+            borderBottom: '1px solid rgba(255,255,255,0.15)',
           }}
         />
 
@@ -221,7 +225,7 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
               {!collapsed && (
                 <div
                   className="text-[11px] tracking-wider uppercase font-semibold px-3 pt-3 pb-1.5 select-none"
-                  style={{ color: isLight ? 'rgba(255,255,255,0.5)' : 'var(--color-text-muted)', letterSpacing: '0.08em' }}
+                  style={{ color: 'rgba(255,255,255,0.5)', letterSpacing: '0.08em' }}
                 >
                   {lang === 'ko' ? group.label.ko : group.label.ja}
                 </div>
@@ -231,13 +235,13 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
               {gi > 0 && collapsed && (
                 <div
                   className="mx-3 my-2"
-                  style={{ borderBottom: isLight ? '1px solid rgba(255,255,255,0.10)' : '1px solid rgba(128,128,128,0.06)' }}
+                  style={{ borderBottom: '1px solid rgba(255,255,255,0.10)' }}
                 />
               )}
               {gi > 0 && !collapsed && (
                 <div
                   className="mx-3 mb-1"
-                  style={{ borderBottom: isLight ? '1px solid rgba(255,255,255,0.10)' : '1px solid rgba(128,128,128,0.06)' }}
+                  style={{ borderBottom: '1px solid rgba(255,255,255,0.10)' }}
                 />
               )}
 
@@ -263,7 +267,7 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
                         justifyContent: collapsed ? 'center' : 'flex-start',
                         color: isActive
                           ? 'var(--color-sidebar-active-text)'
-                          : isLight ? 'rgba(255,255,255,0.7)' : 'var(--color-text-secondary)',
+                          : 'rgba(255,255,255,0.7)',
                         background: isActive ? 'var(--color-sidebar-active)' : 'transparent',
                         textDecoration: 'none',
                       }}
@@ -275,8 +279,8 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
                           className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-full"
                           style={{
                             height: '60%',
-                            background: isLight ? '#FFFFFF' : 'var(--color-accent-blue, #3b82f6)',
-                            boxShadow: isLight ? '0 0 8px rgba(255,255,255,0.4)' : '0 0 8px rgba(59, 130, 246, 0.4)',
+                            background: '#FFFFFF',
+                            boxShadow: '0 0 8px rgba(255,255,255,0.4)',
                           }}
                           transition={{ type: 'spring', stiffness: 350, damping: 30 }}
                         />
@@ -288,14 +292,14 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
                           className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 -translate-x-1 group-hover:translate-x-0"
                           style={{
                             height: '40%',
-                            background: isLight ? 'rgba(255,255,255,0.6)' : 'var(--color-accent-blue, #3b82f6)',
+                            background: 'rgba(255,255,255,0.6)',
                           }}
                         />
                       )}
 
                       <div
                         className="shrink-0 transition-colors duration-200"
-                        style={{ color: isActive ? 'var(--color-sidebar-active-text)' : (isLight ? 'rgba(255,255,255,0.7)' : undefined) }}
+                        style={{ color: isActive ? 'var(--color-sidebar-active-text)' : 'rgba(255,255,255,0.7)' }}
                       >
                         <item.icon size={20} />
                       </div>
@@ -320,9 +324,7 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
                         style={{
                           background: isActive
                             ? 'transparent'
-                            : isLight
-                              ? 'rgba(255, 255, 255, 0.08)'
-                              : 'rgba(255, 255, 255, 0.03)',
+                            : 'rgba(255, 255, 255, 0.08)',
                         }}
                       />
                     </Link>
@@ -335,6 +337,73 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
 
         {/* 토글은 헤더 우측으로 이동 */}
 
+        {/* User info */}
+        {user && (
+          <div className="px-3 pb-2">
+            <div
+              className="flex items-center gap-2.5 rounded-xl px-3 py-2.5"
+              style={{
+                background: 'rgba(255,255,255,0.08)',
+                border: '1px solid rgba(255,255,255,0.12)',
+              }}
+            >
+              {user.picture ? (
+                <img
+                  src={user.picture}
+                  alt=""
+                  className="shrink-0 rounded-full"
+                  style={{ width: 28, height: 28, objectFit: 'cover' }}
+                />
+              ) : (
+                <div
+                  className="shrink-0 flex items-center justify-center rounded-full"
+                  style={{
+                    width: 28,
+                    height: 28,
+                    background: '#1A2B5E',
+                    color: '#fff',
+                    fontSize: 12,
+                    fontWeight: 600,
+                  }}
+                >
+                  {user.name?.[0]?.toUpperCase() ?? <User size={14} />}
+                </div>
+              )}
+              {!collapsed && (
+                <div className="flex-1 min-w-0">
+                  <div
+                    className="text-xs font-medium truncate"
+                    style={{ color: '#fff' }}
+                  >
+                    {user.name}
+                  </div>
+                  <div
+                    className="text-[10px] truncate"
+                    style={{ color: 'rgba(255,255,255,0.5)' }}
+                  >
+                    {user.email}
+                  </div>
+                </div>
+              )}
+              {!collapsed && (
+                <button
+                  onClick={logout}
+                  className="shrink-0 p-1.5 rounded-lg transition-colors duration-150 hover:bg-[var(--color-glass-hover)]"
+                  style={{
+                    color: 'rgba(255,255,255,0.5)',
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
+                  title={t('로그아웃', 'ログアウト')}
+                >
+                  <LogOut size={14} />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Collapse toggle (desktop only) */}
         <div className="hidden md:flex px-3 pb-4">
           <button
@@ -342,9 +411,9 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
             className="w-full flex items-center justify-center rounded-xl transition-all duration-200 hover:bg-[var(--color-glass-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue"
             style={{
               padding: '8px 0',
-              color: isLight ? 'rgba(255,255,255,0.6)' : 'var(--color-text-muted)',
-              background: isLight ? 'rgba(255,255,255,0.08)' : 'var(--color-glass)',
-              border: isLight ? '1px solid rgba(255,255,255,0.15)' : '1px solid var(--color-glass-border)',
+              color: 'rgba(255,255,255,0.6)',
+              background: 'rgba(255,255,255,0.08)',
+              border: '1px solid rgba(255,255,255,0.15)',
               cursor: 'pointer',
             }}
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
@@ -360,19 +429,11 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
         <header className="shrink-0 relative">
           <div
             className="flex items-center h-14 px-4 md:px-6"
-            style={
-              isLight
-                ? {
-                    background: 'rgba(255, 255, 255, 0.80)',
-                    backdropFilter: 'blur(12px)',
-                    WebkitBackdropFilter: 'blur(12px)',
-                  }
-                : {
-                    background: 'rgba(12, 12, 20, 0.60)',
-                    backdropFilter: 'blur(12px)',
-                    WebkitBackdropFilter: 'blur(12px)',
-                  }
-            }
+            style={{
+              background: 'var(--color-header-bg, color-mix(in srgb, var(--background) 80%, transparent))',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+            }}
           >
             {/* Mobile hamburger */}
             <button
@@ -469,9 +530,7 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
       <nav
         className="fixed bottom-0 left-0 right-0 sm:hidden z-50 flex items-center justify-around h-16 px-2"
         style={{
-          background: isLight
-            ? 'rgba(255, 255, 255, 0.90)'
-            : 'rgba(12, 12, 20, 0.90)',
+          background: 'color-mix(in srgb, var(--background) 90%, transparent)',
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
           borderTop: '1px solid var(--color-glass-border)',

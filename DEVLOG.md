@@ -2,9 +2,10 @@
 
 > **프로젝트**: Riverse Japan 프리미엄 매출 분석 대시보드
 > **배포**: https://rvjp-dashboard.vercel.app
-> **스택**: React 19 + TypeScript (strict) + Vite 7 + Tailwind CSS v4 + Recharts + framer-motion
+> **스택**: Next.js 16 (App Router) + React 19 + TypeScript + Tailwind CSS v4 + Recharts + framer-motion
 > **백엔드**: Supabase (PostgreSQL) — daily_sales ~74,934행
-> **마지막 업데이트**: 2026-03-11
+> **인증**: Auth0 (Resource Owner Password Grant + BFF 패턴)
+> **마지막 업데이트**: 2026-04-05
 
 ---
 
@@ -70,6 +71,51 @@ src/
 ---
 
 ## 작업 히스토리 (최신순)
+
+### 2026-04-05: Auth0 인증 + ADMIN 접근 제어 + 디자인 시스템 마이그레이션
+
+**Auth0 인증 시스템 구현**
+- BFF 패턴: Next.js Route Handlers가 Auth0 프록시 역할, 클라이언트에 Auth0 크리덴셜 미노출
+- Access Token → 클라이언트 메모리, Refresh Token → HTTPOnly cookie (`X-REFRESH-TOKEN`)
+- API Routes 5개: `/api/auth/login`, `/refresh`, `/logout`, `/forgot-password`, `/profile`
+- `middleware.ts`: 쿠키 기반 라우트 보호 (미인증 → `/login` 리다이렉트)
+- `AuthProvider`: 앱 마운트 시 세션 복원, login/logout/refreshToken 관리
+
+**ADMIN Role 접근 제어**
+- Auth0 Post Login Action "Add Roles to Token"이 JWT에 `https://api.riverse.net/roles` claim 주입
+- login/refresh API에서 JWT 디코딩 후 ADMIN role 체크 → 비관리자 403 거부
+- Auth0에서 role 제거 시 다음 refresh 시점에 자동 차단
+
+**디렉토리 구조 재편**
+- 기존 8개 페이지 → `app/(protected)/`로 이동 (URL 변경 없음)
+- `app/(public)/login/page.tsx` 신규 (사이드바 없는 독립 페이지)
+- `app/(protected)/layout.tsx`: ClientLayout 래퍼
+
+**디자인 시스템 마이그레이션**
+- `globals.css`: WCMS 디자인 시스템 기반으로 교체
+  - Shadcn UI 시맨틱 토큰 (`--primary`, `--background`, `--foreground` 등)
+  - `riverse-blue` / `riverse-slate` 팔레트 (Primary: `#003b71`)
+  - `.dark` 클래스 기반 다크 모드 (기존 `.theme-light` 제거)
+  - `tw-animate-css` 통합
+  - 기존 38개 컴포넌트용 `var(--color-*)` 호환 레이어 유지
+- 로그인 페이지: 2컬럼 (네이비 대시보드 프리뷰 + 로그인 폼), Tailwind 시맨틱 토큰
+- ClientLayout: `.dark` 클래스 전환, `var(--sidebar)` 사용, 사용자 프로필 + 로그아웃 버튼
+
+**Auth0 환경변수**
+- `.env.local` 설정 완료 (AUTH0_DOMAIN, CLIENT_ID/SECRET, AUDIENCE, M2M)
+- Vercel 환경변수: 미설정 (Dashboard에서 수동 추가 필요)
+
+**Auth0 Dashboard 확인사항**
+- Tenant: `riverse.jp.auth0.com` (JP 리전)
+- Application: WCMS (Regular Web Application) — Password Grant 활성화됨
+- API: Riverse API (`https://api.riverse.net`) — Allow Offline Access 활성화됨
+- M2M: Riverse API (Machine to Machine) — 프로필 수정용
+- Roles: ADMIN / STAFF / USER 3개 존재
+- Actions: "Add Roles to Token" Post Login Action 배포됨
+
+**변경 파일**: `app/api/auth/*`, `middleware.ts`, `src/providers/AuthProvider.tsx`, `app/(public)/login/page.tsx`, `app/(protected)/layout.tsx`, `app/layout.tsx`, `app/globals.css`, `src/components/layout/ClientLayout.tsx`, `.env.local`, `.env.example`
+
+---
 
 ### 2026-03-11: 플랫폼 다이나믹스 → 플랫폼별 분석 통합 `64c6ded`
 
