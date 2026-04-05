@@ -22,10 +22,19 @@ const platformIcons = [
   { src: '/icons/mangaoukoku.jpeg', name: 'まんが王国' },
 ];
 
-// 3열 무한 스크롤용 배열 (2세트 반복)
-const col1 = [...platformIcons.slice(0, 4), ...platformIcons.slice(0, 4)];
-const col2 = [...platformIcons.slice(4, 7), ...platformIcons.slice(4, 7)];
-const col3 = [...platformIcons.slice(7, 10), ...platformIcons.slice(7, 10)];
+// 3열: 각 열에 전체 아이콘을 섞어서 배치, 3세트 반복 (빈 공간 방지)
+const shuffle = (arr: typeof platformIcons, seed: number) => {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = (i * seed + 3) % (i + 1);
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
+const col1 = [...shuffle(platformIcons, 7), ...shuffle(platformIcons, 7), ...shuffle(platformIcons, 7)];
+const col2 = [...shuffle(platformIcons, 13), ...shuffle(platformIcons, 13), ...shuffle(platformIcons, 13)];
+const col3 = [...shuffle(platformIcons, 19), ...shuffle(platformIcons, 19), ...shuffle(platformIcons, 19)];
+// 1세트 높이: (280px + 40px gap) × 10개 = 3200px
 
 // ---------------------------------------------------------------------------
 // 로그인 페이지
@@ -63,53 +72,50 @@ export default function LoginPage() {
         className="relative hidden flex-col justify-between overflow-hidden md:flex md:w-[55%]"
         style={{ background: '#1A2B5E' }}
       >
-        {/* 배경: 아이콘 스크롤 (전체 패널에 깔림, 매우 반투명) */}
+        {/* 배경: 아이콘 무한 스크롤 (CSS animation, 끊김 없음) */}
+        <style>{`
+          @keyframes scrollUp {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-3200px); }
+          }
+          @keyframes scrollDown {
+            0% { transform: translateY(-3200px); }
+            100% { transform: translateY(0); }
+          }
+        `}</style>
         <div className="absolute inset-0 flex items-center justify-center overflow-hidden pointer-events-none">
-          <div className="flex gap-10">
-            {/* 열 1: 위로 스크롤 */}
-            <div className="relative h-full w-[280px] overflow-hidden" style={{ height: '100vh' }}>
-              <motion.div
-                className="flex flex-col gap-10"
-                animate={{ y: [0, -1520] }}
-                transition={{ duration: 30, repeat: Infinity, ease: 'linear' }}
-              >
+          <div className="flex gap-8">
+            {/* 열 1: 위로 */}
+            <div className="w-[280px] overflow-hidden" style={{ height: '100vh' }}>
+              <div style={{ animation: 'scrollUp 40s linear infinite' }}>
                 {col1.map((icon, i) => (
-                  <div key={`c1-${i}`} className="w-[280px] h-[280px] flex items-center justify-center p-8">
+                  <div key={`c1-${i}`} className="w-[280px] h-[280px] flex items-center justify-center p-6 mb-[40px]">
                     <img src={icon.src} alt={icon.name} className="w-full h-full object-cover rounded-3xl" style={{ opacity: 0.08, aspectRatio: '1/1' }} />
                   </div>
                 ))}
-              </motion.div>
+              </div>
             </div>
 
-            {/* 열 2: 아래로 스크롤 */}
-            <div className="relative h-full w-[280px] overflow-hidden" style={{ height: '100vh' }}>
-              <motion.div
-                className="flex flex-col gap-10"
-                initial={{ y: -800 }}
-                animate={{ y: [-800, 0] }}
-                transition={{ duration: 25, repeat: Infinity, ease: 'linear' }}
-              >
+            {/* 열 2: 아래로 */}
+            <div className="w-[280px] overflow-hidden" style={{ height: '100vh' }}>
+              <div style={{ animation: 'scrollDown 35s linear infinite' }}>
                 {col2.map((icon, i) => (
-                  <div key={`c2-${i}`} className="w-[280px] h-[280px] flex items-center justify-center p-8">
+                  <div key={`c2-${i}`} className="w-[280px] h-[280px] flex items-center justify-center p-6 mb-[40px]">
                     <img src={icon.src} alt={icon.name} className="w-full h-full object-cover rounded-3xl" style={{ opacity: 0.08, aspectRatio: '1/1' }} />
                   </div>
                 ))}
-              </motion.div>
+              </div>
             </div>
 
-            {/* 열 3: 위로 스크롤 (느리게) */}
-            <div className="relative h-full w-[280px] overflow-hidden" style={{ height: '100vh' }}>
-              <motion.div
-                className="flex flex-col gap-10"
-                animate={{ y: [0, -1520] }}
-                transition={{ duration: 35, repeat: Infinity, ease: 'linear' }}
-              >
+            {/* 열 3: 위로 (느리게) */}
+            <div className="w-[280px] overflow-hidden" style={{ height: '100vh' }}>
+              <div style={{ animation: 'scrollUp 50s linear infinite' }}>
                 {col3.map((icon, i) => (
-                  <div key={`c3-${i}`} className="w-[280px] h-[280px] flex items-center justify-center p-8">
+                  <div key={`c3-${i}`} className="w-[280px] h-[280px] flex items-center justify-center p-6 mb-[40px]">
                     <img src={icon.src} alt={icon.name} className="w-full h-full object-cover rounded-3xl" style={{ opacity: 0.08, aspectRatio: '1/1' }} />
                   </div>
                 ))}
-              </motion.div>
+              </div>
             </div>
           </div>
         </div>
