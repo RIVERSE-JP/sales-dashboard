@@ -58,65 +58,55 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen">
-      {/* ---- Left Panel: 대시보드 프리뷰 ---- */}
-      <div className="relative hidden flex-col justify-between overflow-hidden bg-primary md:flex md:w-[55%]">
-        {/* 배경 장식 글로우 */}
-        <div
-          className="pointer-events-none absolute left-[30%] top-[20%] h-[400px] w-[400px]"
-          style={{
-            background: 'radial-gradient(circle, rgba(56,169,248,0.10) 0%, transparent 70%)',
-          }}
-        />
-
-        {/* 상단: 로고 */}
-        <div className="relative z-10 px-12 pt-10">
-          <img src="/riverse_logo.png" alt="RIVERSE" className="h-7" />
-        </div>
-
-        {/* 중앙: 플랫폼 아이콘 스크롤 */}
-        <div className="relative z-10 flex-1 flex items-center justify-center overflow-hidden">
-          <div className="flex gap-6">
+      {/* ---- Left Panel: 리버스 네이비 + 반투명 아이콘 스크롤 ---- */}
+      <div
+        className="relative hidden flex-col justify-between overflow-hidden md:flex md:w-[55%]"
+        style={{ background: '#1A2B5E' }}
+      >
+        {/* 배경: 아이콘 스크롤 (전체 패널에 깔림, 매우 반투명) */}
+        <div className="absolute inset-0 flex items-center justify-center overflow-hidden pointer-events-none">
+          <div className="flex gap-10">
             {/* 열 1: 위로 스크롤 */}
-            <div className="relative h-[500px] w-[120px] overflow-hidden">
+            <div className="relative h-full w-[280px] overflow-hidden" style={{ height: '100vh' }}>
               <motion.div
-                className="flex flex-col gap-5"
-                animate={{ y: [0, -480] }}
-                transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+                className="flex flex-col gap-10"
+                animate={{ y: [0, -1520] }}
+                transition={{ duration: 30, repeat: Infinity, ease: 'linear' }}
               >
                 {col1.map((icon, i) => (
-                  <div key={`c1-${i}`} className="w-[120px] h-[120px] rounded-2xl bg-white/[0.08] border border-white/10 flex items-center justify-center p-4 backdrop-blur-sm">
-                    <img src={icon.src} alt={icon.name} className="w-full h-full object-contain rounded-xl" />
+                  <div key={`c1-${i}`} className="w-[280px] h-[280px] flex items-center justify-center p-8">
+                    <img src={icon.src} alt={icon.name} className="w-full h-full object-contain" style={{ opacity: 0.08 }} />
                   </div>
                 ))}
               </motion.div>
             </div>
 
             {/* 열 2: 아래로 스크롤 */}
-            <div className="relative h-[500px] w-[120px] overflow-hidden">
+            <div className="relative h-full w-[280px] overflow-hidden" style={{ height: '100vh' }}>
               <motion.div
-                className="flex flex-col gap-5"
-                initial={{ y: -360 }}
-                animate={{ y: [- 360, 0] }}
-                transition={{ duration: 18, repeat: Infinity, ease: 'linear' }}
+                className="flex flex-col gap-10"
+                initial={{ y: -800 }}
+                animate={{ y: [-800, 0] }}
+                transition={{ duration: 25, repeat: Infinity, ease: 'linear' }}
               >
                 {col2.map((icon, i) => (
-                  <div key={`c2-${i}`} className="w-[120px] h-[120px] rounded-2xl bg-white/[0.08] border border-white/10 flex items-center justify-center p-4 backdrop-blur-sm">
-                    <img src={icon.src} alt={icon.name} className="w-full h-full object-contain rounded-xl" />
+                  <div key={`c2-${i}`} className="w-[280px] h-[280px] flex items-center justify-center p-8">
+                    <img src={icon.src} alt={icon.name} className="w-full h-full object-contain" style={{ opacity: 0.08 }} />
                   </div>
                 ))}
               </motion.div>
             </div>
 
             {/* 열 3: 위로 스크롤 (느리게) */}
-            <div className="relative h-[500px] w-[120px] overflow-hidden">
+            <div className="relative h-full w-[280px] overflow-hidden" style={{ height: '100vh' }}>
               <motion.div
-                className="flex flex-col gap-5"
-                animate={{ y: [0, -480] }}
-                transition={{ duration: 24, repeat: Infinity, ease: 'linear' }}
+                className="flex flex-col gap-10"
+                animate={{ y: [0, -1520] }}
+                transition={{ duration: 35, repeat: Infinity, ease: 'linear' }}
               >
                 {col3.map((icon, i) => (
-                  <div key={`c3-${i}`} className="w-[120px] h-[120px] rounded-2xl bg-white/[0.08] border border-white/10 flex items-center justify-center p-4 backdrop-blur-sm">
-                    <img src={icon.src} alt={icon.name} className="w-full h-full object-contain rounded-xl" />
+                  <div key={`c3-${i}`} className="w-[280px] h-[280px] flex items-center justify-center p-8">
+                    <img src={icon.src} alt={icon.name} className="w-full h-full object-contain" style={{ opacity: 0.08 }} />
                   </div>
                 ))}
               </motion.div>
@@ -124,12 +114,20 @@ export default function LoginPage() {
           </div>
         </div>
 
+        {/* 상단: 로고 */}
+        <div className="relative z-10 px-12 pt-10">
+          <img src="/riverse_logo.png" alt="RIVERSE" className="h-7" style={{ filter: 'brightness(0) invert(1)' }} />
+        </div>
+
+        {/* 중앙: 빈 공간 (아이콘이 배경으로 깔림) */}
+        <div className="flex-1" />
+
         {/* 하단: 카피 + 저작권 */}
         <div className="relative z-10 px-12 pb-9">
           <h1 className="mb-2.5 text-[28px] font-bold leading-[1.4] text-white/90">
             데이터로 보는
             <br />
-            <span className="text-riverse-blue-400">매출의 모든 것</span>
+            <span style={{ color: 'rgba(255,255,255,0.6)' }}>매출의 모든 것</span>
           </h1>
           <p className="mb-6 text-[13px] leading-[1.7] text-white/40">
             속보치 업로드부터 주간 리포트까지,
