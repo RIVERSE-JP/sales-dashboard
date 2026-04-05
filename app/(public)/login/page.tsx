@@ -75,7 +75,7 @@ export default function LoginPage() {
               >
                 {col1.map((icon, i) => (
                   <div key={`c1-${i}`} className="w-[280px] h-[280px] flex items-center justify-center p-8">
-                    <img src={icon.src} alt={icon.name} className="w-full h-full object-contain" style={{ opacity: 0.08 }} />
+                    <img src={icon.src} alt={icon.name} className="w-full h-full object-cover rounded-3xl" style={{ opacity: 0.08, aspectRatio: '1/1' }} />
                   </div>
                 ))}
               </motion.div>
@@ -91,7 +91,7 @@ export default function LoginPage() {
               >
                 {col2.map((icon, i) => (
                   <div key={`c2-${i}`} className="w-[280px] h-[280px] flex items-center justify-center p-8">
-                    <img src={icon.src} alt={icon.name} className="w-full h-full object-contain" style={{ opacity: 0.08 }} />
+                    <img src={icon.src} alt={icon.name} className="w-full h-full object-cover rounded-3xl" style={{ opacity: 0.08, aspectRatio: '1/1' }} />
                   </div>
                 ))}
               </motion.div>
@@ -106,7 +106,7 @@ export default function LoginPage() {
               >
                 {col3.map((icon, i) => (
                   <div key={`c3-${i}`} className="w-[280px] h-[280px] flex items-center justify-center p-8">
-                    <img src={icon.src} alt={icon.name} className="w-full h-full object-contain" style={{ opacity: 0.08 }} />
+                    <img src={icon.src} alt={icon.name} className="w-full h-full object-cover rounded-3xl" style={{ opacity: 0.08, aspectRatio: '1/1' }} />
                   </div>
                 ))}
               </motion.div>
