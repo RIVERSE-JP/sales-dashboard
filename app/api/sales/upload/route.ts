@@ -34,6 +34,30 @@ export async function POST(request: Request) {
     };
   });
 
+  // 누적형 데이터 소스(cmoa Excel 등): 같은 채널+월의 기존 데이터를 먼저 삭제
+  const cumulativeSources = ['sokuhochi_cmoa_excel', 'sokuhochi_cmoa'];
+  if (cumulativeSources.includes(source)) {
+    // 업로드 데이터의 날짜 범위 파악
+    const dates = normalizedRows
+      .map((r: Record<string, unknown>) => String(r.sale_date || ''))
+      .filter((d: string) => /^\d{4}-\d{2}-\d{2}$/.test(d))
+      .sort();
+    if (dates.length > 0) {
+      const minDate = dates[0];
+      const maxDate = dates[dates.length - 1];
+      const channel = normalizedRows[0]?.channel ? String(normalizedRows[0].channel) : '';
+      if (channel) {
+        await supabaseServer
+          .from('daily_sales_v2')
+          .delete()
+          .eq('channel', channel)
+          .eq('data_source', source)
+          .gte('sale_date', minDate)
+          .lte('sale_date', maxDate);
+      }
+    }
+  }
+
   let totalInserted = 0;
   let totalUpdated = 0;
   const batchSize = 500;
