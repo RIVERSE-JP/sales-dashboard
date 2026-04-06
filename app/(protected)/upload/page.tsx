@@ -428,7 +428,8 @@ export default function DataUploadPage() {
             rows = await parseSokuhochiExcel(buffer);
             rows = rows.map((r) => ({ ...r, channel: fmt.platform }));
           } else {
-            rows = parseCSVSokuhochi(textContent, fmt.platform);
+            const isKan = file.name.toLowerCase().includes('kan_daily');
+            rows = parseCSVSokuhochi(textContent, fmt.platform, false, isKan);
           }
         } else if (fmt.type === 'piccoma_kpi') {
           rows = parsePiccomaKPI(textContent, fmt.platform, file.name);

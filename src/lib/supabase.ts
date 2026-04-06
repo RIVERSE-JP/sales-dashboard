@@ -25,6 +25,8 @@ export function extractBaseTitle(titleJp: string): string {
     .replace(/【連載版】/g, '')
     .replace(/【完全版】/g, '')
     .replace(/【タテヨミ】/g, '')
+    .replace(/\(巻\)/g, '')
+    .replace(/（巻）/g, '')
     .replace(/\s+/g, ' ')
     .trim();
 }

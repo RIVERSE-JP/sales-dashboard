@@ -112,7 +112,7 @@ export function parseCSVWeeklyReport(text: string): ParsedRow[] {
  * Header: 日付,取次店書籍ID,ブックID,ブック名,チャプタID/巻ID,チャプタ名/巻名,話数番号/巻番号,著者名,出版社名,価格,購入件数,購入ポイント数
  * Aggregate by (ブック名, 日付) summing 購入ポイント数
  */
-export function parseCSVSokuhochi(text: string, channel: string, divideByTax = false): ParsedRow[] {
+export function parseCSVSokuhochi(text: string, channel: string, divideByTax = false, isKan = false): ParsedRow[] {
   const lines = parseCSVText(text);
   if (lines.length < 2) return [];
 
@@ -129,8 +129,13 @@ export function parseCSVSokuhochi(text: string, channel: string, divideByTax = f
   for (let i = headerIdx + 1; i < lines.length; i++) {
     const cols = lines[i];
     const rawDate = (cols[0] ?? '').trim();
-    const titleJP = (cols[3] ?? '').trim();
+    let titleJP = (cols[3] ?? '').trim();
     const rawAmount = (cols[11] ?? '').trim();
+
+    // kan(権별/판면) 파일이면 작품명에 (巻) 접미어 추가
+    if (isKan && titleJP && !titleJP.includes('(巻)')) {
+      titleJP = `${titleJP}(巻)`;
+    }
 
     if (!rawDate || !titleJP) continue;
 
