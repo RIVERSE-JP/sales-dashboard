@@ -1,10 +1,14 @@
 import { extractBaseTitle } from '@/lib/supabase';
 
-/** 핵심어 추출: 부제/괄호/번호 모두 제거 */
+/** 핵심어 추출: 부제/괄호/번호/문장부호 정규화 */
 export function toCore(s: string): string {
   return s
-    .replace(/～[^～]*～/g, '')
-    .replace(/〜[^〜]*〜/g, '')
+    // 문장부호 정규화 (전각→반각)
+    .replace(/～/g, '~').replace(/〜/g, '~')
+    .replace(/！/g, '!').replace(/？/g, '?')
+    .replace(/　/g, ' ')
+    // 부제/괄호 제거
+    .replace(/~[^~]*~/g, '')
     .replace(/【[^】]*】/g, '')
     .replace(/\[[^\]]*\]/g, '')
     .replace(/（[^）]*）/g, '')
