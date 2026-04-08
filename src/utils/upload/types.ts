@@ -29,7 +29,7 @@ export interface UploadResult {
 }
 
 export interface DetectedFormat {
-  type: 'piccoma_sokuhochi' | 'piccoma_kpi' | 'cmoa_sokuhochi' | 'cmoa_excel' | 'weekly_report' | 'unknown';
+  type: 'piccoma_sokuhochi' | 'piccoma_kpi' | 'cmoa_sokuhochi' | 'cmoa_excel' | 'weekly_report' | 'ruikei_metadata' | 'unknown';
   platform: string;
   isPreliminary: boolean;
   confidence: 'high' | 'medium' | 'low';

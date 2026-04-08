@@ -35,6 +35,7 @@ import {
   parseWeeklyReport,
   parseCSVWeeklyReport,
   parseSokuhochiExcel,
+  parseRuikeiMetadata,
 } from '@/utils/upload';
 import ExcelJS from 'exceljs';
 
@@ -447,6 +448,8 @@ export default function DataUploadPage() {
           } else {
             rows = parseCSVWeeklyReport(textContent);
           }
+        } else if (fmt.type === 'ruikei_metadata') {
+          rows = await parseRuikeiMetadata(buffer);
         }
 
         return { rows, fmt };

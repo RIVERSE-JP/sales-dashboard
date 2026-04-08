@@ -486,6 +486,82 @@ export async function parseWeeklyReport(buffer: ArrayBuffer): Promise<ParsedRow[
   return rows;
 }
 
+/**
+ * 누계 매출 메타데이터 Excel 파서
+ * 시트: 누계매출메타데이터(2020~)
+ * 헤더: 5행, 데이터: 6행부터
+ * 컬럼: 1=채널작품명JP, 2=작품명KR, 3=작품명JP, 9=판매월(Date), 15=채널, 23=세후거래액JPY
+ */
+export async function parseRuikeiMetadata(buffer: ArrayBuffer): Promise<ParsedRow[]> {
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(buffer);
+
+  // "누계매출메타데이터" 또는 가장 큰 시트 찾기
+  const sheet = wb.worksheets.find((ws) => ws.name.includes('누계') || ws.name.includes('메타데이터')) ?? wb.worksheets[0];
+  if (!sheet) return [];
+
+  const rows: ParsedRow[] = [];
+  const cellResult = (v: unknown): unknown => {
+    if (v && typeof v === 'object' && 'result' in v) return (v as { result: unknown }).result;
+    return v;
+  };
+
+  // 헤더 행 찾기 (5행 근처에서 '판매월' 또는 'Title(JP)' 찾기)
+  let headerRow = 5;
+  for (let r = 1; r <= 10; r++) {
+    const cell = sheet.getCell(r, 9);
+    const v = cellResult(cell.value);
+    if (typeof v === 'string' && (v.includes('판매월') || v.includes('Month'))) {
+      headerRow = r;
+      break;
+    }
+  }
+
+  // 데이터 행: 헤더 + 1부터 끝까지
+  const lastRow = sheet.rowCount;
+  for (let r = headerRow + 1; r <= lastRow; r++) {
+    const titleJpCell = cellResult(sheet.getCell(r, 3).value);
+    const titleKrCell = cellResult(sheet.getCell(r, 2).value);
+    const monthCell = cellResult(sheet.getCell(r, 9).value);
+    const channelCell = cellResult(sheet.getCell(r, 15).value);
+    const amountCell = cellResult(sheet.getCell(r, 23).value);
+
+    const titleJp = String(titleJpCell ?? '').trim();
+    const titleKr = String(titleKrCell ?? '').trim();
+    const channel = String(channelCell ?? '').trim();
+
+    if (!titleJp || !channel) continue;
+
+    // 판매월 → YYYY-MM-01
+    let saleDate = '';
+    if (monthCell instanceof Date) {
+      saleDate = monthCell.toISOString().slice(0, 7) + '-01';
+    } else if (typeof monthCell === 'string' && /^\d{4}-\d{2}/.test(monthCell)) {
+      saleDate = monthCell.slice(0, 7) + '-01';
+    } else if (typeof monthCell === 'number' && monthCell > 40000) {
+      const epoch = new Date(1899, 11, 30);
+      const d = new Date(epoch.getTime() + monthCell * 86400000);
+      saleDate = d.toISOString().slice(0, 7) + '-01';
+    }
+    if (!saleDate) continue;
+
+    // 매출: 세후거래액(JPY) — 컬럼 23
+    const amount = typeof amountCell === 'number' ? Math.round(amountCell) : parseInt(String(amountCell ?? '0').replace(/[¥,]/g, ''), 10) || 0;
+    if (amount <= 0) continue;
+
+    rows.push({
+      title_jp: titleJp,
+      title_kr: titleKr,
+      channel_title_jp: titleJp,
+      channel,
+      sale_date: saleDate,
+      sales_amount: amount,
+    });
+  }
+
+  return rows;
+}
+
 export async function parseSokuhochiExcel(buffer: ArrayBuffer): Promise<ParsedRow[]> {
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(buffer);

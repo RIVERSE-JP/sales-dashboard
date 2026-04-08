@@ -45,6 +45,11 @@ export function detectFormat(fileName: string, headerSample?: string, isExcel?: 
     return { type: 'weekly_report', platform: '', isPreliminary: false, confidence: 'high', label: 'Weekly Report', subSource: 'weekly_report' };
   }
 
+  // 누계 매출 메타데이터
+  if (name.includes('누계') || name.includes('累計') || lower.includes('ruikei') || lower.includes('metadata')) {
+    return { type: 'ruikei_metadata', platform: '', isPreliminary: false, confidence: 'high', label: '누계 매출 메타데이터', subSource: 'ruikei_metadata' };
+  }
+
   if (lower.includes('product_kpi')) {
     return { type: 'piccoma_kpi' as DetectedFormat['type'], platform: guessedPlatform || 'Piccoma', isPreliminary: true, confidence: 'high', label: 'Piccoma KPI 속보치', subSource };
   }
