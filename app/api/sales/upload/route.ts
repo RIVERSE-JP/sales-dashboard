@@ -12,14 +12,14 @@ export const dynamic = 'force-dynamic';
  */
 export async function POST(request: Request) {
   const body = await request.json();
-  const { rows, source, isPreliminary } = body;
+  const { rows, source, isPreliminary, isLastBatch = true, skipPostProcess = false } = body;
 
   if (!rows || !Array.isArray(rows)) {
     return NextResponse.json({ error: 'rows array is required' }, { status: 400 });
   }
 
-  // title_master에서 title_kr 매핑 로드
-  const { data: masterData } = await supabaseServer.from('titles').select('title_jp, title_kr');
+  // title_master 로드 (title_kr 매칭 + 신규 작품 등록용)
+  const { data: masterData } = await supabaseServer.from('titles').select('title_jp, title_kr, genre_id, production_company_id, content_format');
   const maps = buildTitleKrMaps(masterData ?? []);
 
   // 채널명 정규화 + title_kr 자동 매칭
@@ -83,49 +83,46 @@ export async function POST(request: Request) {
     }
   }
 
-  // 신규 작품 자동 등록 (titles 테이블에 없는 작품 → 원작 정보 복사)
-  try {
-    const uploadedTitles = [...new Set(normalizedRows.map((r: Record<string, unknown>) => String(r.title_jp)))];
-    const existingSet = new Set((masterData ?? []).map((m: { title_jp: string }) => m.title_jp));
-    const newTitles = uploadedTitles.filter(t => !existingSet.has(t));
+  // 후처리(신규 작품 등록 + MV 갱신)는 마지막 배치 또는 단일 배치에서만 수행
+  if (isLastBatch && !skipPostProcess) {
+    // 신규 작품 자동 등록
+    try {
+      const uploadedTitles = [...new Set(normalizedRows.map((r: Record<string, unknown>) => String(r.title_jp)))];
+      const existingSet = new Set((masterData ?? []).map((m: { title_jp: string }) => m.title_jp));
+      const newTitles = uploadedTitles.filter(t => !existingSet.has(t));
 
-    if (newTitles.length > 0) {
-      // 원작 매칭용 맵 (장르/제작사/포맷만)
-      const { extractBaseTitle } = await import('@/lib/supabase');
-      const { toCore } = await import('@/utils/titleMatcher');
-      const originByBase = new Map<string, { genre_id: number | null; production_company_id: number | null; content_format: string }>();
-      const originByCore = new Map<string, { genre_id: number | null; production_company_id: number | null; content_format: string }>();
-      const { data: fullMaster } = await supabaseServer.from('titles').select('title_jp, genre_id, production_company_id, content_format');
-      (fullMaster ?? []).forEach((m: Record<string, unknown>) => {
-        const info = { genre_id: m.genre_id as number | null, production_company_id: m.production_company_id as number | null, content_format: String(m.content_format || 'WEBTOON') };
-        const b = extractBaseTitle(String(m.title_jp));
-        if (!originByBase.has(b)) originByBase.set(b, info);
-        const c = toCore(String(m.title_jp));
-        if (c && !originByCore.has(c)) originByCore.set(c, info);
-      });
+      if (newTitles.length > 0) {
+        const { extractBaseTitle } = await import('@/lib/supabase');
+        const { toCore } = await import('@/utils/titleMatcher');
+        const originByBase = new Map<string, { genre_id: number | null; production_company_id: number | null; content_format: string }>();
+        const originByCore = new Map<string, { genre_id: number | null; production_company_id: number | null; content_format: string }>();
+        (masterData ?? []).forEach((m: Record<string, unknown>) => {
+          const info = { genre_id: (m.genre_id as number | null) ?? null, production_company_id: (m.production_company_id as number | null) ?? null, content_format: String(m.content_format || 'WEBTOON') };
+          const b = extractBaseTitle(String(m.title_jp));
+          if (!originByBase.has(b)) originByBase.set(b, info);
+          const c = toCore(String(m.title_jp));
+          if (c && !originByCore.has(c)) originByCore.set(c, info);
+        });
 
-      for (const titleJp of newTitles) {
-        const origin = originByBase.get(extractBaseTitle(titleJp)) || originByCore.get(toCore(titleJp));
-        const titleKr = matchTitleKr(titleJp, maps);
-        await supabaseServer.from('titles').insert({
-          title_jp: titleJp,
-          title_kr: titleKr || null,
-          genre_id: origin?.genre_id || null,
-          production_company_id: origin?.production_company_id || null,
-          content_format: origin?.content_format || 'WEBTOON',
-          is_active: true,
-        }).then(() => {});  // 중복 무시
+        for (const titleJp of newTitles) {
+          const origin = originByBase.get(extractBaseTitle(titleJp)) || originByCore.get(toCore(titleJp));
+          const titleKr = matchTitleKr(titleJp, maps);
+          await supabaseServer.from('titles').insert({
+            title_jp: titleJp,
+            title_kr: titleKr || null,
+            genre_id: origin?.genre_id || null,
+            production_company_id: origin?.production_company_id || null,
+            content_format: origin?.content_format || 'WEBTOON',
+            is_active: true,
+          }).then(() => {});
+        }
       }
-    }
-  } catch {
-    // 신규 작품 등록 실패해도 매출 업로드 결과는 반환
-  }
+    } catch { /* 무시 */ }
 
-  // 업로드 후 Materialized View 갱신
-  try {
-    await supabaseServer.rpc('refresh_materialized_views');
-  } catch {
-    // MV 갱신 실패해도 업로드 결과는 반환
+    // Materialized View 갱신
+    try {
+      await supabaseServer.rpc('refresh_materialized_views');
+    } catch { /* 무시 */ }
   }
 
   return NextResponse.json({ inserted: totalInserted, updated: totalUpdated });

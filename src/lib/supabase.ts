@@ -238,11 +238,12 @@ export async function upsertDailySales(
   }>,
   source: string = 'weekly_report',
   isPreliminary = false,
+  isLastBatch = true,
 ) {
   return apiFetch<{ inserted: number; updated: number }>('/api/sales/upload', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ rows, source, isPreliminary }),
+    body: JSON.stringify({ rows, source, isPreliminary, isLastBatch }),
   });
 }
 

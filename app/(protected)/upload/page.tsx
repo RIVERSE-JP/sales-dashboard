@@ -583,15 +583,17 @@ export default function DataUploadPage() {
         : parsedRows;
 
     try {
-      const batchSize = 500;
+      // 대용량 데이터의 경우 큰 배치로 (호출 수 감소)
+      const batchSize = rowsToUpload.length > 10000 ? 5000 : 2000;
       let totalInserted = 0;
       let totalUpdated = 0;
       for (let i = 0; i < rowsToUpload.length; i += batchSize) {
         const batch = rowsToUpload.slice(i, i + batchSize);
-        const result = await upsertDailySales(batch, fileType, isPreliminary);
+        const isLastBatch = i + batchSize >= rowsToUpload.length;
+        const result = await upsertDailySales(batch, fileType, isPreliminary, isLastBatch);
         totalInserted += result.inserted;
         totalUpdated += result.updated;
-        setUploadProgress(Math.round(((i + batchSize) / rowsToUpload.length) * 100));
+        setUploadProgress(Math.round(Math.min(100, ((i + batchSize) / rowsToUpload.length) * 100)));
       }
       const now = new Date().toISOString();
       setLastUploadTime(now);
