@@ -75,12 +75,13 @@ export function parseCSVWeeklyReport(text: string): ParsedRow[] {
     const hasKeyword = lines[i].some((c) => c.includes('Title') || c.includes('Channel') || c.includes('Date') || c.includes('Sales'));
     if (hasKeyword) {
       headerIdx = i;
+      // 컬럼 매핑: Channel 관련을 먼저 체크
       lines[i].forEach((c, idx) => {
         const lower = c.toLowerCase().trim();
-        if (lower.includes('title') && lower.includes('jp') || lower === 'title(jp)') col.titleJP = idx;
-        else if (lower.includes('title') && lower.includes('kr') || lower === 'title(kr)') col.titleKR = idx;
-        else if (lower.includes('channel') && lower.includes('title')) col.channelTitleJP = idx;
-        else if (lower.includes('channel') && !lower.includes('title')) col.channel = idx;
+        if (lower.includes('channel') && lower.includes('title')) col.channelTitleJP = idx;
+        else if (lower.includes('channel')) col.channel = idx;
+        else if (lower === 'title(jp)' || (lower.includes('title') && lower.includes('jp'))) col.titleJP = idx;
+        else if (lower === 'title(kr)' || (lower.includes('title') && lower.includes('kr'))) col.titleKR = idx;
         else if (lower.includes('date') || lower.includes('날짜')) col.date = idx;
         else if (lower.includes('sales') || lower.includes('amount') || lower.includes('매출')) col.amount = idx;
       });
@@ -420,22 +421,21 @@ export async function parseWeeklyReport(buffer: ArrayBuffer): Promise<ParsedRow[
     ));
     if (hasKeyword) {
       headerRowNum = rowNumber;
+      // 컬럼 매핑: Channel 관련을 먼저 체크 (Channel Title(JP)가 Title(JP)로 잘못 매핑되는 것 방지)
       vals.forEach((v, idx) => {
         if (typeof v !== 'string') return;
         const lower = v.toLowerCase().trim();
-        if (lower.includes('title') && lower.includes('jp') || lower === 'title(jp)' || lower === 'title_jp') colMap.titleJP = idx;
-        else if (lower.includes('title') && lower.includes('kr') || lower === 'title(kr)' || lower === 'title_kr') colMap.titleKR = idx;
-        else if (lower.includes('channel') && lower.includes('title')) colMap.channelTitleJP = idx;
-        else if (lower.includes('channel') && !lower.includes('title')) colMap.channel = idx;
+        // 1. Channel 관련 우선
+        if (lower.includes('channel') && lower.includes('title')) colMap.channelTitleJP = idx;
+        else if (lower.includes('channel')) colMap.channel = idx;
+        // 2. Title(JP) / Title(KR)
+        else if (lower === 'title(jp)' || lower === 'title_jp' || (lower.includes('title') && lower.includes('jp'))) colMap.titleJP = idx;
+        else if (lower === 'title(kr)' || lower === 'title_kr' || (lower.includes('title') && lower.includes('kr'))) colMap.titleKR = idx;
+        // 3. Date
         else if (lower.includes('date') || lower.includes('날짜') || lower.includes('日付')) colMap.date = idx;
+        // 4. Sales
         else if (lower.includes('sales') || lower.includes('매출') || lower.includes('売上') || lower.includes('amount')) colMap.amount = idx;
       });
-      // Title(JP)가 없으면 첫 번째 Title 컬럼을 사용
-      if (!colMap.titleJP) {
-        vals.forEach((v, idx) => {
-          if (typeof v === 'string' && v.toLowerCase().includes('title') && !colMap.titleJP) colMap.titleJP = idx;
-        });
-      }
     }
   });
 
@@ -448,9 +448,16 @@ export async function parseWeeklyReport(buffer: ArrayBuffer): Promise<ParsedRow[
   if (!colMap.date) colMap.date = 5;
   if (!colMap.amount) colMap.amount = 6;
 
+  // 수식 셀 처리: { formula, result } 객체에서 result만 추출
+  const cellValue = (v: unknown): unknown => {
+    if (v && typeof v === 'object' && 'result' in v) return (v as { result: unknown }).result;
+    return v;
+  };
+
   dailySheet.eachRow((row, rowNumber) => {
     if (rowNumber <= headerRowNum) return;
-    const vals = row.values as (string | number | Date | null | undefined)[];
+    const rawVals = row.values as unknown[];
+    const vals = rawVals.map(cellValue) as (string | number | Date | null | undefined)[];
     const titleJP = String(vals[colMap.titleJP] ?? '').trim();
     const titleKR = String(vals[colMap.titleKR] ?? '').trim();
     const channelTitleJP = String(vals[colMap.channelTitleJP] ?? '').trim();
