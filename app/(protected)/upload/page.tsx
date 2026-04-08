@@ -1090,7 +1090,10 @@ export default function DataUploadPage() {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={handleUpload}
-                    disabled={!detectedFormat.platform && !manualPlatform}
+                    disabled={
+                      detectedFormat.type !== 'ruikei_metadata' &&
+                      !detectedFormat.platform && !manualPlatform
+                    }
                     className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold cursor-pointer"
                     style={{
                       background: '#1A2B5E',

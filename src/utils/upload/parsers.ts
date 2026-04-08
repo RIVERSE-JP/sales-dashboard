@@ -448,9 +448,17 @@ export async function parseWeeklyReport(buffer: ArrayBuffer): Promise<ParsedRow[
   if (!colMap.date) colMap.date = 5;
   if (!colMap.amount) colMap.amount = 6;
 
-  // 수식 셀 처리: { formula, result } 객체에서 result만 추출
+  // ExcelJS 셀 값 정규화: 수식/리치텍스트/에러/하이퍼링크 셀을 원시값으로 풀어냄
   const cellValue = (v: unknown): unknown => {
-    if (v && typeof v === 'object' && 'result' in v) return (v as { result: unknown }).result;
+    if (v == null) return v;
+    if (typeof v !== 'object') return v;
+    const obj = v as Record<string, unknown>;
+    if ('result' in obj) return cellValue(obj.result);
+    if (Array.isArray(obj.richText)) {
+      return (obj.richText as Array<{ text?: string }>).map((seg) => seg.text ?? '').join('');
+    }
+    if ('error' in obj) return '';
+    if ('text' in obj && typeof obj.text === 'string') return obj.text;
     return v;
   };
 
@@ -501,8 +509,21 @@ export async function parseRuikeiMetadata(buffer: ArrayBuffer): Promise<ParsedRo
   if (!sheet) return [];
 
   const rows: ParsedRow[] = [];
+  // ExcelJS 셀 값 정규화: 수식/리치텍스트/에러 셀을 원시값으로 풀어냄
   const cellResult = (v: unknown): unknown => {
-    if (v && typeof v === 'object' && 'result' in v) return (v as { result: unknown }).result;
+    if (v == null) return v;
+    if (typeof v !== 'object') return v;
+    const obj = v as Record<string, unknown>;
+    // 수식 셀: { formula, result }
+    if ('result' in obj) return cellResult(obj.result);
+    // 리치 텍스트 셀: { richText: [{text, font?}, ...] }
+    if (Array.isArray(obj.richText)) {
+      return (obj.richText as Array<{ text?: string }>).map((seg) => seg.text ?? '').join('');
+    }
+    // 에러 셀: { error: '#N/A' }
+    if ('error' in obj) return '';
+    // 하이퍼링크 셀: { text, hyperlink }
+    if ('text' in obj && typeof obj.text === 'string') return obj.text;
     return v;
   };
 
