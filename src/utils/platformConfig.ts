@@ -117,11 +117,15 @@ export const PLATFORM_BRANDS: Record<string, PlatformBrand> = {
 
 // 채널명 정규화: 모든 변형 → DB channel 값으로 통일
 const CHANNEL_ALIASES: Record<string, string> = {
-  // Piccoma (DB: 'Piccoma')
+  // Piccoma (DB: 'Piccoma') — 광고/유료/무제한 등 변형 모두 통합
   'Piccoma': 'Piccoma',
   'piccoma': 'Piccoma',
   'PICCOMA': 'Piccoma',
   'ピッコマ': 'Piccoma',
+  'piccoma_ads': 'Piccoma',
+  'piccoma_sales': 'Piccoma',
+  'piccoma france': 'Piccoma',
+  'piccoma무제한읽기(読み放題)': 'Piccoma',
   // Mechacomic (DB: 'Mechacomic')
   'Mechacomic': 'Mechacomic',
   'mechacomic': 'Mechacomic',
@@ -133,22 +137,58 @@ const CHANNEL_ALIASES: Record<string, string> = {
   'CMOA': 'cmoa',
   'Cmoa': 'cmoa',
   'コミックシーモア': 'cmoa',
-  // 기타 플랫폼
+  // Renta
   'renta': 'Renta',
   'Renta': 'Renta',
   'Renta!': 'Renta',
+  // DMM / FANZA
   'dmm': 'DMM',
   'DMM': 'DMM',
   'DMMブックス': 'DMM',
-  'u-next': 'U-NEXT',
-  'U-NEXT': 'U-NEXT',
-  'LINEマンガ': 'LINEマンガ',
-  'line_manga': 'LINEマンガ',
-  'ebookjapan': 'ebookjapan',
   'DMM（FANZA）': 'DMM（FANZA）',
   'dmm_fanza': 'DMM（FANZA）',
+  // U-NEXT
+  'u-next': 'U-NEXT',
+  'U-NEXT': 'U-NEXT',
+  // LINEマンガ (광고 포함)
+  'LINEマンガ': 'LINEマンガ',
+  'line_manga': 'LINEマンガ',
+  'line': 'LINEマンガ',
+  'LINE': 'LINEマンガ',
+  'line_ads': 'LINEマンガ',
+  // ebookjapan (웹툰 라인 포함)
+  'ebookjapan': 'ebookjapan',
+  'ebj': 'ebookjapan',
+  'ebj_webtoon': 'ebookjapan',
+  // まんが王国
   'まんが王国': 'まんが王国',
   'manga_oukoku': 'まんが王国',
+  'manga-kingdom': 'まんが王国',
+  // BookLive
+  'booklive': 'BookLive',
+  'BookLive': 'BookLive',
+  'BOOKLIVE': 'BookLive',
+  // comico (광고 포함)
+  'comico jp': 'comico',
+  'comico_jp': 'comico',
+  'comico': 'comico',
+  'comico_ads': 'comico',
+  // BookCOMI
+  'bookcomi': 'BookCOMI',
+  'BookCOMI': 'BookCOMI',
+  // Beltoon
+  'beltoon': 'Beltoon',
+  'Beltoon': 'Beltoon',
+  // Lezhin
+  'lezhin': 'Lezhin',
+  'Lezhin': 'Lezhin',
+  // MangaBang
+  'mangabang': 'MangaBang',
+  'MangaBang': 'MangaBang',
+  // MediaDo
+  'mediado_sales': 'MediaDo',
+  'mediado': 'MediaDo',
+  'MediaDo': 'MediaDo',
 };
 
 function resolveChannelName(name: string): string {
