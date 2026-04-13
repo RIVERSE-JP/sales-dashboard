@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
  */
 export async function POST(request: Request) {
   const body = await request.json();
-  const { rows, source, isPreliminary, isLastBatch = true, skipPostProcess = false } = body;
+  const { rows, source, isPreliminary, isLastBatch = true, skipPostProcess = false, isFirstBatch = true } = body;
 
   if (!rows || !Array.isArray(rows)) {
     return NextResponse.json({ error: 'rows array is required' }, { status: 400 });
@@ -34,9 +34,9 @@ export async function POST(request: Request) {
     };
   });
 
-  // 누적형 데이터 소스(cmoa Excel 등): 같은 채널+월의 기존 데이터를 먼저 삭제
+  // 누적형 데이터 소스(cmoa Excel 등): 첫 번째 배치에서만 기존 데이터 삭제
   const cumulativeSources = ['sokuhochi_cmoa_excel', 'sokuhochi_cmoa'];
-  if (cumulativeSources.includes(source)) {
+  if (cumulativeSources.includes(source) && isFirstBatch) {
     // 업로드 데이터의 날짜 범위 파악
     const dates = normalizedRows
       .map((r: Record<string, unknown>) => String(r.sale_date || ''))

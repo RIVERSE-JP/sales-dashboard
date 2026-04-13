@@ -592,8 +592,9 @@ export default function DataUploadPage() {
       let totalUpdated = 0;
       for (let i = 0; i < rowsToUpload.length; i += batchSize) {
         const batch = rowsToUpload.slice(i, i + batchSize);
+        const isFirstBatch = i === 0;
         const isLastBatch = i + batchSize >= rowsToUpload.length;
-        const result = await upsertDailySales(batch, fileType, isPreliminary, isLastBatch);
+        const result = await upsertDailySales(batch, fileType, isPreliminary, isLastBatch, isFirstBatch);
         totalInserted += result.inserted;
         totalUpdated += result.updated;
         setUploadProgress(Math.round(Math.min(100, ((i + batchSize) / rowsToUpload.length) * 100)));
