@@ -1,12 +1,21 @@
 import { extractBaseTitle } from '@/lib/supabase';
 
 /** 핵심어 추출: 부제/괄호/번호/문장부호 정규화 */
+/** 전각→반각 숫자·영문자 정규화 */
+function normalizeFullWidth(s: string): string {
+  return s.replace(/[Ａ-Ｚａ-ｚ０-９]/g, (ch) =>
+    String.fromCharCode(ch.charCodeAt(0) - 0xFEE0),
+  );
+}
+
 export function toCore(s: string): string {
-  return s
+  return normalizeFullWidth(s)
     // 문장부호 정규화 (전각→반각)
     .replace(/～/g, '~').replace(/〜/g, '~')
     .replace(/！/g, '!').replace(/？/g, '?')
     .replace(/　/g, ' ')
+    // 전각 괄호 → 반각 통일
+    .replace(/［/g, '[').replace(/］/g, ']')
     // 부제/괄호 제거
     .replace(/~[^~]*~/g, '')
     .replace(/【[^】]*】/g, '')
