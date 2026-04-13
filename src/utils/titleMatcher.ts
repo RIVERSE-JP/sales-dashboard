@@ -41,10 +41,25 @@ export function buildTitleKrMaps(masterData: Array<{ title_jp: string; title_kr:
   return { krExact, krBase, krCore };
 }
 
+/** 일본어 에디션 표기 → 한국어 접미사 */
+function editionSuffix(titleJp: string): string {
+  if (/完全版/.test(titleJp)) return ' 완전판';
+  if (/改訂版/.test(titleJp)) return ' 개정판';
+  if (/分冊版/.test(titleJp)) return ' 분권판';
+  if (/特装版/.test(titleJp)) return ' 특장판';
+  if (/連載版/.test(titleJp)) return ' 연재판';
+  return '';
+}
+
 /** title_jp에 대한 title_kr 매칭 (정확 → base → 핵심어 순서 폴백) */
 export function matchTitleKr(titleJp: string, maps: TitleKrMaps): string {
-  return maps.krExact.get(titleJp)
-    || maps.krBase.get(extractBaseTitle(titleJp))
-    || maps.krCore.get(toCore(titleJp))
-    || '';
+  // 1. 정확히 일치
+  const exact = maps.krExact.get(titleJp);
+  if (exact) return exact;
+  // 2. base/core 매칭 → 에디션 접미사 추가
+  const base = maps.krBase.get(extractBaseTitle(titleJp));
+  if (base) return base + editionSuffix(titleJp);
+  const core = maps.krCore.get(toCore(titleJp));
+  if (core) return core + editionSuffix(titleJp);
+  return '';
 }
