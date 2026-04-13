@@ -396,14 +396,8 @@ export default function InsightPanel({
     >
       {/* Header */}
       <div className="flex items-center gap-2 mb-4">
-        <div
-          className="w-6 h-6 rounded-md flex items-center justify-center text-[11px] font-bold"
-          style={{ background: '#1A2B5E', color: '#fff' }}
-        >
-          AI
-        </div>
         <h3 className="text-[16px] font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-          {t('AI 인사이트', 'AIインサイト')}
+          {t('현황 포커스', '現況フォーカス')}
         </h3>
         <span className="text-[12px] ml-auto" style={{ color: 'var(--color-text-muted)' }}>
           {insights.length}{t('개 분석', '件の分析')}

@@ -539,114 +539,18 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
             />
           </div>
 
-          {/* ===== ALERT PANEL (2-column) ===== */}
-          {(declining.length > 0 || surging.length > 0) && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Declining */}
-              <motion.div
-                initial={{ opacity: 0, x: -16 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.4, delay: 0.3 }}
-                className="rounded-2xl p-5"
-                style={{ ...GLASS_CARD, borderLeft: '3px solid #ef4444' }}
-              >
-                <div className="flex items-center gap-2 mb-3">
-                  <AlertTriangle size={16} color="#ef4444" />
-                  <h3 className="text-[15px] font-semibold" style={{ color: '#ef4444' }}>
-                    {t('주의 작품', '注意作品')}
-                  </h3>
-                  <span className="text-[12px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>
-                    {declining.length}{t('건', '件')}
-                  </span>
-                </div>
-                <div className="space-y-2">
-                  {declining.slice(0, 5).map((alert, i) => (
-                    <motion.div
-                      key={alert.title_jp}
-                      initial={{ opacity: 0, x: -12 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.4 + i * 0.12 }}
-                      className="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all"
-                      style={{ background: 'rgba(239,68,68,0.04)', border: '1px solid rgba(239,68,68,0.08)' }}
-                      whileHover={{ x: 4, background: 'rgba(239,68,68,0.08)' }}
-                      onClick={() => router.push(`/titles?search=${encodeURIComponent(alert.title_jp)}`)}
-                    >
-                      <TrendingDown size={14} color="#ef4444" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[14px] font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>
-                          {alert.title_kr || alert.title_jp}
-                        </p>
-                      </div>
-                      <span className="text-[14px] font-bold shrink-0" style={{ color: '#ef4444' }}>
-                        {alert.growth_pct.toFixed(0)}%
-                      </span>
-                      <ChevronRight size={14} style={{ color: 'var(--color-text-muted)' }} />
-                    </motion.div>
-                  ))}
-                </div>
-                {declining.length > 5 && (
-                  <button onClick={() => router.push('/titles')}
-                    className="mt-3 text-[13px] font-medium w-full text-center py-1.5 rounded-lg transition-colors"
-                    style={{ color: '#ef4444', background: 'rgba(239,68,68,0.06)' }}>
-                    {t('전체 보기', 'すべて表示')} ({declining.length})
-                  </button>
-                )}
-              </motion.div>
-
-              {/* Surging */}
-              <motion.div
-                initial={{ opacity: 0, x: 16 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.4, delay: 0.3 }}
-                className="rounded-2xl p-5"
-                style={{ ...GLASS_CARD, borderLeft: '3px solid #22c55e' }}
-              >
-                <div className="flex items-center gap-2 mb-3">
-                  <Rocket size={16} color="#22c55e" />
-                  <h3 className="text-[15px] font-semibold" style={{ color: '#22c55e' }}>
-                    {t('급성장 작품', '急成長作品')}
-                  </h3>
-                  <span className="text-[12px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e' }}>
-                    {surging.length}{t('건', '件')}
-                  </span>
-                </div>
-                <div className="space-y-2">
-                  {surging.slice(0, 5).map((alert, i) => (
-                    <motion.div
-                      key={alert.title_jp}
-                      initial={{ opacity: 0, x: 12 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.4 + i * 0.12 }}
-                      className="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all"
-                      style={{ background: 'rgba(34,197,94,0.04)', border: '1px solid rgba(34,197,94,0.08)' }}
-                      whileHover={{ x: 4, background: 'rgba(34,197,94,0.08)' }}
-                      onClick={() => router.push(`/titles?search=${encodeURIComponent(alert.title_jp)}`)}
-                    >
-                      <TrendingUp size={14} color="#22c55e" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[14px] font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>
-                          {alert.title_kr || alert.title_jp}
-                        </p>
-                      </div>
-                      <span className="text-[14px] font-bold shrink-0" style={{ color: '#22c55e' }}>
-                        +{alert.growth_pct.toFixed(0)}%
-                      </span>
-                      <ChevronRight size={14} style={{ color: 'var(--color-text-muted)' }} />
-                    </motion.div>
-                  ))}
-                </div>
-                {surging.length > 5 && (
-                  <button onClick={() => router.push('/titles')}
-                    className="mt-3 text-[13px] font-medium w-full text-center py-1.5 rounded-lg transition-colors"
-                    style={{ color: '#22c55e', background: 'rgba(34,197,94,0.06)' }}>
-                    {t('전체 보기', 'すべて表示')} ({surging.length})
-                  </button>
-                )}
-              </motion.div>
-            </div>
-          )}
-
-          {/* ===== SECTIONS (no tabs, all inline) ===== */}
+          {/* ===== 현황 포커스 ===== */}
+          <InsightPanel
+            kpis={kpis}
+            yoyChange={null}
+            growthAlerts={growthAlerts}
+            platformSummary={platformSummary}
+            goalRate={null}
+            genreSummary={genreSummary}
+            companySummary={companySummary}
+            topTitles={topTitles}
+            dailyTrend={dailyTrend}
+          />
 
           {/* ── 1. 현황: 매출 추이 ── */}
           <div className="rounded-2xl p-6" style={GLASS_CARD}>
@@ -686,19 +590,6 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
               </AreaChart>
             </ResponsiveContainer>
           </div>
-
-          {/* ===== AI INSIGHT PANEL ===== */}
-          <InsightPanel
-            kpis={kpis}
-            yoyChange={null}
-            growthAlerts={growthAlerts}
-            platformSummary={platformSummary}
-            goalRate={null}
-            genreSummary={genreSummary}
-            companySummary={companySummary}
-            topTitles={topTitles}
-            dailyTrend={dailyTrend}
-          />
 
           {/* ── 2. 플랫폼 ── */}
           <div className="rounded-2xl p-6" style={GLASS_CARD}>
@@ -929,6 +820,113 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
                       </div>
                     </div>
           </div>
+
+          {/* ===== ALERT PANEL (주의/급성장 작품) ===== */}
+          {(declining.length > 0 || surging.length > 0) && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Declining */}
+              <motion.div
+                initial={{ opacity: 0, x: -16 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.4, delay: 0.3 }}
+                className="rounded-2xl p-5"
+                style={{ ...GLASS_CARD, borderLeft: '3px solid #ef4444' }}
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <AlertTriangle size={16} color="#ef4444" />
+                  <h3 className="text-[15px] font-semibold" style={{ color: '#ef4444' }}>
+                    {t('주의 작품', '注意作品')}
+                  </h3>
+                  <span className="text-[12px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>
+                    {declining.length}{t('건', '件')}
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {declining.slice(0, 5).map((alert, i) => (
+                    <motion.div
+                      key={alert.title_jp}
+                      initial={{ opacity: 0, x: -12 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.4 + i * 0.12 }}
+                      className="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all"
+                      style={{ background: 'rgba(239,68,68,0.04)', border: '1px solid rgba(239,68,68,0.08)' }}
+                      whileHover={{ x: 4, background: 'rgba(239,68,68,0.08)' }}
+                      onClick={() => router.push(`/titles?search=${encodeURIComponent(alert.title_jp)}`)}
+                    >
+                      <TrendingDown size={14} color="#ef4444" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[14px] font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>
+                          {alert.title_kr || alert.title_jp}
+                        </p>
+                      </div>
+                      <span className="text-[14px] font-bold shrink-0" style={{ color: '#ef4444' }}>
+                        {alert.growth_pct.toFixed(0)}%
+                      </span>
+                      <ChevronRight size={14} style={{ color: 'var(--color-text-muted)' }} />
+                    </motion.div>
+                  ))}
+                </div>
+                {declining.length > 5 && (
+                  <button onClick={() => router.push('/titles')}
+                    className="mt-3 text-[13px] font-medium w-full text-center py-1.5 rounded-lg transition-colors"
+                    style={{ color: '#ef4444', background: 'rgba(239,68,68,0.06)' }}>
+                    {t('전체 보기', 'すべて表示')} ({declining.length})
+                  </button>
+                )}
+              </motion.div>
+
+              {/* Surging */}
+              <motion.div
+                initial={{ opacity: 0, x: 16 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.4, delay: 0.3 }}
+                className="rounded-2xl p-5"
+                style={{ ...GLASS_CARD, borderLeft: '3px solid #22c55e' }}
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <Rocket size={16} color="#22c55e" />
+                  <h3 className="text-[15px] font-semibold" style={{ color: '#22c55e' }}>
+                    {t('급성장 작품', '急成長作品')}
+                  </h3>
+                  <span className="text-[12px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e' }}>
+                    {surging.length}{t('건', '件')}
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {surging.slice(0, 5).map((alert, i) => (
+                    <motion.div
+                      key={alert.title_jp}
+                      initial={{ opacity: 0, x: 12 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.4 + i * 0.12 }}
+                      className="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all"
+                      style={{ background: 'rgba(34,197,94,0.04)', border: '1px solid rgba(34,197,94,0.08)' }}
+                      whileHover={{ x: 4, background: 'rgba(34,197,94,0.08)' }}
+                      onClick={() => router.push(`/titles?search=${encodeURIComponent(alert.title_jp)}`)}
+                    >
+                      <TrendingUp size={14} color="#22c55e" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[14px] font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>
+                          {alert.title_kr || alert.title_jp}
+                        </p>
+                      </div>
+                      <span className="text-[14px] font-bold shrink-0" style={{ color: '#22c55e' }}>
+                        +{alert.growth_pct.toFixed(0)}%
+                      </span>
+                      <ChevronRight size={14} style={{ color: 'var(--color-text-muted)' }} />
+                    </motion.div>
+                  ))}
+                </div>
+                {surging.length > 5 && (
+                  <button onClick={() => router.push('/titles')}
+                    className="mt-3 text-[13px] font-medium w-full text-center py-1.5 rounded-lg transition-colors"
+                    style={{ color: '#22c55e', background: 'rgba(34,197,94,0.06)' }}>
+                    {t('전체 보기', 'すべて表示')} ({surging.length})
+                  </button>
+                )}
+              </motion.div>
+            </div>
+          )}
 
           {/* ── 5. 트렌드 작품 ── */}
           <div className="rounded-2xl p-6" style={GLASS_CARD}>
