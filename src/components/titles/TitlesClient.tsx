@@ -1,14 +1,14 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useTitleSummaries, useTitleMaster, useTitleRankings } from '@/hooks/useData';
+import { useTitleSummaries, useTitleMaster, useTitleRankings, useGrowthAlerts } from '@/hooks/useData';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip,
   ResponsiveContainer, BarChart, Bar, Cell,
   LineChart, Line, Legend, ReferenceDot,
 } from 'recharts';
-import { BookOpen, ArrowLeft, GitCompare, CheckSquare, Square, ChevronLeft, ChevronRight } from 'lucide-react';
+import { BookOpen, ArrowLeft, GitCompare, CheckSquare, Square, ChevronLeft, ChevronRight, AlertTriangle, TrendingDown, TrendingUp, Rocket } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { fetchTitleDetail, extractBaseTitle, extractProductType } from '@/lib/supabase';
 import { getPlatformColor } from '@/utils/platformConfig';
@@ -113,6 +113,9 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
 
   const { currentStart, currentEnd, prevStart, prevEnd } = useMemo(() => getDateRangeForRanking(), []);
   const { data: rankingsRaw } = useTitleRankings(currentStart, currentEnd, prevStart, prevEnd);
+  const { data: growthAlertsRaw } = useGrowthAlerts();
+  const declining = useMemo(() => (growthAlertsRaw ?? []).filter((a: { growth_pct: number }) => a.growth_pct <= -30).sort((a: { growth_pct: number }, b: { growth_pct: number }) => a.growth_pct - b.growth_pct), [growthAlertsRaw]);
+  const surging = useMemo(() => (growthAlertsRaw ?? []).filter((a: { growth_pct: number }) => a.growth_pct >= 50).sort((a: { growth_pct: number }, b: { growth_pct: number }) => b.growth_pct - a.growth_pct), [growthAlertsRaw]);
 
   // Normalize SWR data — prefer SWR, then initialData, then empty
   const effectiveSummaries = summariesRaw ?? initialData?.summaries;
@@ -1168,6 +1171,66 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
         filteredCount={filteredGrouped.length}
         totalCount={groupedTitles.length}
       />
+
+      {/* 주의 작품 / 급성장 작품 */}
+      {(declining.length > 0 || surging.length > 0) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <motion.div initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4 }}
+            className="rounded-2xl p-5" style={{ ...GLASS_CARD, borderLeft: '3px solid #ef4444' }}>
+            <div className="flex items-center gap-2 mb-3">
+              <AlertTriangle size={16} color="#ef4444" />
+              <h3 className="text-[15px] font-semibold" style={{ color: '#ef4444' }}>{t('주의 작품', '注意作品')}</h3>
+              <span className="text-[12px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>{declining.length}{t('건', '件')}</span>
+            </div>
+            <div className="space-y-2">
+              {declining.slice(0, 5).map((alert: { title_jp: string; title_kr?: string; growth_pct: number }, i: number) => (
+                <motion.div key={alert.title_jp} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 + i * 0.08 }}
+                  className="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all"
+                  style={{ background: 'rgba(239,68,68,0.04)', border: '1px solid rgba(239,68,68,0.08)' }}
+                  whileHover={{ x: 4, background: 'rgba(239,68,68,0.08)' }}
+                  onClick={() => setSearchQuery(alert.title_kr || alert.title_jp)}>
+                  <TrendingDown size={14} color="#ef4444" />
+                  <p className="flex-1 text-[14px] font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>{alert.title_kr || alert.title_jp}</p>
+                  <span className="text-[14px] font-bold shrink-0" style={{ color: '#ef4444' }}>{alert.growth_pct.toFixed(0)}%</span>
+                  <ChevronRight size={14} style={{ color: 'var(--color-text-muted)' }} />
+                </motion.div>
+              ))}
+            </div>
+            {declining.length > 5 && (
+              <button onClick={() => setSearchQuery('')} className="mt-3 text-[13px] font-medium w-full text-center py-1.5 rounded-lg" style={{ color: '#ef4444', background: 'rgba(239,68,68,0.06)' }}>
+                {t('전체 보기', 'すべて表示')} ({declining.length})
+              </button>
+            )}
+          </motion.div>
+          <motion.div initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4 }}
+            className="rounded-2xl p-5" style={{ ...GLASS_CARD, borderLeft: '3px solid #22c55e' }}>
+            <div className="flex items-center gap-2 mb-3">
+              <Rocket size={16} color="#22c55e" />
+              <h3 className="text-[15px] font-semibold" style={{ color: '#22c55e' }}>{t('급성장 작품', '急成長作品')}</h3>
+              <span className="text-[12px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e' }}>{surging.length}{t('건', '件')}</span>
+            </div>
+            <div className="space-y-2">
+              {surging.slice(0, 5).map((alert: { title_jp: string; title_kr?: string; growth_pct: number }, i: number) => (
+                <motion.div key={alert.title_jp} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 + i * 0.08 }}
+                  className="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all"
+                  style={{ background: 'rgba(34,197,94,0.04)', border: '1px solid rgba(34,197,94,0.08)' }}
+                  whileHover={{ x: 4, background: 'rgba(34,197,94,0.08)' }}
+                  onClick={() => setSearchQuery(alert.title_kr || alert.title_jp)}>
+                  <TrendingUp size={14} color="#22c55e" />
+                  <p className="flex-1 text-[14px] font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>{alert.title_kr || alert.title_jp}</p>
+                  <span className="text-[14px] font-bold shrink-0" style={{ color: '#22c55e' }}>+{alert.growth_pct.toFixed(0)}%</span>
+                  <ChevronRight size={14} style={{ color: 'var(--color-text-muted)' }} />
+                </motion.div>
+              ))}
+            </div>
+            {surging.length > 5 && (
+              <button onClick={() => setSearchQuery('')} className="mt-3 text-[13px] font-medium w-full text-center py-1.5 rounded-lg" style={{ color: '#22c55e', background: 'rgba(34,197,94,0.06)' }}>
+                {t('전체 보기', 'すべて表示')} ({surging.length})
+              </button>
+            )}
+          </motion.div>
+        </div>
+      )}
 
       {/* Title Table */}
       {loading ? (
