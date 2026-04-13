@@ -168,6 +168,10 @@ export default function TitlesManagePage() {
   const [batchOpen, setBatchOpen] = useState(false);
   const [batchUpdates, setBatchUpdates] = useState<Record<string, string | boolean | null>>({});
 
+  // Inline title_kr editing
+  const [inlineEditId, setInlineEditId] = useState<string | null>(null);
+  const [inlineEditValue, setInlineEditValue] = useState('');
+
   // Confirm dialog
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<'delete' | 'deactivate'>('delete');
@@ -338,6 +342,18 @@ export default function TitlesManagePage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const saveInlineTitleKr = async (id: string, value: string) => {
+    try {
+      await fetch('/api/manage/titles', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, title_kr: value || null }),
+      });
+      fetchTitles();
+    } catch { /* ignore */ }
+    setInlineEditId(null);
   };
 
   const confirmDelete = () => {
@@ -663,8 +679,23 @@ export default function TitlesManagePage() {
                       <td className="px-3 py-2.5 font-medium whitespace-nowrap" style={{ color: 'var(--color-text-primary)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {row.title_jp}
                       </td>
-                      <td className="px-3 py-2.5 whitespace-nowrap" style={{ color: 'var(--color-text-secondary)', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {row.title_kr || '-'}
+                      <td
+                        className="px-3 py-2.5 whitespace-nowrap"
+                        style={{ color: row.title_kr ? 'var(--color-text-secondary)' : 'var(--color-text-muted)', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', cursor: 'text' }}
+                        onClick={(e) => { e.stopPropagation(); setInlineEditId(row.id); setInlineEditValue(row.title_kr || ''); }}
+                      >
+                        {inlineEditId === row.id ? (
+                          <input
+                            autoFocus
+                            value={inlineEditValue}
+                            onChange={(e) => setInlineEditValue(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') saveInlineTitleKr(row.id, inlineEditValue); if (e.key === 'Escape') setInlineEditId(null); }}
+                            onBlur={() => saveInlineTitleKr(row.id, inlineEditValue)}
+                            style={{ ...inputStyle, padding: '4px 8px', fontSize: '12px', width: '100%', minWidth: 140 }}
+                          />
+                        ) : (
+                          <span style={{ opacity: row.title_kr ? 1 : 0.4 }}>{row.title_kr || t('클릭하여 입력', 'クリックして入力')}</span>
+                        )}
                       </td>
                       <td className="px-3 py-2.5">
                         <FormatBadge format={row.content_format} />
