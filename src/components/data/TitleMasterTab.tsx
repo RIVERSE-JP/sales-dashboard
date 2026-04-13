@@ -987,16 +987,19 @@ export default function TitleMasterTab() {
                         />
                       </td>
                       {/* title_jp */}
-                      <td className="py-3 px-2" style={{ maxWidth: '200px' }}>
-                        <p className="font-medium truncate" title={row.title_jp} style={{ color: 'var(--color-text-primary)' }}>{row.title_jp}</p>
+                      <td className="py-3 px-2" style={{ minWidth: '180px' }}>
+                        <p className="font-medium" title={row.title_jp} style={{ color: 'var(--color-text-primary)', whiteSpace: 'normal', wordBreak: 'break-word' }}>{row.title_jp}</p>
                       </td>
 
-                      {/* title_kr */}
-                      <td className="py-3 px-2" style={{ maxWidth: '180px', background: isEmpty(row.title_kr) ? EMPTY_CELL_BG : undefined }}>
-                        <p className="text-xs truncate" title={row.title_kr ?? ''} style={{ color: isEmpty(row.title_kr) ? 'rgba(245, 158, 11, 0.7)' : 'var(--color-text-muted)' }}>
-                          {row.title_kr || '-'}
-                        </p>
-                      </td>
+                      {/* title_kr — EditableCell로 연필 아이콘 + 편집 모달 */}
+                      <EditableCell
+                        row={row}
+                        displayValue={row.title_kr || '-'}
+                        dbField="title_kr"
+                        fieldLabel={t('작품명(KR)', 'タイトル(KR)')}
+                        fieldType="text"
+                        highlight={isEmpty(row.title_kr)}
+                      />
 
                       {/* genre */}
                       <EditableCell
