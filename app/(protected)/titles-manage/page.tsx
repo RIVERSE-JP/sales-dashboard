@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, Plus, Trash2, ToggleLeft, CheckSquare, Square,
   X, AlertTriangle, ArrowUpDown,
-  ArrowUp, ArrowDown, Layers, Save, Loader2,
+  ArrowUp, ArrowDown, Layers, Save, Loader2, Pencil,
 } from 'lucide-react';
 import { Pagination } from '@/components/Pagination';
 import { useApp } from '@/context/AppContext';
@@ -676,12 +676,12 @@ export default function TitlesManagePage() {
                           {isSelected ? <CheckSquare size={16} style={{ color: 'var(--color-accent-blue)' }} /> : <Square size={16} />}
                         </button>
                       </td>
-                      <td className="px-3 py-2.5 font-medium whitespace-nowrap" style={{ color: 'var(--color-text-primary)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <td className="px-3 py-2.5 font-medium" style={{ color: 'var(--color-text-primary)', minWidth: 180, whiteSpace: 'normal', wordBreak: 'break-word' }}>
                         {row.title_jp}
                       </td>
                       <td
-                        className="px-3 py-2.5 whitespace-nowrap"
-                        style={{ color: row.title_kr ? 'var(--color-text-secondary)' : 'var(--color-text-muted)', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', cursor: 'text' }}
+                        className="px-3 py-2.5"
+                        style={{ color: row.title_kr ? 'var(--color-text-secondary)' : 'var(--color-text-muted)', minWidth: 160, cursor: 'text' }}
                         onClick={(e) => { e.stopPropagation(); setInlineEditId(row.id); setInlineEditValue(row.title_kr || ''); }}
                       >
                         {inlineEditId === row.id ? (
@@ -691,10 +691,19 @@ export default function TitlesManagePage() {
                             onChange={(e) => setInlineEditValue(e.target.value)}
                             onKeyDown={(e) => { if (e.key === 'Enter') saveInlineTitleKr(row.id, inlineEditValue); if (e.key === 'Escape') setInlineEditId(null); }}
                             onBlur={() => saveInlineTitleKr(row.id, inlineEditValue)}
-                            style={{ ...inputStyle, padding: '4px 8px', fontSize: '12px', width: '100%', minWidth: 140 }}
+                            style={{ ...inputStyle, padding: '4px 8px', fontSize: '12px', width: '100%', minWidth: 160 }}
                           />
                         ) : (
-                          <span style={{ opacity: row.title_kr ? 1 : 0.4 }}>{row.title_kr || t('클릭하여 입력', 'クリックして入力')}</span>
+                          <span className="inline-flex items-center gap-1.5">
+                            {row.title_kr ? (
+                              row.title_kr
+                            ) : (
+                              <>
+                                <Pencil size={12} style={{ color: 'var(--color-accent-blue)', opacity: 0.6 }} />
+                                <span style={{ fontSize: '11px' }}>{t('입력', '入力')}</span>
+                              </>
+                            )}
+                          </span>
                         )}
                       </td>
                       <td className="px-3 py-2.5">
