@@ -141,8 +141,11 @@ export async function POST(request: Request) {
 
     // Materialized View 갱신
     try {
-      await supabaseServer.rpc('refresh_materialized_views');
-    } catch { /* 무시 */ }
+      const { error: mvError } = await supabaseServer.rpc('refresh_materialized_views');
+      if (mvError) console.error('MV refresh failed:', mvError.message);
+    } catch (e) {
+      console.error('MV refresh exception:', e);
+    }
   }
 
   return NextResponse.json({ inserted: totalInserted, updated: totalUpdated });
