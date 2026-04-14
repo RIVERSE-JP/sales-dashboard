@@ -22,9 +22,7 @@ interface PlatformChange {
 }
 
 function formatOku(value: number): string {
-  if (value >= 100_000_000) return `${(value / 100_000_000).toFixed(1)}億`;
-  if (value >= 10_000) return `${(value / 10_000).toFixed(0)}万`;
-  return value.toLocaleString();
+  return Math.round(value).toLocaleString();
 }
 
 export function PlatformContribution({ currentBreakdown, monthlyTrend, t }: PlatformContributionProps) {

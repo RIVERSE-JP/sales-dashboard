@@ -75,9 +75,7 @@ export default function HealthTrend({ channel, months = 6 }: Props) {
   }
 
   const formatShort = (v: number) => {
-    if (v >= 100_000_000) return `${(v / 100_000_000).toFixed(1)}億`;
-    if (v >= 10_000) return `${(v / 10_000).toFixed(0)}万`;
-    return v.toLocaleString();
+    return Math.round(v).toLocaleString();
   };
 
   return (

@@ -29,14 +29,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const formatCurrency = (amountJPY: number) => {
     if (currency === 'KRW') {
-      const krw = amountJPY * JPY_TO_KRW;
-      if (krw >= 100_000_000) return `\u20A9${(krw / 100_000_000).toFixed(2)}\uC5B5`;
-      if (krw >= 10_000) return `\u20A9${(krw / 10_000).toFixed(1)}\uB9CC`;
-      return `\u20A9${Math.round(krw).toLocaleString()}`;
+      const krw = Math.round(amountJPY * JPY_TO_KRW);
+      return `\u20A9${krw.toLocaleString()}`;
     }
-    if (amountJPY >= 100_000_000) return `\u00A5${(amountJPY / 100_000_000).toFixed(2)}\u5104`;
-    if (amountJPY >= 10_000) return `\u00A5${(amountJPY / 10_000).toFixed(1)}\u4E07`;
-    return `\u00A5${amountJPY.toLocaleString()}`;
+    return `\u00A5${Math.round(amountJPY).toLocaleString()}`;
   };
 
   return (

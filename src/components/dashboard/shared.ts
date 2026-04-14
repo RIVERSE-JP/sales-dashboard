@@ -15,7 +15,5 @@ export const FORMAT_COLORS: Record<string, string> = {
 };
 
 export function formatShort(value: number): string {
-  if (value >= 100_000_000) return `${(value / 100_000_000).toFixed(1)}`;
-  if (value >= 10_000) return `${(value / 10_000).toFixed(0)}`;
-  return value.toLocaleString();
+  return Math.round(value).toLocaleString();
 }
