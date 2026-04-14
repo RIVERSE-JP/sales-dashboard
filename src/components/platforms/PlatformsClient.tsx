@@ -535,7 +535,7 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
 
                   {/* Sales amount */}
                   <p className="text-xl sm:text-2xl font-bold mb-1.5" style={{ color: 'var(--color-text-primary)' }}>
-                    {formatShort(pf.total_sales)}
+                    {formatCurrency(pf.total_sales)}
                   </p>
 
                   {/* Growth + title count */}
@@ -601,7 +601,7 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
                     <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={65} />
+                    <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={110} />
                     <ReTooltip content={({ active, payload, label }: any) => {
                       if (!active || !payload) return null;
                       const sorted = [...payload].sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
@@ -778,7 +778,7 @@ export default function PlatformsClient({ initialData }: PlatformsClientProps) {
                           </defs>
                           <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
                           <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} />
-                          <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={65} />
+                          <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={110} />
                           <ReTooltip {...darkTooltipStyle} formatter={(v: unknown) => [formatCurrency(Number(v ?? 0)), t('매출', '売上')]} />
                           <Area type="monotone" dataKey="sales" stroke={getPlatformColor(selectedPlatform)} strokeWidth={2.5} fill="url(#pfSingleGrad)" />
                         </AreaChart>

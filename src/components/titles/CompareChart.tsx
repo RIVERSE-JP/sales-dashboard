@@ -227,7 +227,7 @@ export function CompareChart({ selectedTitles, onClose, t, launchDates }: Compar
               tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }}
               axisLine={false}
               tickLine={false}
-              width={65}
+              width={110}
               tickFormatter={formatYAxis}
             />
             <ReTooltip content={<CompareTooltip formatCurrency={formatCurrency} />} />

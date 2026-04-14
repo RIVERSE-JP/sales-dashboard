@@ -584,7 +584,7 @@ export default function DashboardClient({ initialData }: DashboardClientProps) {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
                 <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={65} />
+                <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={110} />
                 <ReTooltip content={<AreaChartTooltip fmtCurrency={formatCurrency} />} />
                 <Area type="monotone" dataKey="sales" stroke="#3B6FF6" strokeWidth={2.5} fill="url(#execAreaGrad)" />
               </AreaChart>

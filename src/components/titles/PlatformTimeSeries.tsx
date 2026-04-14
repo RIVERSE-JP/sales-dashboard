@@ -163,7 +163,7 @@ export function PlatformTimeSeries({ titleJP, t }: PlatformTimeSeriesProps) {
           <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
             <XAxis dataKey="month" tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} width={65}
+            <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} width={110}
               tickFormatter={(v: number) => v >= 100_000_000 ? `${(v / 100_000_000).toFixed(1)}億` : v >= 10_000 ? `${(v / 10_000).toFixed(0)}万` : String(v)} />
             <ReTooltip
               content={({ active, payload, label }: any) => {

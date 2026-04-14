@@ -111,7 +111,7 @@ export default function HealthTrend({ channel, months = 6 }: Props) {
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
             <XAxis dataKey="month" tick={{ fill: 'var(--color-text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} width={50} tickFormatter={formatShort} />
+            <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} width={110} tickFormatter={formatShort} />
             <ReTooltip {...darkTooltipStyle} formatter={(v: unknown) => [formatCurrency(Number(v ?? 0)), t('일평균', '日平均')]} />
             <Area
               type="monotone"

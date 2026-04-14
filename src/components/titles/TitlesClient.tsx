@@ -848,7 +848,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
                     <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={65} />
+                    <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={110} />
                     <ReTooltip content={renderTooltip} />
                     <Area type="monotone" dataKey="sales" name={t('매출', '売上')} stroke="#34d399" strokeWidth={2} fill="url(#dailyTrendGrad)" />
                     {launchDay && (
@@ -894,7 +894,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                     <LineChart data={trendData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
                       <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={65} />
+                      <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={110} />
                       <ReTooltip content={renderTooltip} />
                       <Legend wrapperStyle={{ fontSize: '12px' }} />
                       <Line type="monotone" dataKey="total" name={t('총합', '合計')} stroke="#3B6FF6" strokeWidth={3} dot={false} />
@@ -913,7 +913,7 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--color-chart-grid)" />
                       <XAxis dataKey="label" tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={65} />
+                      <YAxis tick={{ fill: 'var(--color-text-muted)', fontSize: 13 }} axisLine={false} tickLine={false} tickFormatter={formatShort} width={110} />
                       <ReTooltip content={renderTooltip} />
                       <Area type="monotone" dataKey="total" name={t('매출', '売上')} stroke="#3B6FF6" strokeWidth={2} fill="url(#trendGrad)" />
                     </AreaChart>
