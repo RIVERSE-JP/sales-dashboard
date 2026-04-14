@@ -192,13 +192,17 @@ export default function DataUploadPage() {
         platforms: meta.platform ? [meta.platform] : null,
       });
 
-      // 2. Storage에 원본 파일 저장 시도 (실패해도 무시)
+      // 2. Storage에 원본 파일 직접 업로드 (Vercel 4.5MB 제한 우회)
       if (file) {
         try {
-          const form = new FormData();
-          form.append('file', file);
-          form.append('metadata', JSON.stringify({ ...meta, fileName: file.name, fileSize: file.size }));
-          await fetch('/api/upload-debug', { method: 'POST', body: form });
+          const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+          const safeName = file.name.replace(/[^a-zA-Z0-9가-힣ぁ-んァ-ヶ一-龠._-]/g, '_');
+          const path = `uploads/${timestamp}_${safeName}`;
+          const buf = await file.arrayBuffer();
+          await supabase.storage.from('upload-debug').upload(path, buf, {
+            contentType: file.type || 'application/octet-stream',
+            upsert: false,
+          });
         } catch { /* Storage 실패 무시 */ }
       }
     } catch {
