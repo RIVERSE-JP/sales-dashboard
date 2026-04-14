@@ -11,7 +11,7 @@ function LoadingSkeleton() {
         height: '100vh',
         background: '#0a0a14',
         color: '#666',
-        fontFamily: 'system-ui, sans-serif',
+        fontFamily: 'Meiryo, メイリオ, system-ui, sans-serif',
       }}
     >
       Loading...
