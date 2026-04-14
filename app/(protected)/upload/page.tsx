@@ -901,8 +901,8 @@ export default function DataUploadPage() {
                     </div>
                   </div>
 
-                  {/* Platform manual override if not auto-detected */}
-                  {!detectedFormat.platform && (
+                  {/* Platform manual override — 멀티 플랫폼 포맷은 각 행에 channel이 있으므로 숨김 */}
+                  {!detectedFormat.platform && detectedFormat.type !== 'weekly_report' && detectedFormat.type !== 'ruikei_metadata' && (
                     <div className="mt-4 pt-4" style={{ borderTop: '1px solid var(--color-input-border)' }}>
                       <label className="block text-xs font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>
                         {t('플랫폼 선택 (필수)', 'プラットフォーム選択（必須）')}
@@ -1097,14 +1097,15 @@ export default function DataUploadPage() {
                     onClick={handleUpload}
                     disabled={
                       detectedFormat.type !== 'ruikei_metadata' &&
+                      detectedFormat.type !== 'weekly_report' &&
                       !detectedFormat.platform && !manualPlatform
                     }
                     className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold cursor-pointer"
                     style={{
                       background: '#1A2B5E',
                       color: 'white',
-                      opacity: !detectedFormat.platform && !manualPlatform ? 0.4 : 1,
-                      cursor: !detectedFormat.platform && !manualPlatform ? 'not-allowed' : 'pointer',
+                      opacity: detectedFormat.type !== 'ruikei_metadata' && detectedFormat.type !== 'weekly_report' && !detectedFormat.platform && !manualPlatform ? 0.4 : 1,
+                      cursor: detectedFormat.type !== 'ruikei_metadata' && detectedFormat.type !== 'weekly_report' && !detectedFormat.platform && !manualPlatform ? 'not-allowed' : 'pointer',
                     }}
                   >
                     <Upload size={15} />
