@@ -54,9 +54,7 @@ function CompareTooltip({ active, payload, label, formatCurrency }: {
 }
 
 function formatYAxis(v: number): string {
-  if (v >= 100_000_000) return `${(v / 100_000_000).toFixed(1)}億`;
-  if (v >= 10_000) return `${(v / 10_000).toFixed(0)}万`;
-  return String(v);
+  return Math.round(v).toLocaleString();
 }
 
 export function CompareChart({ selectedTitles, onClose, t, launchDates }: CompareChartProps) {
@@ -92,10 +90,10 @@ export function CompareChart({ selectedTitles, onClose, t, launchDates }: Compar
   const chartData = useMemo(() => {
     if (titleData.length === 0) return [];
 
-    // For each title, compute relative days from launch date (or first data date)
+    // For each title, compute relative days from first data date
     const titleRelativeData = titleData.map((td) => {
       const sorted = [...td.dailySales].sort((a, b) => a.date.localeCompare(b.date));
-      const baseDate = td.launchDate ?? sorted[0]?.date;
+      const baseDate = sorted[0]?.date;
       if (!baseDate || sorted.length === 0) return { titleJP: td.titleJP, days: new Map<number, number>() };
 
       const base = new Date(baseDate);
@@ -104,7 +102,7 @@ export function CompareChart({ selectedTitles, onClose, t, launchDates }: Compar
       for (const entry of sorted) {
         const entryDate = new Date(entry.date);
         const dayNum = Math.floor((entryDate.getTime() - base.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-        if (dayNum < 1) continue; // Before launch
+        if (dayNum < 1) continue;
         dayMap.set(dayNum, (dayMap.get(dayNum) ?? 0) + entry.sales);
       }
       return { titleJP: td.titleJP, days: dayMap };
@@ -118,7 +116,7 @@ export function CompareChart({ selectedTitles, onClose, t, launchDates }: Compar
           if (d > maxDay) maxDay = d;
         }
       }
-      maxDay = Math.min(maxDay, 90);
+      // 데이터 전체 범위 표시 (제한 없음)
       const rows: Record<string, unknown>[] = [];
       for (let day = 1; day <= maxDay; day++) {
         const row: Record<string, unknown> = { label: `Day ${day}` };
