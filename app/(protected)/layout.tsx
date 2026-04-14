@@ -11,7 +11,7 @@ function LoadingSkeleton() {
         height: '100vh',
         background: '#0a0a14',
         color: '#666',
-        fontFamily: '-apple-system, BlinkMacSystemFont, Hiragino Sans, system-ui, sans-serif',
+        fontFamily: 'Noto Sans JP, Noto Sans KR, system-ui, sans-serif',
       }}
     >
       Loading...
