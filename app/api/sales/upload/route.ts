@@ -23,7 +23,7 @@ export async function POST(request: Request) {
   const maps = buildTitleKrMaps(masterData ?? []);
 
   // 채널명 정규화 + title_kr 자동 매칭
-  const normalizedRows = rows.map((row: Record<string, unknown>) => {
+  const normalizedRows: Record<string, unknown>[] = rows.map((row: Record<string, unknown>) => {
     const titleJp = String(row.title_jp || '');
     const existingKr = row.title_kr ? String(row.title_kr) : '';
     const matchedKr = existingKr || matchTitleKr(titleJp, maps);
@@ -58,12 +58,32 @@ export async function POST(request: Request) {
     }
   }
 
+  // 같은 (title_jp, channel, sale_date) 키가 배치 안에 중복되면
+  // PostgreSQL ON CONFLICT DO UPDATE가 거부하므로 사전 합산
+  const deduped = (() => {
+    const map = new Map<string, Record<string, unknown>>();
+    for (const row of normalizedRows) {
+      const key = `${row.title_jp}\0${row.channel}\0${row.sale_date}`;
+      const existing = map.get(key);
+      if (existing) {
+        existing.sales_amount = (Number(existing.sales_amount) || 0) + (Number(row.sales_amount) || 0);
+        if (row.sales_amount_gross) {
+          existing.sales_amount_gross = (Number(existing.sales_amount_gross) || 0) + (Number(row.sales_amount_gross) || 0);
+        }
+        if (!existing.title_kr && row.title_kr) existing.title_kr = row.title_kr;
+      } else {
+        map.set(key, { ...row });
+      }
+    }
+    return [...map.values()];
+  })();
+
   let totalInserted = 0;
   let totalUpdated = 0;
   const batchSize = 500;
 
-  for (let i = 0; i < normalizedRows.length; i += batchSize) {
-    const batch = normalizedRows.slice(i, i + batchSize);
+  for (let i = 0; i < deduped.length; i += batchSize) {
+    const batch = deduped.slice(i, i + batchSize);
     const { data, error } = await supabaseServer.rpc('upsert_daily_sales', {
       p_rows: batch,
       p_source: source || 'manual',
