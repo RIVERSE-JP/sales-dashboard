@@ -153,22 +153,22 @@ function EditModal({
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
-        className="rounded-2xl p-6 max-w-sm w-full mx-4"
-        style={{ background: 'var(--color-card-bg)', border: '1px solid var(--color-glass-border)' }}
+        className="rounded-2xl p-6 max-w-sm w-full mx-4 shadow-xl"
+        style={{ background: '#ffffff', border: '1px solid #e2e8f0' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--color-text-primary)' }}>
+        <h3 className="text-sm font-semibold mb-1" style={{ color: '#1e293b' }}>
           {title}
         </h3>
-        <p className="text-xs mb-4" style={{ color: 'var(--color-text-muted)' }}>{field}</p>
+        <p className="text-xs mb-4" style={{ color: '#94a3b8' }}>{field}</p>
 
         {fieldType === 'select' ? (
           <select
             ref={inputRef as React.RefObject<HTMLSelectElement>}
             value={value}
             onChange={(e) => setValue(e.target.value)}
-            className="w-full px-3 py-2 rounded-xl text-sm outline-none"
-            style={{ background: 'var(--color-input-bg)', border: '1px solid var(--color-input-border)', color: 'var(--color-text-primary)' }}
+            className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+            style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#1e293b' }}
           >
             <option value="">-</option>
             {options?.map((o) => (
@@ -182,8 +182,8 @@ function EditModal({
             value={value}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') handleSubmit(); if (e.key === 'Escape') onClose(); }}
-            className="w-full px-3 py-2 rounded-xl text-sm outline-none"
-            style={{ background: 'var(--color-input-bg)', border: '1px solid var(--color-input-border)', color: 'var(--color-text-primary)' }}
+            className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+            style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#1e293b' }}
           />
         )}
 
@@ -191,14 +191,14 @@ function EditModal({
           <button
             onClick={onClose}
             className="px-4 py-2 rounded-xl text-xs font-medium cursor-pointer"
-            style={{ background: 'var(--color-input-bg)', color: 'var(--color-text-secondary)', border: '1px solid var(--color-input-border)' }}
+            style={{ background: '#f1f5f9', color: '#64748b', border: '1px solid #e2e8f0' }}
           >
             {t('취소', 'キャンセル')}
           </button>
           <button
             onClick={handleSubmit}
             className="px-4 py-2 rounded-xl text-xs font-semibold cursor-pointer"
-            style={{ background: 'rgba(99, 102, 241, 0.15)', color: '#a5b4fc', border: '1px solid rgba(99, 102, 241, 0.3)' }}
+            style={{ background: '#1A2B5E', color: '#ffffff', border: 'none' }}
           >
             {t('저장', '保存')}
           </button>
