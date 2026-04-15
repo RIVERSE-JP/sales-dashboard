@@ -31,7 +31,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 function AnimatedValue({ value, formatter }: { value: number; formatter: (v: number) => string }) {
   const mv = useMotionValue(0);
-  const spring = useSpring(mv, { stiffness: 45, damping: 18, duration: 1500 });
+  const spring = useSpring(mv, { stiffness: 120, damping: 25, duration: 500 });
   const display = useTransform(spring, (v: number) => formatter(v));
   useEffect(() => { mv.set(value); }, [value, mv]);
   return <motion.span>{display}</motion.span>;

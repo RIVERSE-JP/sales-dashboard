@@ -31,7 +31,7 @@ export const barGrow: Variants = {
 };
 
 // 숫자 카운트업 설정
-export const numberSpring = { stiffness: 40, damping: 20, duration: 1.5 };
+export const numberSpring = { stiffness: 120, damping: 25, duration: 0.5 };
 
 // 호버 효과
 export const hoverLift = {
