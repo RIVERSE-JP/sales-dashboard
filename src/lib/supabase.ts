@@ -245,7 +245,7 @@ export async function upsertDailySales(
   isLastBatch = true,
   isFirstBatch = true,
 ) {
-  return apiFetch<{ inserted: number; updated: number }>('/api/sales/upload', {
+  return apiFetch<{ inserted: number; updated: number; dedup?: { action: string; count: number } }>('/api/sales/upload', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ rows, source, isPreliminary, isLastBatch, isFirstBatch }),

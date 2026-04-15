@@ -58,6 +58,57 @@ export async function POST(request: Request) {
     }
   }
 
+  // ── 소스 간 중복 처리 (우선순위: weekly_report > sokuhochi) ──
+  let dedupAction = '';
+  let dedupCount = 0;
+
+  const dates = normalizedRows
+    .map((r: Record<string, unknown>) => String(r.sale_date || ''))
+    .filter((d: string) => /^\d{4}-\d{2}-\d{2}$/.test(d))
+    .sort();
+  const minDate = dates[0] || '';
+  const maxDate = dates[dates.length - 1] || '';
+
+  if (source === 'weekly_report' && isFirstBatch && minDate) {
+    // Weekly Report 업로드 → 겹치는 속보치 데이터 삭제
+    const { count } = await supabaseServer
+      .from('daily_sales_v2')
+      .delete({ count: 'exact' })
+      .neq('data_source', 'weekly_report')
+      .gte('sale_date', minDate)
+      .lte('sale_date', maxDate);
+    if (count && count > 0) {
+      dedupAction = 'replaced_sokuhochi';
+      dedupCount = count;
+      console.log(`[dedup] weekly_report uploaded: deleted ${count} overlapping sokuhochi rows (${minDate}~${maxDate})`);
+    }
+  } else if (source?.startsWith('sokuhochi') && isFirstBatch && minDate) {
+    // 속보치 업로드 → 이미 weekly_report가 있는 날짜의 행 제거 (업로드 전)
+    const { data: existingWR } = await supabaseServer
+      .from('daily_sales_v2')
+      .select('title_jp, channel, sale_date')
+      .eq('data_source', 'weekly_report')
+      .gte('sale_date', minDate)
+      .lte('sale_date', maxDate);
+
+    if (existingWR && existingWR.length > 0) {
+      const wrKeys = new Set(existingWR.map((r: Record<string, string>) => `${r.title_jp}\0${r.channel}\0${r.sale_date}`));
+      const before = normalizedRows.length;
+      // 이미 weekly_report에 있는 행은 업로드 대상에서 제외
+      const filtered = normalizedRows.filter((r: Record<string, unknown>) => {
+        const key = `${r.title_jp}\0${r.channel}\0${r.sale_date}`;
+        return !wrKeys.has(key);
+      });
+      dedupCount = before - filtered.length;
+      if (dedupCount > 0) {
+        dedupAction = 'skipped_existing_wr';
+        normalizedRows.length = 0;
+        normalizedRows.push(...filtered);
+        console.log(`[dedup] sokuhochi uploaded: skipped ${dedupCount} rows already in weekly_report (${minDate}~${maxDate})`);
+      }
+    }
+  }
+
   // 같은 (title_jp, channel, sale_date) 키가 배치 안에 중복되면
   // PostgreSQL ON CONFLICT DO UPDATE가 거부하므로 사전 합산
   const deduped = (() => {
@@ -148,5 +199,9 @@ export async function POST(request: Request) {
     }
   }
 
-  return NextResponse.json({ inserted: totalInserted, updated: totalUpdated });
+  return NextResponse.json({
+    inserted: totalInserted,
+    updated: totalUpdated,
+    ...(dedupCount > 0 && { dedup: { action: dedupAction, count: dedupCount } }),
+  });
 }

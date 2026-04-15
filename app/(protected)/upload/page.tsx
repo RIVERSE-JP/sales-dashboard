@@ -143,6 +143,7 @@ export default function DataUploadPage() {
   // When platform couldn't be auto-detected, allow manual override
   const [manualPlatform, setManualPlatform] = useState<string>('');
   const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
+  const [dedupMessage, setDedupMessage] = useState<{ action: string; count: number } | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadLogs, setUploadLogs] = useState<UploadLog[]>([]);
@@ -594,6 +595,7 @@ export default function DataUploadPage() {
       const batchSize = rowsToUpload.length > 10000 ? 5000 : 2000;
       let totalInserted = 0;
       let totalUpdated = 0;
+      let dedupInfo: { action: string; count: number } | null = null;
       for (let i = 0; i < rowsToUpload.length; i += batchSize) {
         const batch = rowsToUpload.slice(i, i + batchSize);
         const isFirstBatch = i === 0;
@@ -601,11 +603,13 @@ export default function DataUploadPage() {
         const result = await upsertDailySales(batch, fileType, isPreliminary, isLastBatch, isFirstBatch);
         totalInserted += result.inserted;
         totalUpdated += result.updated;
+        if (result.dedup) dedupInfo = result.dedup;
         setUploadProgress(Math.round(Math.min(100, ((i + batchSize) / rowsToUpload.length) * 100)));
       }
       const now = new Date().toISOString();
       setLastUploadTime(now);
       setUploadResult({ inserted: totalInserted, updated: totalUpdated, errors: 0 });
+      if (dedupInfo) setDedupMessage(dedupInfo);
       setStatus('success');
       saveDebugLog({
         status: 'success',
@@ -629,6 +633,7 @@ export default function DataUploadPage() {
     setDetectedFormat(null);
     setManualPlatform('');
     setUploadResult(null);
+    setDedupMessage(null);
     setErrorMessage('');
     setUploadProgress(0);
     setWarnings([]);
@@ -1206,6 +1211,25 @@ export default function DataUploadPage() {
                         <span>{er.message}</span>
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {dedupMessage && (
+                  <div
+                    className="w-full max-w-md mb-4 rounded-xl p-3 text-center"
+                    style={{ background: 'rgba(59, 111, 246, 0.08)', border: '1px solid rgba(59, 111, 246, 0.2)' }}
+                  >
+                    <p className="text-sm font-medium" style={{ color: '#3B6FF6' }}>
+                      {dedupMessage.action === 'replaced_sokuhochi'
+                        ? t(
+                            `확정 데이터 업로드로 기존 속보치 ${dedupMessage.count}건이 대체되었습니다.`,
+                            `確定データアップロードにより、既存速報値${dedupMessage.count}件が置換されました。`,
+                          )
+                        : t(
+                            `이미 확정 데이터(Weekly Report)가 있는 ${dedupMessage.count}건은 건너뛰었습니다.`,
+                            `既に確定データ(Weekly Report)がある${dedupMessage.count}件はスキップしました。`,
+                          )}
+                    </p>
                   </div>
                 )}
 
