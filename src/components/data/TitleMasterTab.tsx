@@ -986,10 +986,14 @@ export default function TitleMasterTab() {
                           className="w-4 h-4 rounded cursor-pointer accent-blue-600"
                         />
                       </td>
-                      {/* title_jp */}
-                      <td className="py-3 px-2" style={{ minWidth: '180px' }}>
-                        <p className="font-medium" title={row.title_jp} style={{ color: 'var(--color-text-primary)', whiteSpace: 'normal', wordBreak: 'break-word' }}>{row.title_jp}</p>
-                      </td>
+                      {/* title_jp — EditableCell */}
+                      <EditableCell
+                        row={row}
+                        displayValue={row.title_jp}
+                        dbField="title_jp"
+                        fieldLabel={t('작품명(JP)', 'タイトル(JP)')}
+                        fieldType="text"
+                      />
 
                       {/* title_kr — EditableCell로 연필 아이콘 + 편집 모달 */}
                       <EditableCell
