@@ -657,16 +657,20 @@ export function parseRentaSokuhochi(text: string): ParsedRow[] {
 
   // Renta 타이틀에서 화수/권수 접미사 제거하여 하나의 작품으로 집계
   // 예: "【タテコミ】お父さん...！第10話【フルカラー】" → "【タテコミ】お父さん...！"
-  //     "商品名 第5巻" → "商品名"
-  //     "商品名 10" (숫자만 붙은 경우) → "商品名"
+  //     "デイジー～...～ 157話"  (第 없이)      → "デイジー～...～"
+  //     "商品名 10" (숫자만 붙은 경우)          → "商品名"
   const normalizeRentaTitle = (raw: string): string => {
-    return raw
-      .replace(/\s*第\d+[話巻]\s*【[^】]*】\s*$/g, '') // "第10話【フルカラー】" 제거
-      .replace(/\s*第\d+[話巻]\s*$/g, '')              // "第10話" 또는 "第10巻"
-      .replace(/\s*【フルカラー】\s*$/g, '')            // 끝에 남은 "【フルカラー】"
-      .replace(/\s+\d+\s*【[^】]*】\s*$/g, '')         // "商品名 10【フルカラー】" 유형
-      .replace(/\s+\d+\s*$/g, '')                      // "商品名 10" 같은 숫자 접미사
-      .trim();
+    let s = raw;
+    // 반복 적용 (여러 접미사가 겹친 경우)
+    for (let i = 0; i < 3; i++) {
+      s = s
+        .replace(/\s*【フルカラー】\s*$/g, '')            // 끝에 남은 "【フルカラー】"
+        .replace(/\s*第?\s*\d+[話巻]\s*【[^】]*】\s*$/g, '') // "第10話【...】" / "10話【...】"
+        .replace(/\s*第?\s*\d+[話巻]\s*$/g, '')           // "第10話" / "10話" / "第10巻"
+        .replace(/\s+\d+\s*【[^】]*】\s*$/g, '')         // "商品名 10【...】"
+        .replace(/\s+\d+\s*$/g, '');                      // "商品名 10"
+    }
+    return s.trim();
   };
 
   // 집계: (title_jp, date) → amount
@@ -796,10 +800,21 @@ export function parseDmmSokuhochi(text: string): ParsedRow[] {
 
   if (titleIdx < 0 || amountIdx < 0 || dateIdx < 0) return [];
 
-  // DMM 타이틀에서 화수 접미사 제거 ("僕に教えて 4" → "僕に教えて")
-  // 공백 + 숫자로 끝나는 패턴만 제거. "プロローグ" 등 문자 접미사는 유지.
+  // DMM 타이틀에서 화수 접미사 제거
+  // 예: "僕に教えて 4" → "僕に教えて"
+  //     "ツンデレ幼馴染、催眠でトロ～る25" → "ツンデレ幼馴染、催眠でトロ～る"
+  //     "タイトル 10話" → "タイトル"
+  // "プロローグ" 등 문자 접미사는 유지.
   const normalizeDmmTitle = (raw: string): string => {
-    return raw.replace(/\s+\d+\s*$/g, '').trim();
+    let s = raw;
+    for (let i = 0; i < 3; i++) {
+      s = s
+        .replace(/\s*第?\s*\d+[話巻]\s*【[^】]*】\s*$/g, '') // "第10話【...】" / "10話"
+        .replace(/\s*第?\s*\d+[話巻]\s*$/g, '')             // "10話" 단독
+        .replace(/\s*【フルカラー】\s*$/g, '')
+        .replace(/\s*\d+\s*$/g, '');                         // 공백 유무 무관 끝의 숫자
+    }
+    return s.trim();
   };
 
   const salesMap = new Map<string, Map<string, { amount: number; channel: string }>>();
