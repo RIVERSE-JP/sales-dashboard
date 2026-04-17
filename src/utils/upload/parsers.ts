@@ -778,20 +778,25 @@ export function parseDmmSokuhochi(text: string): ParsedRow[] {
   if (lines.length < 2) return [];
 
   const header = lines[0];
+  // 타이틀: 商品タイトル / タイトル名 / 作品名 (정확 매칭)
   const titleIdx = header.findIndex((h) =>
     h === '商品タイトル' || h === 'タイトル名' || h === '作品名',
   );
-  const amountIdx = header.findIndex((h) =>
-    h === '売上金額' || h === '販売額計' || h === '金額',
-  );
-  // 날짜 컬럼: 日付 / 集計期間 / 集計単位 / 販売日
+  // 금액: "売上金額", "売上金額（税抜）", "売上金額(税抜)", "販売額計", "金額" 등 유연 매칭
+  const amountIdx = header.findIndex((h) => /売上金額|販売額計|取扱高/.test(h) && !/税込/.test(h))
+    >= 0
+      ? header.findIndex((h) => /売上金額|販売額計|取扱高/.test(h) && !/税込/.test(h))
+      : header.findIndex((h) => /売上金額|販売額計|金額/.test(h));
+  // 날짜: 売上月/売上日, 日付, 集計期間, 集計単位, 販売日
   const dateIdx = header.findIndex((h) =>
-    h === '日付' || h === '集計期間' || h === '集計単位' || h === '販売日',
+    /売上月|売上日|^日付$|集計期間|集計単位|販売日/.test(h),
   );
+  // 配信サイト 컬럼 (FANZA 분기용)
+  const siteIdx = header.findIndex((h) => h === '配信サイト' || h === 'サイト');
 
   if (titleIdx < 0 || amountIdx < 0 || dateIdx < 0) return [];
 
-  const salesMap = new Map<string, Map<string, number>>();
+  const salesMap = new Map<string, Map<string, { amount: number; channel: string }>>();
 
   for (let i = 1; i < lines.length; i++) {
     const cols = lines[i];
@@ -800,35 +805,41 @@ export function parseDmmSokuhochi(text: string): ParsedRow[] {
     const amount = parseInt(String(cols[amountIdx] ?? '0').replace(/[¥,]/g, ''), 10) || 0;
     if (!titleJP || !rawDate || amount <= 0) continue;
 
-    // 날짜 파싱: "2025/04/01～2025/04/30" → 시작일(월 단위로 처리 시 YYYY-MM-01)
-    // 또는 "2025/04/15" → 해당 일자
+    // 配信サイト에 FANZA가 있으면 DMM（FANZA）, 아니면 DMM
+    const site = siteIdx >= 0 ? (cols[siteIdx] ?? '').toUpperCase() : '';
+    const channel = site.includes('FANZA') ? 'DMM（FANZA）' : 'DMM';
+
+    // 날짜: "2026年04月01日" / "2026/04/01" / "2025/04/01～2025/04/30"
     let saleDate = '';
-    const rangeMatch = rawDate.match(/^(\d{4})[/\-](\d{1,2})[/\-](\d{1,2})\s*[～~]\s*(\d{4})[/\-](\d{1,2})[/\-](\d{1,2})/);
+    const rangeMatch = rawDate.match(/^(\d{4})[/\-年](\d{1,2})[/\-月](\d{1,2})日?\s*[～~]\s*\d{4}/);
     if (rangeMatch) {
-      // 월 단위 집계 → 해당 월 1일로 저장
       saleDate = `${rangeMatch[1]}-${rangeMatch[2].padStart(2, '0')}-01`;
     } else {
-      const singleMatch = rawDate.match(/(\d{4})[/\-年](\d{1,2})[/\-月](\d{1,2})/);
-      if (singleMatch) {
-        saleDate = `${singleMatch[1]}-${singleMatch[2].padStart(2, '0')}-${singleMatch[3].padStart(2, '0')}`;
-      }
+      const m1 = rawDate.match(/(\d{4})年(\d{1,2})月(\d{1,2})日/);
+      const m2 = rawDate.match(/(\d{4})[/\-](\d{1,2})[/\-](\d{1,2})/);
+      const m = m1 || m2;
+      if (m) saleDate = `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
     }
     if (!saleDate) continue;
 
     if (!salesMap.has(titleJP)) salesMap.set(titleJP, new Map());
     const dateMap = salesMap.get(titleJP)!;
-    dateMap.set(saleDate, (dateMap.get(saleDate) || 0) + amount);
+    const key = `${saleDate}\0${channel}`;
+    const existing = dateMap.get(key);
+    if (existing) existing.amount += amount;
+    else dateMap.set(key, { amount, channel });
   }
 
   const rows: ParsedRow[] = [];
   for (const [titleJP, dateMap] of salesMap) {
-    for (const [date, amount] of dateMap) {
+    for (const [key, { amount, channel }] of dateMap) {
+      const saleDate = key.split('\0')[0];
       rows.push({
         title_jp: titleJP,
         title_kr: '',
         channel_title_jp: titleJP,
-        channel: 'DMM',
-        sale_date: date,
+        channel,
+        sale_date: saleDate,
         sales_amount: amount,
       });
     }
