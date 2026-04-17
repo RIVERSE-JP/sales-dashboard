@@ -302,6 +302,40 @@ export default function DataPage() {
     });
   };
 
+  // 플랫폼 전체 데이터 삭제 (필터 선택된 플랫폼)
+  const handleDeletePlatform = () => {
+    if (!platformFilter) return;
+    setConfirmDialog({
+      message: t(
+        `'${platformFilter}' 플랫폼의 모든 매출 데이터를 삭제합니다. 되돌릴 수 없습니다. 계속하시겠습니까?`,
+        `'${platformFilter}' プラットフォームの全売上データを削除します。元に戻せません。続行しますか？`,
+      ),
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        try {
+          const res = await fetch('/api/manage/sales/batch-delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ channel: platformFilter }),
+          });
+          if (!res.ok) throw new Error('Delete failed');
+          const data = await res.json();
+          setToast({
+            message: t(
+              `${platformFilter} 플랫폼 ${data.deleted || 0}건 삭제 완료`,
+              `${platformFilter} プラットフォーム ${data.deleted || 0}件削除しました`,
+            ),
+            type: 'success',
+          });
+          setSelectedIds(new Set());
+          void loadPage();
+        } catch {
+          setToast({ message: t('삭제 실패', '削除に失敗しました'), type: 'error' });
+        }
+      },
+    });
+  };
+
   // ---- Inline edit ----
   const startEdit = (row: DailySale) => {
     setEditingId(row.id);
@@ -718,6 +752,28 @@ export default function DataPage() {
                 />
               </div>
             </motion.div>
+          )}
+
+          {/* 플랫폼 전체 삭제 — 플랫폼 필터 선택 시만 노출 */}
+          {platformFilter && (
+            <div className="mt-4 pt-4 flex items-center justify-between flex-wrap gap-2" style={{ borderTop: '1px dashed var(--color-glass-border)' }}>
+              <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                {t(
+                  `'${platformFilter}' 플랫폼 전체 데이터를 한번에 삭제할 수 있습니다.`,
+                  `'${platformFilter}' プラットフォームの全データを一括削除できます。`,
+                )}
+              </p>
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={handleDeletePlatform}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer"
+                style={{ background: 'rgba(239, 68, 68, 0.12)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)' }}
+              >
+                <Trash2 size={12} />
+                {t(`${platformFilter} 전체 삭제`, `${platformFilter} 全削除`)}
+              </motion.button>
+            </div>
           )}
         </motion.div>
 
