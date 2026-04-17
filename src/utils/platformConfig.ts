@@ -68,7 +68,7 @@ export const PLATFORM_BRANDS: Record<string, PlatformBrand> = {
     nameKR: 'ebookjapan',
     nameJP: 'ebookjapan',
   },
-  'DMM（FANZA）': {
+  'DMM(FANZA)': {
     color: '#D4272E',        // 레드 (FANZA 로고)
     bgColor: '#FDE8E9',
     borderColor: '#F5AAAD',
@@ -145,8 +145,9 @@ const CHANNEL_ALIASES: Record<string, string> = {
   'dmm': 'DMM',
   'DMM': 'DMM',
   'DMMブックス': 'DMM',
-  'DMM（FANZA）': 'DMM（FANZA）',
-  'dmm_fanza': 'DMM（FANZA）',
+  'DMM（FANZA）': 'DMM(FANZA)',
+  'DMM(FANZA)': 'DMM(FANZA)',
+  'dmm_fanza': 'DMM(FANZA)',
   // U-NEXT
   'u-next': 'U-NEXT',
   'U-NEXT': 'U-NEXT',

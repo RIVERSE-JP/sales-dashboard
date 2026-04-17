@@ -13,7 +13,7 @@ export function guessPlatformFromFileName(fileName: string): string {
   if (lower.includes('cmoa') || lower.includes('シーモア') || lower.includes('시모아')) return 'cmoa';
   if (lower.includes('line') && lower.includes('manga') || lower.includes('lineマンガ') || lower.includes('linemannga')) return 'LINEマンガ';
   if (lower.includes('ebookjapan') || lower.includes('ebook')) return 'ebookjapan';
-  if (lower.includes('fanza')) return 'DMM（FANZA）';
+  if (lower.includes('fanza')) return 'DMM(FANZA)';
   if (lower.includes('renta')) return 'Renta';
   if (lower.includes('u-next') || lower.includes('unext')) return 'U-NEXT';
   if (lower.includes('dmm') && !lower.includes('fanza')) return 'DMM';

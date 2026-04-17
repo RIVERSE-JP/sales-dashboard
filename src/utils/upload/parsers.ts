@@ -829,9 +829,10 @@ export function parseDmmSokuhochi(text: string): ParsedRow[] {
     const amount = parseInt(String(cols[amountIdx] ?? '0').replace(/[¥,]/g, ''), 10) || 0;
     if (!titleJP || !rawDate || amount <= 0) continue;
 
-    // 配信サイト에 FANZA가 있으면 DMM（FANZA）, 아니면 DMM
+    // 配信サイト에 FANZA가 있으면 DMM(FANZA), 아니면 DMM
+    // 반각 괄호로 통일 (platforms 테이블 및 필터와 일치)
     const site = siteIdx >= 0 ? (cols[siteIdx] ?? '').toUpperCase() : '';
-    const channel = site.includes('FANZA') ? 'DMM（FANZA）' : 'DMM';
+    const channel = site.includes('FANZA') ? 'DMM(FANZA)' : 'DMM';
 
     // 날짜: "2026年04月01日" / "2026/04/01" / "2025/04/01～2025/04/30"
     let saleDate = '';
