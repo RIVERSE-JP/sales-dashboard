@@ -626,3 +626,184 @@ export async function parseSokuhochiExcel(buffer: ArrayBuffer): Promise<ParsedRo
   });
   return rows;
 }
+
+// ============================================================
+// Renta 속보치 parser
+// 월간 파일 + 일별 컬럼 (cmoa 구조와 유사)
+// 헤더: 参照ID, 商品名, 著者名, 版元名, 販売開始日, 貸出期間, 価格, 売上件数, 売上金額,
+//       2026/04/01, 2026/04/02, ... (일별 판매 건수)
+// 일별 셀 = 판매 건수 → 금액 = 건수 × 価格
+// ============================================================
+export function parseRentaSokuhochi(text: string): ParsedRow[] {
+  const cleaned = text.replace(/^\uFEFF/, '');
+  const lines = parseCSVText(cleaned, ',');
+  if (lines.length < 2) return [];
+
+  const header = lines[0];
+  const titleIdx = header.findIndex((h) => h === '商品名');
+  const priceIdx = header.findIndex((h) => h === '価格');
+  if (titleIdx < 0 || priceIdx < 0) return [];
+
+  // 일별 컬럼 찾기 (YYYY/MM/DD 형식)
+  const dateCols: Array<{ idx: number; date: string }> = [];
+  header.forEach((h, idx) => {
+    const m = h.match(/^(\d{4})[/\-](\d{1,2})[/\-](\d{1,2})$/);
+    if (m) {
+      dateCols.push({ idx, date: `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}` });
+    }
+  });
+
+  if (dateCols.length === 0) return [];
+
+  // 집계: (title_jp, date) → amount
+  const salesMap = new Map<string, Map<string, number>>();
+
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i];
+    const titleJP = (cols[titleIdx] ?? '').trim();
+    const price = parseInt(String(cols[priceIdx] ?? '0').replace(/[¥,]/g, ''), 10) || 0;
+    if (!titleJP || price <= 0) continue;
+
+    for (const dc of dateCols) {
+      const count = parseInt(String(cols[dc.idx] ?? '0').replace(/[¥,]/g, ''), 10) || 0;
+      if (count <= 0) continue;
+      const amount = count * price;
+      if (!salesMap.has(titleJP)) salesMap.set(titleJP, new Map());
+      const dateMap = salesMap.get(titleJP)!;
+      dateMap.set(dc.date, (dateMap.get(dc.date) || 0) + amount);
+    }
+  }
+
+  const rows: ParsedRow[] = [];
+  for (const [titleJP, dateMap] of salesMap) {
+    for (const [date, amount] of dateMap) {
+      rows.push({
+        title_jp: titleJP,
+        title_kr: '',
+        channel_title_jp: titleJP,
+        channel: 'Renta',
+        sale_date: date,
+        sales_amount: amount,
+      });
+    }
+  }
+  return rows;
+}
+
+// ============================================================
+// ebookjapan 속보치 parser
+// 헤더: 集計単位, 書店名, タイトルID, ブックコード, 商品コード, SKU, 出版社名,
+//       タイトル名, 表示用刊行物名, 刊行物名, 著者名, 販売数計,
+//       単価(税抜), 単価(税込), 販売額計, ...
+// 각 행이 하루치 매출
+// ============================================================
+export function parseEbookjapanSokuhochi(text: string): ParsedRow[] {
+  const cleaned = text.replace(/^\uFEFF/, '');
+  const lines = parseCSVText(cleaned, ',');
+  if (lines.length < 2) return [];
+
+  const header = lines[0];
+  const dateIdx = header.findIndex((h) => h === '集計単位');
+  const titleIdx = header.findIndex((h) => h === 'タイトル名');
+  const amountIdx = header.findIndex((h) => h === '販売額計');
+  const storeIdx = header.findIndex((h) => h === '書店名');
+  if (dateIdx < 0 || titleIdx < 0 || amountIdx < 0) return [];
+
+  const salesMap = new Map<string, Map<string, number>>();
+
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i];
+    const titleJP = (cols[titleIdx] ?? '').trim();
+    const rawDate = (cols[dateIdx] ?? '').trim();
+    const amount = parseInt(String(cols[amountIdx] ?? '0').replace(/[¥,]/g, ''), 10) || 0;
+    if (!titleJP || !rawDate || amount <= 0) continue;
+
+    const dm = rawDate.match(/(\d{4})[/\-](\d{1,2})[/\-](\d{1,2})/);
+    if (!dm) continue;
+    const saleDate = `${dm[1]}-${dm[2].padStart(2, '0')}-${dm[3].padStart(2, '0')}`;
+
+    // 書店名이 ebookjapan（web）이면 채널은 'ebookjapan'
+    const storeName = storeIdx >= 0 ? (cols[storeIdx] ?? '') : '';
+    const channel = /ebookjapan/i.test(storeName) ? 'ebookjapan' : 'ebookjapan';
+
+    if (!salesMap.has(titleJP)) salesMap.set(titleJP, new Map());
+    const dateMap = salesMap.get(titleJP)!;
+    dateMap.set(saleDate, (dateMap.get(saleDate) || 0) + amount);
+
+    // channel은 첫 루프에서 한 번만 기록되면 됨 (모든 row 같은 channel 가정)
+    void channel;
+  }
+
+  const rows: ParsedRow[] = [];
+  for (const [titleJP, dateMap] of salesMap) {
+    for (const [date, amount] of dateMap) {
+      rows.push({
+        title_jp: titleJP,
+        title_kr: '',
+        channel_title_jp: titleJP,
+        channel: 'ebookjapan',
+        sale_date: date,
+        sales_amount: amount,
+      });
+    }
+  }
+  return rows;
+}
+
+// ============================================================
+// LINE Manga 속보치 parser
+// 헤더: 集計単位, 出版社名, 作品ID, 作品名, 著者名, ジャンル, 掲載誌名,
+//       冊単価(税抜), 冊単価(税込), 販売冊数, 取扱高(税抜), 取扱高(税込)
+// 날짜 형식: "2026年04月15日" (연월일)
+// 금액: 取扱高(税抜)
+// ============================================================
+export function parseLineMangaSokuhochi(text: string): ParsedRow[] {
+  const cleaned = text.replace(/^\uFEFF/, '');
+  const lines = parseCSVText(cleaned, ',');
+  if (lines.length < 2) return [];
+
+  const header = lines[0];
+  const dateIdx = header.findIndex((h) => h === '集計単位');
+  const titleIdx = header.findIndex((h) => h === '作品名');
+  // 取扱高(税抜) 우선, 없으면 取扱高(税込)
+  let amountIdx = header.findIndex((h) => h === '取扱高(税抜)' || h === '取扱高（税抜）');
+  if (amountIdx < 0) amountIdx = header.findIndex((h) => h === '取扱高(税込)' || h === '取扱高（税込）');
+  if (dateIdx < 0 || titleIdx < 0 || amountIdx < 0) return [];
+
+  const salesMap = new Map<string, Map<string, number>>();
+
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i];
+    const titleJP = (cols[titleIdx] ?? '').trim();
+    const rawDate = (cols[dateIdx] ?? '').trim();
+    const amount = Math.round(parseFloat(String(cols[amountIdx] ?? '0').replace(/[¥,]/g, '')) || 0);
+    if (!titleJP || !rawDate || amount <= 0) continue;
+
+    // 날짜: "2026年04月15日" 또는 "2026/04/15"
+    let saleDate = '';
+    const dm1 = rawDate.match(/(\d{4})年(\d{1,2})月(\d{1,2})日/);
+    const dm2 = rawDate.match(/(\d{4})[/\-](\d{1,2})[/\-](\d{1,2})/);
+    const dm = dm1 || dm2;
+    if (!dm) continue;
+    saleDate = `${dm[1]}-${dm[2].padStart(2, '0')}-${dm[3].padStart(2, '0')}`;
+
+    if (!salesMap.has(titleJP)) salesMap.set(titleJP, new Map());
+    const dateMap = salesMap.get(titleJP)!;
+    dateMap.set(saleDate, (dateMap.get(saleDate) || 0) + amount);
+  }
+
+  const rows: ParsedRow[] = [];
+  for (const [titleJP, dateMap] of salesMap) {
+    for (const [date, amount] of dateMap) {
+      rows.push({
+        title_jp: titleJP,
+        title_kr: '',
+        channel_title_jp: titleJP,
+        channel: 'LINEマンガ',
+        sale_date: date,
+        sales_amount: amount,
+      });
+    }
+  }
+  return rows;
+}

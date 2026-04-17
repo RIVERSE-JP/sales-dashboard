@@ -36,6 +36,9 @@ import {
   parseCSVWeeklyReport,
   parseSokuhochiExcel,
   parseRuikeiMetadata,
+  parseRentaSokuhochi,
+  parseEbookjapanSokuhochi,
+  parseLineMangaSokuhochi,
 } from '@/utils/upload';
 import ExcelJS from 'exceljs';
 
@@ -455,6 +458,12 @@ export default function DataUploadPage() {
           }
         } else if (fmt.type === 'ruikei_metadata') {
           rows = await parseRuikeiMetadata(buffer);
+        } else if (fmt.type === 'renta_sokuhochi') {
+          rows = parseRentaSokuhochi(textContent);
+        } else if (fmt.type === 'ebookjapan_sokuhochi') {
+          rows = parseEbookjapanSokuhochi(textContent);
+        } else if (fmt.type === 'linemanga_sokuhochi') {
+          rows = parseLineMangaSokuhochi(textContent);
         }
 
         return { rows, fmt };

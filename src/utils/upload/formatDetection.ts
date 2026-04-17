@@ -67,6 +67,21 @@ export function detectFormat(fileName: string, headerSample?: string, isExcel?: 
     return { type: 'cmoa_sokuhochi', platform: 'cmoa', isPreliminary: true, confidence: 'high', label: 'cmoa 속보치', subSource: isExcel ? 'sokuhochi_cmoa_excel' : 'sokuhochi_cmoa' };
   }
 
+  // Renta 속보치 (월간 파일 + 일별 컬럼)
+  if (lower.includes('renta')) {
+    return { type: 'renta_sokuhochi', platform: 'Renta', isPreliminary: true, confidence: 'high', label: 'Renta 속보치', subSource: 'sokuhochi_renta' };
+  }
+
+  // LINE Manga 속보치
+  if (lower.includes('line_sales_report') || (lower.includes('line') && lower.includes('.csv'))) {
+    return { type: 'linemanga_sokuhochi', platform: 'LINEマンガ', isPreliminary: true, confidence: 'high', label: 'LINEマンガ 속보치', subSource: 'sokuhochi_line' };
+  }
+
+  // ebookjapan 속보치 (파일명에 PaymentReport, DailyDetail 등)
+  if (lower.includes('paymentreport') || lower.includes('dailydetail') || lower.includes('ebookjapan') || lower.includes('ebj')) {
+    return { type: 'ebookjapan_sokuhochi', platform: 'ebookjapan', isPreliminary: true, confidence: 'high', label: 'ebookjapan 속보치', subSource: 'sokuhochi_ebj' };
+  }
+
   // ── 2단계: 헤더/내용으로 포맷 감지 ──
   if (headerSample) {
     if (headerSample.includes('日付') && headerSample.includes('ブック名') && headerSample.includes('購入ポイント数')) {
@@ -77,6 +92,18 @@ export function detectFormat(fileName: string, headerSample?: string, isExcel?: 
     }
     if (headerSample.includes('コンテンツID') && headerSample.includes('タイトル名')) {
       return { type: 'cmoa_sokuhochi', platform: 'cmoa', isPreliminary: true, confidence: 'high', label: 'cmoa 속보치', subSource: 'sokuhochi_cmoa' };
+    }
+    // Renta: 参照ID + 商品名 + 売上金額
+    if (headerSample.includes('参照ID') && headerSample.includes('商品名') && headerSample.includes('売上金額')) {
+      return { type: 'renta_sokuhochi', platform: 'Renta', isPreliminary: true, confidence: 'high', label: 'Renta 속보치', subSource: 'sokuhochi_renta' };
+    }
+    // ebookjapan: 書店名 + 販売額計
+    if (headerSample.includes('書店名') && headerSample.includes('販売額計')) {
+      return { type: 'ebookjapan_sokuhochi', platform: 'ebookjapan', isPreliminary: true, confidence: 'high', label: 'ebookjapan 속보치', subSource: 'sokuhochi_ebj' };
+    }
+    // LINE Manga: 作品ID + 取扱高
+    if (headerSample.includes('作品ID') && headerSample.includes('取扱高')) {
+      return { type: 'linemanga_sokuhochi', platform: 'LINEマンガ', isPreliminary: true, confidence: 'high', label: 'LINEマンガ 속보치', subSource: 'sokuhochi_line' };
     }
     if (headerSample.includes('Title') && headerSample.includes('Channel') && headerSample.includes('Date')) {
       return { type: 'weekly_report', platform: '', isPreliminary: false, confidence: 'medium', label: 'Weekly Report CSV', subSource: 'weekly_report' };
