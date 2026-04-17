@@ -796,11 +796,18 @@ export function parseDmmSokuhochi(text: string): ParsedRow[] {
 
   if (titleIdx < 0 || amountIdx < 0 || dateIdx < 0) return [];
 
+  // DMM 타이틀에서 화수 접미사 제거 ("僕に教えて 4" → "僕に教えて")
+  // 공백 + 숫자로 끝나는 패턴만 제거. "プロローグ" 등 문자 접미사는 유지.
+  const normalizeDmmTitle = (raw: string): string => {
+    return raw.replace(/\s+\d+\s*$/g, '').trim();
+  };
+
   const salesMap = new Map<string, Map<string, { amount: number; channel: string }>>();
 
   for (let i = 1; i < lines.length; i++) {
     const cols = lines[i];
-    const titleJP = (cols[titleIdx] ?? '').trim();
+    const rawTitle = (cols[titleIdx] ?? '').trim();
+    const titleJP = normalizeDmmTitle(rawTitle);
     const rawDate = (cols[dateIdx] ?? '').trim();
     const amount = parseInt(String(cols[amountIdx] ?? '0').replace(/[¥,]/g, ''), 10) || 0;
     if (!titleJP || !rawDate || amount <= 0) continue;
