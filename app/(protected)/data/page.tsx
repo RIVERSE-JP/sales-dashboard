@@ -193,15 +193,15 @@ export default function DataPage() {
   const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
 
   useEffect(() => {
-    fetch('/api/sales/platforms')
+    // daily_sales_v2에 실제 존재하는 채널만 조회 (필터-DB 완벽 매칭용)
+    fetch('/api/sales/active-channels')
       .then((res) => res.json())
-      .then((data: Array<Record<string, unknown>>) => {
+      .then((data: Array<{ channel: string }>) => {
         if (data && Array.isArray(data)) {
-          const names = data.map((d) => String(d.code || d.name_jp || '')).filter(Boolean);
-          setPlatformNames(names);
+          setPlatformNames(data.map((d) => d.channel).filter(Boolean));
         }
       })
-      .catch((err) => console.error('Failed to load platforms:', err));
+      .catch((err) => console.error('Failed to load channels:', err));
   }, []);
 
   const loadPage = useCallback(async () => {
