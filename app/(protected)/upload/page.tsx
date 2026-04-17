@@ -39,6 +39,7 @@ import {
   parseRentaSokuhochi,
   parseEbookjapanSokuhochi,
   parseLineMangaSokuhochi,
+  parseDmmSokuhochi,
 } from '@/utils/upload';
 import ExcelJS from 'exceljs';
 
@@ -200,8 +201,11 @@ export default function DataUploadPage() {
       if (file) {
         try {
           const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-          const safeName = file.name.replace(/[^a-zA-Z0-9가-힣ぁ-んァ-ヶ一-龠._-]/g, '_');
-          const path = `uploads/${timestamp}_${safeName}`;
+          // Storage 경로는 ASCII만 허용 (일본어 파일명 업로드 실패 방지)
+          // 원본 파일명은 upload_logs.source_file에 보존됨
+          const ext = file.name.match(/\.[^.]+$/)?.[0] ?? '';
+          const asciiBase = file.name.replace(ext, '').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 50);
+          const path = `uploads/${timestamp}_${asciiBase || 'upload'}${ext}`;
           const buf = await file.arrayBuffer();
           await supabase.storage.from('upload-debug').upload(path, buf, {
             contentType: file.type || 'application/octet-stream',
@@ -464,6 +468,8 @@ export default function DataUploadPage() {
           rows = parseEbookjapanSokuhochi(textContent);
         } else if (fmt.type === 'linemanga_sokuhochi') {
           rows = parseLineMangaSokuhochi(textContent);
+        } else if (fmt.type === 'dmm_sokuhochi') {
+          rows = parseDmmSokuhochi(textContent);
         }
 
         return { rows, fmt };

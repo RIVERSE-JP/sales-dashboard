@@ -751,6 +751,77 @@ export function parseEbookjapanSokuhochi(text: string): ParsedRow[] {
 }
 
 // ============================================================
+// DMM 속보치 parser
+// 예상 헤더: 集計期間, カテゴリ, コンテンツＩＤ, 書籍コード, 商品タイトル,
+//            作家名, メーカー名, レーベル名, 件数, 売上金額
+// 또는 일별 데이터: 日付, 商品タイトル, 件数, 売上金額
+// 集計期間 형식: "2025/04/01～2025/04/30" 또는 단일 날짜
+// ============================================================
+export function parseDmmSokuhochi(text: string): ParsedRow[] {
+  const cleaned = text.replace(/^\uFEFF/, '');
+  const lines = parseCSVText(cleaned, ',');
+  if (lines.length < 2) return [];
+
+  const header = lines[0];
+  const titleIdx = header.findIndex((h) =>
+    h === '商品タイトル' || h === 'タイトル名' || h === '作品名',
+  );
+  const amountIdx = header.findIndex((h) =>
+    h === '売上金額' || h === '販売額計' || h === '金額',
+  );
+  // 날짜 컬럼: 日付 / 集計期間 / 集計単位 / 販売日
+  const dateIdx = header.findIndex((h) =>
+    h === '日付' || h === '集計期間' || h === '集計単位' || h === '販売日',
+  );
+
+  if (titleIdx < 0 || amountIdx < 0 || dateIdx < 0) return [];
+
+  const salesMap = new Map<string, Map<string, number>>();
+
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i];
+    const titleJP = (cols[titleIdx] ?? '').trim();
+    const rawDate = (cols[dateIdx] ?? '').trim();
+    const amount = parseInt(String(cols[amountIdx] ?? '0').replace(/[¥,]/g, ''), 10) || 0;
+    if (!titleJP || !rawDate || amount <= 0) continue;
+
+    // 날짜 파싱: "2025/04/01～2025/04/30" → 시작일(월 단위로 처리 시 YYYY-MM-01)
+    // 또는 "2025/04/15" → 해당 일자
+    let saleDate = '';
+    const rangeMatch = rawDate.match(/^(\d{4})[/\-](\d{1,2})[/\-](\d{1,2})\s*[～~]\s*(\d{4})[/\-](\d{1,2})[/\-](\d{1,2})/);
+    if (rangeMatch) {
+      // 월 단위 집계 → 해당 월 1일로 저장
+      saleDate = `${rangeMatch[1]}-${rangeMatch[2].padStart(2, '0')}-01`;
+    } else {
+      const singleMatch = rawDate.match(/(\d{4})[/\-年](\d{1,2})[/\-月](\d{1,2})/);
+      if (singleMatch) {
+        saleDate = `${singleMatch[1]}-${singleMatch[2].padStart(2, '0')}-${singleMatch[3].padStart(2, '0')}`;
+      }
+    }
+    if (!saleDate) continue;
+
+    if (!salesMap.has(titleJP)) salesMap.set(titleJP, new Map());
+    const dateMap = salesMap.get(titleJP)!;
+    dateMap.set(saleDate, (dateMap.get(saleDate) || 0) + amount);
+  }
+
+  const rows: ParsedRow[] = [];
+  for (const [titleJP, dateMap] of salesMap) {
+    for (const [date, amount] of dateMap) {
+      rows.push({
+        title_jp: titleJP,
+        title_kr: '',
+        channel_title_jp: titleJP,
+        channel: 'DMM',
+        sale_date: date,
+        sales_amount: amount,
+      });
+    }
+  }
+  return rows;
+}
+
+// ============================================================
 // LINE Manga 속보치 parser
 // 헤더: 集計単位, 出版社名, 作品ID, 作品名, 著者名, ジャンル, 掲載誌名,
 //       冊単価(税抜), 冊単価(税込), 販売冊数, 取扱高(税抜), 取扱高(税込)

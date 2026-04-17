@@ -82,6 +82,11 @@ export function detectFormat(fileName: string, headerSample?: string, isExcel?: 
     return { type: 'ebookjapan_sokuhochi', platform: 'ebookjapan', isPreliminary: true, confidence: 'high', label: 'ebookjapan 속보치', subSource: 'sokuhochi_ebj' };
   }
 
+  // DMM 속보치 — 파일명에 DMM 또는 FANZA
+  if (name.includes('DMM') || name.includes('商品別売上') || lower.includes('fanza') || lower.includes('dmm')) {
+    return { type: 'dmm_sokuhochi', platform: 'DMM', isPreliminary: true, confidence: 'high', label: 'DMM 속보치', subSource: 'sokuhochi_dmm' };
+  }
+
   // ── 2단계: 헤더/내용으로 포맷 감지 ──
   if (headerSample) {
     if (headerSample.includes('日付') && headerSample.includes('ブック名') && headerSample.includes('購入ポイント数')) {
@@ -104,6 +109,10 @@ export function detectFormat(fileName: string, headerSample?: string, isExcel?: 
     // LINE Manga: 作品ID + 取扱高
     if (headerSample.includes('作品ID') && headerSample.includes('取扱高')) {
       return { type: 'linemanga_sokuhochi', platform: 'LINEマンガ', isPreliminary: true, confidence: 'high', label: 'LINEマンガ 속보치', subSource: 'sokuhochi_line' };
+    }
+    // DMM: 商品タイトル + 売上金額 + 集計期間/カテゴリ
+    if (headerSample.includes('商品タイトル') && headerSample.includes('売上金額') && (headerSample.includes('集計期間') || headerSample.includes('カテゴリ'))) {
+      return { type: 'dmm_sokuhochi', platform: 'DMM', isPreliminary: true, confidence: 'high', label: 'DMM 속보치', subSource: 'sokuhochi_dmm' };
     }
     if (headerSample.includes('Title') && headerSample.includes('Channel') && headerSample.includes('Date')) {
       return { type: 'weekly_report', platform: '', isPreliminary: false, confidence: 'medium', label: 'Weekly Report CSV', subSource: 'weekly_report' };
