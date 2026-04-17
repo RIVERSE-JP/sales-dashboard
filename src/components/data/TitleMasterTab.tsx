@@ -473,6 +473,7 @@ export default function TitleMasterTab() {
     options,
     align = 'left',
     highlight = false,
+    maxWidth = 160,
   }: {
     row: TitleRow;
     displayValue: string;
@@ -482,6 +483,7 @@ export default function TitleMasterTab() {
     options?: { value: string; label: string }[];
     align?: 'left' | 'center' | 'right';
     highlight?: boolean;
+    maxWidth?: number;
   }) => {
     const currentRawValue = (() => {
       if (dbField === 'genre_id') return row.genre_id ? String(row.genre_id) : '';
@@ -509,7 +511,7 @@ export default function TitleMasterTab() {
         }
       >
         <span className="inline-flex items-center gap-1">
-          <span className={`truncate ${highlight ? 'italic' : ''}`} style={{ maxWidth: '160px', color: highlight ? 'rgba(245, 158, 11, 0.7)' : undefined }}>
+          <span className={`truncate ${highlight ? 'italic' : ''}`} style={{ maxWidth: `${maxWidth}px`, color: highlight ? 'rgba(245, 158, 11, 0.7)' : undefined }}>
             {displayValue || '-'}
           </span>
           <Pencil size={11} className="opacity-0 group-hover:opacity-50 transition-opacity flex-shrink-0" />
@@ -993,6 +995,7 @@ export default function TitleMasterTab() {
                         dbField="title_jp"
                         fieldLabel={t('작품명(JP)', 'タイトル(JP)')}
                         fieldType="text"
+                        maxWidth={340}
                       />
 
                       {/* title_kr — EditableCell로 연필 아이콘 + 편집 모달 */}
@@ -1003,6 +1006,7 @@ export default function TitleMasterTab() {
                         fieldLabel={t('작품명(KR)', 'タイトル(KR)')}
                         fieldType="text"
                         highlight={isEmpty(row.title_kr)}
+                        maxWidth={280}
                       />
 
                       {/* genre */}
