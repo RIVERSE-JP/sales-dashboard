@@ -29,7 +29,7 @@ interface EnrichedGroup {
   channels: string[];
 }
 
-const MAX_SELECT = 5;
+const MAX_SELECT = 10;
 
 export default function TitleCompareClient({ initialData }: { initialData?: TitleCompareInitialData | null }) {
   const { formatCurrency, t } = useApp();
@@ -185,7 +185,7 @@ export default function TitleCompareClient({ initialData }: { initialData?: Titl
           </h1>
         </div>
         <p className="text-sm mt-1 ml-14" style={{ color: 'var(--color-text-muted)' }}>
-          {t('최대 5개 작품을 선택해 매출 추이를 비교합니다', '最大5タイトルを選んで売上推移を比較')}
+          {t('최대 10개 작품을 선택해 매출 추이를 비교합니다', '最大10タイトルを選んで売上推移を比較')}
         </p>
       </div>
 
