@@ -17,9 +17,12 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'channel parameter is required' }, { status: 400 });
   }
 
-  const params: Record<string, unknown> = { p_channel: channel };
-  if (start) params.p_start_date = start;
-  if (end) params.p_end_date = end;
+  // 3인자 오버로드로 명시 호출 (1인자 함수와 중복되어 있어 파라미터 이름 기반 매칭 강제)
+  const params = {
+    p_channel: channel,
+    p_start_date: start ?? null,
+    p_end_date: end ?? null,
+  };
 
   const { data, error } = await supabaseServer.rpc('get_platform_detail', params);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
