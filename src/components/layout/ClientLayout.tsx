@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   BookOpen,
   Globe,
+  GitCompare,
 
   Database,
   Upload,
@@ -46,6 +47,7 @@ const navGroups: NavGroup[] = [
       { to: '/dashboard', ko: '매출 현황', ja: '売上現況', icon: LayoutDashboard },
       { to: '/titles', ko: '작품별 매출 분석', ja: 'タイトル別売上分析', icon: BookOpen },
       { to: '/platforms', ko: '플랫폼별 매출 분석', ja: 'プラットフォーム別売上分析', icon: Globe },
+      { to: '/title-compare', ko: '작품 비교', ja: 'タイトル比較', icon: GitCompare },
     ],
   },
   {

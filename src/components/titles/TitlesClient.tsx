@@ -8,7 +8,7 @@ import {
   ResponsiveContainer, BarChart, Bar, Cell,
   LineChart, Line, Legend, ReferenceDot,
 } from 'recharts';
-import { BookOpen, ArrowLeft, GitCompare, CheckSquare, Square, ChevronLeft, ChevronRight, AlertTriangle, TrendingDown, TrendingUp, Rocket } from 'lucide-react';
+import { BookOpen, ArrowLeft, ChevronLeft, ChevronRight, AlertTriangle, TrendingDown, TrendingUp, Rocket } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { fetchTitleDetail, extractBaseTitle, extractProductType } from '@/lib/supabase';
 import { getPlatformColor } from '@/utils/platformConfig';
@@ -20,7 +20,6 @@ import { GLASS_CARD, containerVariants, cardVariants } from '@/components/titles
 import type { SalesPreset } from '@/components/titles/constants';
 import { ListSkeleton, ChartSkeleton } from '@/components/titles/Skeletons';
 import { FilterPanel } from '@/components/titles/FilterPanel';
-import { CompareChart } from '@/components/titles/CompareChart';
 import { PlatformTimeSeries } from '@/components/titles/PlatformTimeSeries';
 
 // ============================================================
@@ -157,11 +156,6 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
 
   // Pagination state
   const [displayCount, setDisplayCount] = useState(60);
-
-  // Compare mode (B5)
-  const [compareMode, setCompareMode] = useState(false);
-  const [compareList, setCompareList] = useState<string[]>([]);
-  const [showCompare, setShowCompare] = useState(false);
 
   // Trend period toggle for "매출 추이" chart
   const [trendPeriod, setTrendPeriod] = useState<'monthly' | 'weekly' | 'daily'>('monthly');
@@ -438,15 +432,6 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
       }
     }
   }, [highlightTitle, groupedTitles, loading, loadTitleDetail]);
-
-  // Compare toggle
-  const toggleCompare = (titleJP: string) => {
-    setCompareList((prev) => {
-      if (prev.includes(titleJP)) return prev.filter((t) => t !== titleJP);
-      if (prev.length >= 5) return prev;
-      return [...prev, titleJP];
-    });
-  };
 
   const resetFilters = () => {
     setSearchQuery('');
@@ -976,24 +961,6 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
           <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
             {t('작품별 매출 분석', 'タイトル別売上分析')}
           </h1>
-          {/* B5: Compare mode toggle */}
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => {
-              setCompareMode((prev) => !prev);
-              if (compareMode) { setCompareList([]); setShowCompare(false); }
-            }}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-[14px] font-bold cursor-pointer transition-all shadow-sm hover:shadow-md"
-            style={{
-              background: compareMode ? '#1A2B5E' : '#FFFFFF',
-              color: compareMode ? '#fff' : '#1A2B5E',
-              border: '2px solid #1A2B5E',
-            }}
-          >
-            <GitCompare size={16} />
-            {compareMode ? t('비교 모드 ON', '比較モード ON') : t('작품 비교하기', '作品を比較する')}
-          </motion.button>
         </div>
         <p className="text-sm mt-1 ml-14" style={{ color: 'var(--color-text-muted)' }}>
           {t('작품별 매출 분석 및 트렌드', '作品別の売上分析・トレンド')}
@@ -1098,48 +1065,6 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
           </button>
         ))}
       </div>
-
-      {/* B5: Compare bar */}
-      {compareMode && compareList.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
-          className="rounded-2xl p-4 mb-4 flex items-center gap-3 flex-wrap"
-          style={GLASS_CARD}
-        >
-          <span className="text-[13px] font-medium" style={{ color: 'var(--color-text-secondary)' }}>
-            {compareList.length}/5 {t('선택됨', '選択済み')}
-          </span>
-          <div className="flex gap-1 flex-wrap flex-1">
-            {compareList.map((title) => (
-              <span key={title} className="px-2 py-0.5 rounded-full text-[12px] font-medium" style={{ background: 'var(--color-glass)', color: 'var(--color-text-primary)' }}>
-                {title.length > 15 ? title.slice(0, 15) + '…' : title}
-                <button onClick={() => toggleCompare(title)} className="ml-1 cursor-pointer" style={{ color: 'var(--color-text-muted)' }}>×</button>
-              </span>
-            ))}
-          </div>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setShowCompare(true)}
-            disabled={compareList.length < 2}
-            className="px-3 py-1.5 rounded-lg text-[13px] font-medium cursor-pointer disabled:opacity-40"
-            style={{ background: '#1A2B5E', color: '#fff' }}
-          >
-            {t('비교하기', '比較する')}
-          </motion.button>
-        </motion.div>
-      )}
-
-      {/* B5: Compare chart overlay */}
-      {showCompare && compareList.length >= 2 && (
-        <CompareChart
-          selectedTitles={compareList}
-          onClose={() => setShowCompare(false)}
-          t={t}
-          launchDates={new Map(compareList.map((titleJP) => [titleJP, masterMap.get(titleJP)?.service_launch_date ?? null]))}
-        />
-      )}
 
       {/* Filter Panel (B1, B2, B6) */}
       <FilterPanel
@@ -1264,7 +1189,6 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                 <tr style={{ borderBottom: '1px solid var(--color-glass-border)' }}>
                   {[
                     { key: '', label: '#', sortable: false, className: 'w-10 text-center' },
-                    ...(compareMode ? [{ key: '__compare', label: '', sortable: false, className: 'w-8' }] : []),
                     { key: 'title_jp', label: t('작품명', 'タイトル'), sortable: true, className: 'text-left', style: { width: '30%' } },
                     { key: 'genre', label: t('장르', 'ジャンル'), sortable: true, className: 'text-left', style: { width: '12%' } },
                     { key: 'company', label: t('제작사', '制作会社'), sortable: true, className: 'text-left', style: { width: '15%' } },
@@ -1295,7 +1219,6 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                 {filteredGrouped.slice(0, displayCount).map((group, idx) => {
                   const mainProduct = group.products.find(p => p.product_type === 'オリジナル') ?? group.products[0];
                   const mainTitleJP = mainProduct?.title_jp ?? group.base_title;
-                  const isCompareSelected = compareList.includes(mainTitleJP);
                   const mainTitle = mainProduct;
                   const nonOriginalTypes = group.products
                     .map(p => p.product_type)
@@ -1307,15 +1230,9 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                       className="transition-colors cursor-pointer"
                       style={{
                         borderBottom: '1px solid var(--color-glass-border)',
-                        borderLeft: isCompareSelected ? '3px solid var(--color-accent-blue, #3B6FF6)' : '3px solid transparent',
+                        borderLeft: '3px solid transparent',
                       }}
-                      onClick={() => {
-                        if (compareMode) {
-                          toggleCompare(mainTitleJP);
-                        } else {
-                          loadTitleDetail(mainTitleJP, group);
-                        }
-                      }}
+                      onClick={() => loadTitleDetail(mainTitleJP, group)}
                       onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--color-glass)'; }}
                       onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
                     >
@@ -1325,19 +1242,6 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
                           {idx + 1}
                         </span>
                       </td>
-
-                      {/* Compare checkbox */}
-                      {compareMode && (
-                        <td className="px-2 py-3">
-                          <div className="shrink-0">
-                            {isCompareSelected ? (
-                              <CheckSquare size={16} color="#3B6FF6" />
-                            ) : (
-                              <Square size={16} color="var(--color-text-muted)" />
-                            )}
-                          </div>
-                        </td>
-                      )}
 
                       {/* Title */}
                       <td className="px-3 py-3">
