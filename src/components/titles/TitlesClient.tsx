@@ -99,9 +99,35 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
   const highlightTitle = searchParams.get('highlight');
 
   // Period selector state (전체 기간이 기본값)
-  const [periodPreset, setPeriodPreset] = useState<string>('all');
+  // periodMode: 'monthly' (월 단위) | 'range' (사용자 지정 기간) | 'all' (전체)
+  const [periodMode, setPeriodMode] = useState<'monthly' | 'range' | 'all'>('all');
   const [periodStart, setPeriodStart] = useState<string | undefined>(undefined);
   const [periodEnd, setPeriodEnd] = useState<string | undefined>(undefined);
+
+  // 모드 전환 핸들러
+  const changePeriodMode = useCallback((mode: 'monthly' | 'range' | 'all') => {
+    const now = new Date();
+    const thisMonthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+    const today = now.toISOString().slice(0, 10);
+    if (mode === 'monthly') {
+      // 이번달로 세팅 (기존이 monthly가 아니거나 값이 없을 때)
+      if (periodMode !== 'monthly' || !periodStart || !periodEnd) {
+        setPeriodStart(thisMonthStart);
+        setPeriodEnd(today);
+      }
+    } else if (mode === 'range') {
+      // 기존 값 유지, 없으면 이번달 범위로 초기화
+      if (!periodStart || !periodEnd) {
+        setPeriodStart(thisMonthStart);
+        setPeriodEnd(today);
+      }
+    } else {
+      // 전체: start/end 해제
+      setPeriodStart(undefined);
+      setPeriodEnd(undefined);
+    }
+    setPeriodMode(mode);
+  }, [periodMode, periodStart, periodEnd]);
 
   // SWR data hooks (client-side fetch with server prefetch as fallback)
   const { data: summariesRaw } = useTitleSummaries(periodStart, periodEnd);
@@ -969,101 +995,123 @@ export default function TitlesClient({ initialData }: TitlesClientProps) {
 
       {/* Period Selector */}
       <div className="flex items-center gap-2 mb-6 flex-wrap">
-        {/* Month Navigator */}
-        <div className="flex items-center gap-1 rounded-xl px-1 py-1" style={{ background: 'var(--color-glass)', border: '1px solid var(--color-glass-border)' }}>
-          {(() => {
-            const canGoPrev = periodPreset !== 'all';
-            const canGoNext = periodPreset !== 'all' && periodEnd && periodEnd < new Date().toISOString().slice(0, 10);
-
+        {/* Mode Tabs */}
+        <div className="flex rounded-xl overflow-hidden" style={{ border: '1px solid var(--color-glass-border)' }}>
+          {(['monthly', 'range', 'all'] as const).map((mode) => {
+            const label = mode === 'monthly'
+              ? t('월별', '月別')
+              : mode === 'range'
+                ? t('기간 선택', '期間選択')
+                : t('전체', '全体');
+            const active = periodMode === mode;
             return (
-              <>
-                <button
-                  onClick={() => {
-                    if (!periodStart) return;
-                    const d = new Date(periodStart);
-                    d.setMonth(d.getMonth() - 1);
-                    const y = d.getFullYear();
-                    const m = d.getMonth();
-                    setPeriodStart(`${y}-${String(m + 1).padStart(2, '0')}-01`);
-                    const lastDay = new Date(y, m + 1, 0);
-                    setPeriodEnd(lastDay.toISOString().slice(0, 10));
-                    setPeriodPreset('custom');
-                  }}
-                  className="p-1.5 rounded-lg transition-colors"
-                  style={{ color: canGoPrev ? 'var(--color-text-secondary)' : 'var(--color-text-subtle)', cursor: canGoPrev ? 'pointer' : 'default', opacity: canGoPrev ? 1 : 0.3 }}
-                >
-                  <ChevronLeft size={16} />
-                </button>
-                <span className="text-[15px] font-bold px-3 min-w-[140px] text-center" style={{ color: 'var(--color-text-primary)' }}>
-                  {(() => {
-                    if (periodPreset === 'all' || !periodStart) return t('전체 기간', '全期間');
-                    if (periodPreset === 'thisYear') return `${new Date().getFullYear()}${t('년', '年')}`;
-                    const d = new Date(periodStart);
-                    return `${d.getFullYear()}${t('년', '年')} ${d.getMonth() + 1}${t('월', '月')}`;
-                  })()}
-                </span>
-                <button
-                  onClick={() => {
-                    if (!periodStart) return;
-                    const d = new Date(periodStart);
-                    d.setMonth(d.getMonth() + 1);
-                    const y = d.getFullYear();
-                    const m = d.getMonth();
-                    setPeriodStart(`${y}-${String(m + 1).padStart(2, '0')}-01`);
-                    const lastDay = new Date(y, m + 1, 0);
-                    const today = new Date();
-                    setPeriodEnd(lastDay > today ? today.toISOString().slice(0, 10) : lastDay.toISOString().slice(0, 10));
-                    setPeriodPreset('custom');
-                  }}
-                  className="p-1.5 rounded-lg transition-colors"
-                  style={{ color: canGoNext ? 'var(--color-text-secondary)' : 'var(--color-text-subtle)', cursor: canGoNext ? 'pointer' : 'default', opacity: canGoNext ? 1 : 0.3 }}
-                >
-                  <ChevronRight size={16} />
-                </button>
-              </>
+              <button
+                key={mode}
+                onClick={() => changePeriodMode(mode)}
+                className="px-4 py-1.5 text-[13px] font-semibold transition-all cursor-pointer focus-visible:outline-none"
+                style={{
+                  background: active ? '#1A2B5E' : 'var(--color-glass)',
+                  color: active ? '#fff' : 'var(--color-text-secondary)',
+                  border: 'none',
+                }}
+              >
+                {label}
+              </button>
             );
-          })()}
+          })}
         </div>
 
-        {/* Preset Buttons */}
-        {[
-          { id: 'thisMonth', ko: '이번달', ja: '今月' },
-          { id: 'lastMonth', ko: '지난달', ja: '先月' },
-          { id: 'thisYear', ko: '올해', ja: '今年' },
-          { id: 'all', ko: '전체', ja: '全体' },
-        ].map((preset) => (
-          <button
-            key={preset.id}
-            onClick={() => {
-              setPeriodPreset(preset.id);
-              const now = new Date();
-              if (preset.id === 'thisMonth') {
+        {/* monthly: 월 네비게이터 + 이번달 빠른가기 */}
+        {periodMode === 'monthly' && (
+          <>
+            <div className="flex items-center gap-1 rounded-xl px-1 py-1" style={{ background: 'var(--color-glass)', border: '1px solid var(--color-glass-border)' }}>
+              <button
+                onClick={() => {
+                  if (!periodStart) return;
+                  const d = new Date(periodStart);
+                  d.setMonth(d.getMonth() - 1);
+                  const y = d.getFullYear();
+                  const m = d.getMonth();
+                  setPeriodStart(`${y}-${String(m + 1).padStart(2, '0')}-01`);
+                  const lastDay = new Date(y, m + 1, 0);
+                  setPeriodEnd(lastDay.toISOString().slice(0, 10));
+                }}
+                className="p-1.5 rounded-lg transition-colors"
+                style={{ color: 'var(--color-text-secondary)', cursor: 'pointer' }}
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <span className="text-[15px] font-bold px-3 min-w-[140px] text-center" style={{ color: 'var(--color-text-primary)' }}>
+                {(() => {
+                  if (!periodStart) return t('이번달', '今月');
+                  const d = new Date(periodStart);
+                  return `${d.getFullYear()}${t('년', '年')} ${d.getMonth() + 1}${t('월', '月')}`;
+                })()}
+              </span>
+              <button
+                onClick={() => {
+                  if (!periodStart) return;
+                  const d = new Date(periodStart);
+                  d.setMonth(d.getMonth() + 1);
+                  const y = d.getFullYear();
+                  const m = d.getMonth();
+                  const today = new Date();
+                  const firstDayNext = new Date(y, m, 1);
+                  if (firstDayNext > today) return; // 미래 월 이동 방지
+                  setPeriodStart(`${y}-${String(m + 1).padStart(2, '0')}-01`);
+                  const lastDay = new Date(y, m + 1, 0);
+                  setPeriodEnd(lastDay > today ? today.toISOString().slice(0, 10) : lastDay.toISOString().slice(0, 10));
+                }}
+                className="p-1.5 rounded-lg transition-colors"
+                style={{ color: 'var(--color-text-secondary)', cursor: 'pointer' }}
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+            <button
+              onClick={() => {
+                const now = new Date();
                 setPeriodStart(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`);
                 setPeriodEnd(now.toISOString().slice(0, 10));
-              } else if (preset.id === 'lastMonth') {
-                const lm = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-                setPeriodStart(`${lm.getFullYear()}-${String(lm.getMonth() + 1).padStart(2, '0')}-01`);
-                const lastDay = new Date(lm.getFullYear(), lm.getMonth() + 1, 0);
-                setPeriodEnd(lastDay.toISOString().slice(0, 10));
-              } else if (preset.id === 'thisYear') {
-                setPeriodStart(`${now.getFullYear()}-01-01`);
-                setPeriodEnd(now.toISOString().slice(0, 10));
-              } else {
-                // 전체
-                setPeriodStart(undefined);
-                setPeriodEnd(undefined);
-              }
-            }}
-            className="px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all"
-            style={{
-              background: periodPreset === preset.id ? '#1A2B5E' : 'var(--color-glass)',
-              color: periodPreset === preset.id ? '#fff' : 'var(--color-text-secondary)',
-              border: `1px solid ${periodPreset === preset.id ? 'transparent' : 'var(--color-glass-border)'}`,
-            }}
-          >
-            {t(preset.ko, preset.ja)}
-          </button>
-        ))}
+              }}
+              className="px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all"
+              style={{ background: 'var(--color-glass)', color: 'var(--color-text-secondary)', border: '1px solid var(--color-glass-border)' }}
+            >
+              {t('이번달', '今月')}
+            </button>
+          </>
+        )}
+
+        {/* range: 시작일 ~ 종료일 */}
+        {periodMode === 'range' && (
+          <div className="flex items-center gap-2 rounded-xl px-3 py-1.5" style={{ background: 'var(--color-glass)', border: '1px solid var(--color-glass-border)' }}>
+            <input
+              type="date"
+              value={periodStart ?? ''}
+              max={periodEnd ?? new Date().toISOString().slice(0, 10)}
+              onChange={(e) => setPeriodStart(e.target.value || undefined)}
+              className="bg-transparent text-[13px] font-medium focus:outline-none"
+              style={{ color: 'var(--color-text-primary)' }}
+            />
+            <span style={{ color: 'var(--color-text-muted)' }}>~</span>
+            <input
+              type="date"
+              value={periodEnd ?? ''}
+              min={periodStart}
+              max={new Date().toISOString().slice(0, 10)}
+              onChange={(e) => setPeriodEnd(e.target.value || undefined)}
+              className="bg-transparent text-[13px] font-medium focus:outline-none"
+              style={{ color: 'var(--color-text-primary)' }}
+            />
+          </div>
+        )}
+
+        {/* all: 안내 라벨만 */}
+        {periodMode === 'all' && (
+          <span className="text-[13px] font-medium px-3" style={{ color: 'var(--color-text-muted)' }}>
+            {t('전체 기간 데이터 표시 중', '全期間データ表示中')}
+          </span>
+        )}
       </div>
 
       {/* Filter Panel (B1, B2, B6) */}
